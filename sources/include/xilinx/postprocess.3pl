@@ -1,0 +1,475 @@
+// Include file invoking Xilinx processing tools ISE and Vivado
+// This code presently will only work on Unix platforms
+nosource
+
+global procedure
+postprocess(str(rname), str(tool), float(minver, 1.0), float(maxver, 9999.0)) {
+
+    // decide if post-processing is actually necessary
+    str(design, directive("designName"));
+    str(outdir, directive("outputDirectory"));
+    str(netfile, directive("netlistFile"));
+
+    // try several plausible bitfile names
+    str(bitfile, outdir + design + ".jed");
+    if (! fileexists(bitfile))
+	bitfile = outdir + design + ".bit";
+    if (! fileexists(bitfile))
+	bitfile = outdir + design + ".bit.gz";
+
+    // if bitfile exists and is newer than netlist - don't post-process
+    if (filelastmod(bitfile) > filelastmod(netfile)) {
+	if (directive("verbose"))
+	    msg("bitfile up-to-date - skipping post-processing");
+        return;
+    }
+    if (directive("verbose"))
+	msg("bitfile out-of-date - post-processing");
+
+    // The recipe file contains the commands needed for post processing
+    // from netlist (3pl output) to FPGA or CPLD configuration (bitfile).
+    // The default recipe file name has been passed to us, but the user can
+    // override it with the directive 'processRecipe'. 
+
+    // use override of recipe file
+    if (direxists("postProcessRecipe"))
+	rname = directive("postProcessRecipe");
+
+    // search for the recipe file in the 3pl include path
+    var(path, "[]str", includedirs());
+    for (int(i); i < dimension(path); ++i) {
+	// prepend each path element to name
+	str(pathname, rname);
+	if (strlen(path[i]) > 0)
+	    pathname = path[i] + "/" + rname;
+	else
+	    pathname = rname;
+
+	// test for existence
+	if (fileexists(pathname)) {
+	    file(local.rfile, pathname);
+	    break;
+	} 
+    }
+    if (! varexists(rfile))
+	texit("could not find recipe '" + rname + "' on include path");
+    open(rfile, "r");
+
+    // Any empty or comment lines in the recipe file are discarded, and
+    // then all strings of the form @key@ are substituted with the value
+    // of the directive with that name. This is mainly used for the
+    // 'designName' directive, but could in principle be used for others.
+
+    // get all directives
+    var(dirs, "map", directives());
+
+    // build the recipe
+    str({line, recipe});
+    while (! hadeof(rfile)) {
+
+	// get a line, trim leading whitespace
+	line = readln(rfile);
+	line = substitute(line, "\t", " ");
+	while ((strlen(line) > 0) && startswith(line, " "))
+	    line = substring(line, 1);
+
+	// ignore empties and comments
+	if (strlen(line) == 0)
+	    continue;
+	if (startswith(line, "#"))
+	    continue;
+
+	// substitute all @key@ strings with directive values
+	str(pattern);
+	for (int(i); i < entries(dirs); ++i) {
+	    // the \Q and \E quotes the key as it may contain regex characters
+	    pattern = "\x5cQ@" + dirs[i] + "@\x5cE";
+	    line = replaceall(line, pattern, tostring(dirs[dirs[i]]));
+	}
+
+	// add to recipe
+	if (strlen(recipe) > 0)
+	    recipe += "\n";
+	recipe += line;
+    }
+    close(rfile);
+
+    // The recipe file is executed as a sequence of ISE commands,
+    // or presented as a Tcl command file to Vivado
+    if (tool == "ise") {
+	ise(recipe, minver, maxver);
+    } else
+	if (tool == "vivado") {
+	    vivado(recipe, minver, maxver);
+	} else
+	    texit("unknown post-processing tool '" + tool + "'");
+
+    // Append the file named by postProcessAppendFile (usually a .info file)
+    // FIXME -- need to get the actual name of the output file
+    if (direxists("postProcessAppendFile")
+	    && filecanread(directive("postProcessAppendFile"))) {
+
+	if (directive("verbose"))
+	    msg("appending " + directive("postProcessAppendFile"));
+	file(bfile, outdir + design + ".bit");
+	open(bfile, "a");
+
+	// append separator string 
+	str(aline, "--------INFO--------");
+	writeln(bfile, aline);
+
+	// open and append file (assumed to be text)
+	file(afile, directive("postProcessAppendFile"));
+	open(afile, "r");
+	while (! hadeof(afile)) {
+	    aline = readln(afile);
+	    writeln(bfile, aline);
+	}
+	close(afile);
+	close(bfile);
+    }
+
+    // Finally, compress the bitfile if indicated
+    if (direxists("postProcessCompress") && directive("postProcessCompress"))
+	run("gzip -f " + directive("designName") + ".bit");
+}
+
+
+function minenv() {
+
+    // Return a map containing a minimal UNIX environment.
+    var(env, "map", env());
+    var(minenv, "map");
+    minenv["HOME"] = env["HOME"];
+    minenv["USER"] = env["USER"];
+    minenv["TERM"] = env["TERM"];
+    minenv["PATH"] = "/bin:/usr/bin";
+    return(minenv);
+}
+
+
+procedure ise(str(recipe), float(minver), float(maxver)) {
+
+    // The PATH for ISE commands is inferred from the 'XILINX' directive
+    // or 'XILINX' environment variable, which should be the installation
+    // point for Xilinx software (typically /tools/Xilinx or /opt/Xilinx).
+    // The newest version of ISE is selected from those installed.
+    //
+    // However, if the 'XILINX_ISE' directive or environment variable is
+    // defined (it should include the version number, e.g., /opt/Xilinx/14.7i)
+    // then that is used instead.
+    //
+    // Otherwise, the PATH and LD_LIBRARY_PATH inherited from the inherited
+    // user environment are used to execute ISE commands; it is assumed the
+    // user has done that correctly.
+
+    // flag indicating ISE constraints met
+    log(file.ise_constraints_met, false);
+
+    // set up minimal environment
+    var(env, "map", env());
+    var(minenv, "map", minenv());
+    minenv["PATH"] = env["PATH"];
+    if (get(env, "LD_LIBRARY_PATH") != null) 
+	minenv["LD_LIBRARY_PATH"] = env["LD_LIBRARY_PATH"];
+
+    // look for XILINX directive/environment variable
+    if (direxists("XILINX"))
+	str(xilinx, directive("XILINX"));
+    else
+	if (get(env, "XILINX") != null) 
+	    str(xilinx, env["XILINX"]);
+
+    // look for XILINX_ISE directive/environment variable
+    if (direxists("XILINX_ISE"))
+	str(xilinx_ise, directive("XILINX_ISE"));
+    else
+	if (get(env, "XILINX_ISE") != null) 
+	    str(xilinx_ise, env["XILINX_ISE"]);
+
+
+    // use XILINX to pick newest ISE version
+    if (varexists(xilinx) && !varexists(xilinx_ise)) {
+
+	// test if it exists
+	if (!fileisdir(xilinx))
+	    texit("directive 'XILINX' isn't a directory"); 
+	minenv["XILINX"] = xilinx;
+
+	// ISE should be installed in numbered directories under XILINX
+	// Find the highest-numbered version within passed minver/maxver
+	str(local.xilinx_ise);
+	var(files, "[]str", filelist(xilinx));
+	float({ver, bestver});
+	for (int(i); i < dimension(files); ++i) {
+	    var(res, "list");
+	    res = match(files[i], "^([1-9][0-9]?.[0-9])i?$");
+	    if (isempty(res))
+		continue;
+
+	    ver = strtofloat(res[1]);
+	    if ((ver >= minver) && (ver <= maxver) && (ver > bestver)) {
+		xilinx_ise = xilinx + "/" + files[i];
+		bestver = ver;
+	    }
+	}
+
+	if (bestver == 0.0)
+	    texit("no suitable ISE installation in directive 'XILINX'"); 
+    }
+
+    // use XILINX_ISE to build PATH and LD_LIBRARY_PATH
+    if (varexists(xilinx_ise)) {
+
+	if (!fileisdir(xilinx_ise))
+	    texit("directive 'XILINX_ISE' isn't a directory"); 
+	var(res, "list");
+	res = match(xilinx_ise, "^(/.*)/(([1-9][0-9]?.[0-9])i?)/?$");
+	if (dimension(res) == 0)
+	    texit("directive 'XILINX_ISE' is'nt an ISE installation"); 
+
+	minenv["XILINX_ISE"] = xilinx_ise;
+	minenv["XILINX"] = res[1];
+
+	// internal path depends on ISE version! Ugh!
+	float(ver, strtofloat(res[3]));
+	if (ver >= 12.0)
+	    str(local.ip, "ISE_DS/ISE/");
+	else
+	    str(local.ip, "ISE/");
+
+	// ISE path also requires binary architecture (in two styles!)
+	if (directive("OS") != "linux") 
+	    texit("only Linux ISE supported (yet)");
+	str(arch, directive("arch"));
+	switch (arch) {
+	case {"x86_64", "amd64"}:
+	    str(local.io, "lin64");
+	    str(local.ar, "x86_64");
+	case {"x86", "i386"}:
+	    str(local.io, "lin32");
+	    str(local.ar, "i386");
+	default:
+	    texit("ISE does not support '" + arch + "'");
+	}
+	if (! endswith(xilinx_ise, "/"))
+	    xilinx_ise = xilinx_ise + "/";
+
+	minenv["PATH"] = xilinx_ise + ip + "bin/" + io + ":/bin:/usr/bin";
+	minenv["LD_LIBRARY_PATH"] = xilinx_ise + ip + "lib/" + io;
+    } 
+
+    // run each ISE command in the recipe
+    var(rlines, "[]str", split(recipe, "\n"));
+    for (int(i); i < dimension(rlines); ++i) {
+
+    	// internal command -- replacement for "xtimerr"
+	if (startswith(rlines[i], "if_constraints_unmet")) {
+	    if (ise_constraints_met) 
+	        continue;
+
+	    // use remainder of line as external command (usually "trce")
+	    rlines[i] = substring(rlines[i], strlen("if_constraints_unmet "));
+	}
+
+	// run the external command
+	run(rlines[i], minenv);
+    }
+}
+
+
+procedure vivado(str(recipe), float(minver), float(maxver)) {
+
+    // The PATH for Vivado is inferred from the 'XILINX' directive
+    // or 'XILINX' environment variable, which should be the installation
+    // point for Xilinx software (typically /tools/Xilinx or /opt/Xilinx).
+    // The newest version of ISE is selected from those installed.
+    //
+    // However, if the 'XILINX_VIVADO' directive or environment variable is
+    // defined (it should include the version number, e.g.,
+    // /opt/Xilinx/Vivado/2018.1) then that is used instead.
+    //
+    // Otherwise, the PATH from the inherited user environment are used to
+    // execute Vivado; it is assumed the user has done that correctly.
+
+    // set up minimal environment
+    var(env, "map", env());
+    var(minenv, "map", minenv());
+    minenv["PATH"] = env["PATH"];
+
+    // look for XILINX directive/environment variable
+    if (direxists("XILINX"))
+	str(xilinx, directive("XILINX"));
+    else
+	if (get(env, "XILINX") != null) 
+	    str(xilinx, env["XILINX"]);
+
+    // look for XILINX_VIVADO directive/environment variable
+    if (direxists("XILINX_VIVADO"))
+	str(xilinx_vivado, directive("XILINX_VIVADO"));
+    else
+	if (get(env, "XILINX_VIVADO") != null) 
+	    str(xilinx_vivado, env["XILINX_VIVADO"]);
+
+
+    // use XILINX to pick newest Vivado version
+    if (varexists(xilinx) && !varexists(xilinx_vivado)) {
+
+	// test if it exists
+	if (!fileisdir(xilinx))
+	    texit("directive 'XILINX' isn't a directory"); 
+	minenv["XILINX"] = xilinx;
+
+	// Vivado should be installed in numbered directories under XILINX,
+	// sub-directory 'Vivado'.
+	// Find the highest-numbered version within passed minver/maxver
+	str(local.xilinx_vivado);
+	var(files, "[]str", filelist(xilinx + "/Vivado"));
+	float({ver, bestver});
+	for (int(i); i < dimension(files); ++i) {
+	    var(res, "list");
+	    res = match(files[i], "^20[1-2][0-9].[1-9]$");
+	    if (dimension(res) == 0)
+		continue;
+
+	    ver = strtofloat(res[0]);
+	    if ((ver >= minver) && (ver <= maxver) && (ver > bestver)) {
+		xilinx_vivado = xilinx + "/Vivado/" + files[i];
+		bestver = ver;
+	    }
+	}
+
+	if (bestver == 0.0)
+	    texit("no suitable Vivado installation in directive 'XILINX'"); 
+    }
+
+    // use XILINX_VIVADO to build PATH 
+    if (varexists(xilinx_vivado)) {
+
+	if (!fileisdir(xilinx_vivado))
+	    texit("directive 'XILINX_VIVADO' isn't a directory"); 
+	var(res, "list");
+	res = match(xilinx_vivado, "^(/.*)/Vivado/(20[1-2][0-9].[1-9])/?$");
+	if (dimension(res) == 0)
+	    texit("directive 'XILINX_VIVADO' isn't a Vivado installation"); 
+	minenv["XILINX_VIVADO"] = xilinx_vivado;
+
+	if (! endswith(xilinx_vivado, "/"))
+	    xilinx_vivado = xilinx_vivado + "/";
+	minenv["XILINX"] = res[1];
+	minenv["PATH"] = xilinx_vivado + "bin:/bin:/usr/bin";
+    }
+
+    // run Xilinx Vivado, pass recipe as stdin
+    str(d, directive("designName"));
+    str(command, "vivado -mode tcl -journal " + d + ".jou -log " + d + ".log");
+    run(command, minenv, recipe);
+}
+
+
+procedure run(str(command), var(nenv, "map"), str(in)) {
+
+    // split up the command, as exec() presently requires that
+    // (note this won't handle quoted spaces in strings, etc)
+    var(cargs, "[]str", split(command, " "));
+    str(cargs0, cargs[0]);
+
+    // use minimal environment if one not supplied
+    var(env, "map", minenv());
+    if (matched(nenv))
+	env = nenv;
+
+    // do the PATH search ourselves (as exec uses the inherited PATH)
+    var(path, "[]str", split(env["PATH"], ":"));
+    for (int(i); i < dimension(path); ++i)
+	if (fileexists(path[i] + "/" + cargs[0])) {
+	    cargs[0] = path[i] + "/" + cargs[0];
+	    command = path[i] + "/" + command;
+	    break;
+	}
+
+    // debug: print environment and command
+    if (false) {
+	for (int(i); i < entries(env); ++i)
+	    println("    env[\"" + env[i] + "\"] = " + env[env[i]]);
+	for (int(i); i < dimension(cargs); ++i)
+	    println("    command[" + i + "] = " + cargs[i]);
+	println("    dir = " + directive("outputDirectory"));
+    }
+
+    // run the command
+    msg(command);
+    int(status);
+    str({out, err});
+    if (matched(in))
+	exec(status, out, err <- cargs, env, directive("outputDirectory"), in);
+    else
+	exec(status, out, err <- cargs, env, directive("outputDirectory"));
+
+    // filter and print its output
+    filter(err);
+    filter(out);
+
+    if (status != 0) 
+        texit(cargs0 + "' returned status " + status);
+}
+
+
+procedure filter(str(lines)) {
+
+    // assume 'lines' is from a run of Vivado or an ISE tool. These tools
+    // emit a load of text, most of which is discarded. However lines and
+    // stanzas beginning with "ERROR:", "WARNING:" and "INFO:" might be
+    // important, and are printed.
+    //
+    // It also searches for some "magic" phrases in the output, and sets 
+    // flags accordingly.
+
+    // determine level to filter to
+    int(level, 2);
+    if (direxists("postProcessFilter")) {
+	switch (tolower(directive("postProcessFilter"))) {
+	    case "error":
+		level = 4;
+	    case "critical":
+		level = 3;
+	    case "warning":
+		level = 2;
+	    case "info":
+		level = 1;
+	    default:
+		level = 0;
+	}
+    }
+    if (directive("verbose"))
+	level = 0;
+
+    // read all lines and filter
+    var(line, "[]str", split(lines, "\n"));
+    log(print);
+    for (int(i); i < dimension(line); ++i) {
+	if (
+	    (startswith(line[i], "ERROR:") && (level <= 4)) ||
+	    (startswith(line[i], "CRITICAL WARNING:") && (level <= 3)) ||
+	    (startswith(line[i], "WARNING:") && (level <= 2)) ||
+	    (startswith(line[i], "INFO:") && (level <= 1)) ||
+	    (print && startswith(line[i], " ")) ||
+	    (level == 0)
+	) 
+	    print = true;
+	else
+	    print = false;
+
+	if (print)
+	    println(line[i]);
+
+	// test for "magic" lines
+	if (strpos(line[i], "All constraints were met") > -1)
+	    ise_constraints_met = true;
+    }
+}
+
+global function matches(str(subject), str(regexp)) {
+    return(dimension(match(subject, regexp)));
+}
+

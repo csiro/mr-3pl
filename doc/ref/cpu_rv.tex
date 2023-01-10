@@ -1,0 +1,108 @@
+            Parameter {\bf in} is the value-mode input variable or expression.
+            Since it is value mode the argument may be a value mode variable,
+            static mode variable or an expression containing these. An expression
+            must not contain a queue read.            
+            
+            The module is created at the end of immediate execution from arguments
+            queued by this procedure. It can be any type, primitive or compound. The
+            optional output static logical variable {\bf access} goes true for one
+            clock cycle to indicate that a read has occurred.
+            
+            This procedure can be called via the more cryptic and general
+            procedure {\bf cpu\_api.read()} \autorefph{sec:lpcpuread} instead.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the input data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the input data type must not exceed 1016 bits (127 bytes).
+            
+
+            The optional output static logical variable {\bf access} goes true
+            for one clock cycle to indicate that a read has occurred.
+            
+            The clock domain of output {\bf access} need not be the same as
+            that of {\bf in}. If {\bf access} has no clock domain it will be
+            given the bus clock domain.
+            
+            The parameters associated with this bus interface, including an
+            allocated bus address, are written
+            to the {\em design}.info file.
+
+            The utility info2c is used to process this file and create
+            an include file {\em design}.h which contains a funcion
+            definition to access this interface. for example the 3PL
+            code
+            \begin{lstlisting}[gobble=12, language=threepl]
+               cpu_read_value("alpha", v);
+            \end{lstlisting}
+            will result in info2c producing a declaration like
+            \begin{lstlisting}[gobble=12, language=C]
+               uint32_t alpha_read (fpga_t * fpga) {}
+            \end{lstlisting}
+            
+            When the CPU reads a value it is sampling that value, hence data may
+            be lost if the sampling rate is lower than the rate at which data
+            changes. The data sampling logic ensures that the data is a valid
+            sample even when the source is changing at the time of the
+            read. This is a primitive interface which depends on additional
+            protocols being imposed by the application code. For example to
+            guarantee data integrity a write to register the data in a static
+            variable prior to reading could be used. For a more complex interface see {\bf cpu\_api.read\_queue()}
+            \autorefph{sec:lpcpurdqueue}.
+            
+            On running info2c on the .json file the following C function will have been
+            defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            function                   &                 \\ \hline \hline
+            fpga\_{\em name}\_read()   & read a datum    \\ \hline
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class(cpu, cpu_api());
+               
+               static(s, "uint:16");
+               .
+               .
+               cpu.read_value("S1", s);
+               .
+               .
+            \end{lstlisting}
+            the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog_fpga.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   int     d;
+                   .
+                   .
+                   fpga_open(portName);
+                   .
+                   .
+                   d = fpga_S1_read(fpga);
+                   .
+            \end{lstlisting}
+            
+            This procedure creates no in-line target code so the current clock domain
+            when this procedure is called is not relevant. The clock domain is not
+            changed by this procedure,
+            The CPU code in Python3 should contain something like \\
+            \begin{lstlisting}[gobble=12, language=python]
+                import sys
+                sys.path.append("/Users/......./install/3pl")
+                import info2py
+                import prog_fpga as fpga
+
+                fpga_open()
+
+                fpga = info2py.info_from_file("prog")   # load info from prog.info file
+
+                d = fpga.P1_read()
+
+            \end{lstlisting}

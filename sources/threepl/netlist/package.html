@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<body>
+
+<p>These classes handle netlist generation.</p>
+
+<p>Classes in the main directory are generic and create an internal netlist
+connecting elements. Classes for generating EDIF netlist output for specific
+FPGA families are contained in subdirectories. At the moment the only
+subdirectory is "xilinx".</p>
+
+
+<pre>
+The class structure is -
+
+       TDECode           implementation of TDE modules - vendor independent
+          |
+     GenFunctions        general support methods - vendor independent
+          |
+      XElements          Xilinx general unified elements
+          |
+      XFunctions         Xilinx higher level functions
+          |
+      XTDECode           Xilinx implementation of TDE modules
+          |
+    ---------------------
+   /   /  |   \   \      \
+XC2S XCV XC3S XC2V XC2VP XC4V      Xilinx elements specific to FPGA families
+</pre>
+
+<p>Class TDECode is an abstract class which is the super class.
+All the other classes are abstract until the leaf classes at the bottom.</p>
+
+<p>All classes above starting with "X" are in subdirectory "xilinx".</p>
+
+<p>All methods in the lowest subclasses override corresponding
+methods in class XElements which throw exceptions to pick up
+the use of special elements in FPGA families which do not
+have them.</p>
+
+<p>TDE code generation methods are invoked using the FPGA
+family as the object instance.</p>
+
+For another vendor or product class GenFunctions would be extended, e.g.
+<pre>
+
+       TDECode           implementation of TDE modules - vendor independent
+          |
+     GenFunctions        general support methods - vendor independent
+          |
+      YElements          product Y... general unified elements
+          |
+      YFunctions         product Y... higher level functions
+          |
+      YTDECode           product Y... implementation of TDE modules
+          |
+    ---------------------
+   /   /  |   \   \      \
+Y..  Y.. Y... Y... Y...  Y...      elements specific to Y.. products
+</pre>
+
+<p>The classes above starting with "Y" would be in subdirectory "y...".</p>
+
+<!-- Put @see and @since tags down here. -->
+
+</body>

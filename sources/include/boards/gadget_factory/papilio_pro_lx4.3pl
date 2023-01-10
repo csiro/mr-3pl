@@ -1,0 +1,66 @@
+nosource
+
+// 3pl board support for GadgetFactory Papilio Pro
+//
+// This board is an update of the Papilio One, with a Xilinx Spartan 6
+// FPGA and a 64Mbit Micron MT48LC4M16 SDRAM
+
+part("XC6SLX4TQG144-2");
+module "xilinx/xc6s.3pl"
+
+// all IO is 3.3V on this board
+str(lvcmos33, "LVCMOS33");
+
+// clock generator 32MHz
+iopins(c32_pin, "str", "P94", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+
+// 48 I/O pins across A (wing 1A), B (wing 1B), C (wing 2A)
+iopins(global.A_pins, "[16]str", {
+    "P48", "P51", "P56", "P58", "P61", "P66", "P67", "P75",
+    "P79", "P81", "P83", "P85", "P88", "P93", "P98", "P100"
+}, iostandard=lvcmos33);
+iopins(global.B_pins, "[16]str", {
+    "P99", "P97", "P92", "P87", "P84", "P82", "P80", "P78",
+    "P74", "P95", "P62", "P59", "P57", "P55", "P50", "P47"
+}, iostandard=lvcmos33);
+iopins(global.C_pins, "[16]str", {
+    "P114", "P115", "P116", "P117", "P118", "P119", "P120", "P121",
+    "P123", "P124", "P126", "P127", "P131", "P132", "P133", "P134"
+}, iostandard=lvcmos33);
+
+// FTDI USB channel B serial receive and transmit
+// Labelling is reversed to schematic!
+// 'tx' should be an FPGA output, 'rx' an input
+iopins(global.serial_rxd_pin, "str", "P101", iostandard=lvcmos33);
+iopins(global.serial_txd_pin, "str", "P105", iostandard=lvcmos33);
+
+// MT48LC4M16 SDRAM
+iopins(global.sdram_addr_pin, "[13]str", {
+    "P140", "P139", "P138", "P137", "P46", "P45", "P44", "P43",
+    "P41", "P40", "P141", "P35", "P34"
+}, iostandard=lvcmos33);
+iopins(global.sdram_dq_pin, "[16]str", {
+    "P9", "P10", "P11", "P12", "P14", "P15", "P16", "P8",
+    "P21", "P22", "P23", "P24", "P26", "P27", "P29", "P30"
+}, iostandard=lvcmos33);
+iopins(global.sdram_ba_pin, "[2]str", {"P143", "P142"}, iostandard=lvcmos33);
+iopins(global.sdram_clk_pin, "str", "P32", iostandard=lvcmos33);
+iopins(global.sdram_cke_pin, "str", "P33", iostandard=lvcmos33);
+iopins(global.sdram_cs_pin, "str", "P1", iostandard=lvcmos33);
+iopins(global.sdram_dqml_pin, "str", "P7", iostandard=lvcmos33);
+iopins(global.sdram_dqmh_pin, "str", "P17", iostandard=lvcmos33);
+iopins(global.sdram_nras_pin, "str", "P2", iostandard=lvcmos33);
+iopins(global.sdram_ncas_pin, "str", "P5", iostandard=lvcmos33);
+iopins(global.sdram_nwe_pin, "str", "P6", iostandard=lvcmos33);
+
+// LED1 pin
+iopins(global.led_pin, "str", "P112", iostandard=lvcmos33); 
+
+
+// create 32MHz clock
+clock(c32_in, loc=c32_pin);
+simpleclock(global.c32, c32_in);
+useclock(c32);
+
+directive("comms_baud_rate", 115200); // define default serial device baud rate
+module "xilinx/uart_cpu.3pl"

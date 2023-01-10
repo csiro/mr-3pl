@@ -1,0 +1,578 @@
+// For Xilinx approach using MIG see XAPP853.
+// The low level part of this implementation does not use the read
+// data delays described in the above application note but is
+// otherwise similar.
+
+
+global class
+qdr2_ram (
+    var(addr_pins, "[]str"),
+    var(data_pins, "[]str"),
+    var(q_pins, "[]str"),
+    str(_r_pin),
+    str(_w_pin),
+    str(_bw0_pin),
+    str(_bw1_pin),
+    str(_doff_pin),
+    str(cq_pin),
+    str(_cq_pin),
+    str(k_pin),
+    str(_k_pin),
+    clock(clk_0),       // clock domain for the interface
+    clock(clk_90),      // clk_0 delayed 90 degrees
+    clock(del_clk),     // nominally 200MHz clock for IDELAY timing
+    // 'slew' and 'drive' control the slew rate and drive current for
+    // K, _K, _R, _W, SA and D outputs to the QDR RAMs.
+    str(slew, "slow"),  // output pad slew rate
+    int(drive, 2),      // output pad drive current
+    str(tnm, "QDRPAD"), // pad timing group name
+    // Input delays for the Q, CQ and _CQ inputs from the QDR RAMs to centre
+    // the clocks in the data 'eyes'. It is assumed that there is no data
+    // skew and hence all data inputs have the same delay.
+    int(  qdel, 0),     // Q input delay
+    int( cqdel, 12),    // CQ input delay
+    int(_cqdel, 12),    //_CQ input delay
+    str(cqbufloc),      // CQ buffer location - probably not necessary
+    str(_cqbufloc)      // _CQ buffer location - probably not necessary
+) {
+    if (!matched(clk_90))
+        texit("clk_90 argument omitted");
+    if (!matched(del_clk))
+        texit("del_clk argument omitted");
+    int(READ_DELAY, 5);
+    int(awidth, dimension(addr_pins));
+    int(dwidth, dimension(data_pins));
+    int(int_datawidth, 2 * dwidth);
+    
+    var(read_used,  "log");
+    var(write_used, "log");
+
+    struct(ems, {in, out, full, prepush}, "->");
+    var({reads, writes},  "map");
+    var({rpindex, wpindex},  "int", -1);
+
+    enum(pritype, NONE, FAIR, PRI);
+    var(write_use_mode, "pritype");
+    var(read_use_mode, "pritype");
+
+    type(addr, "bits:"+awidth);
+    type(data, "bits:"+dwidth);
+    type(int_ram_data, "bits:"+(2*dwidth));
+    struct (write_in_struct,
+        address,    addr,
+        data,       int_ram_data
+    );
+    struct (write_out_struct,
+        address,    addr
+    );
+    struct (read_in_struct,
+        address,    addr
+    );
+    struct (read_out_struct,
+        data,       int_ram_data
+    );
+
+    type(write_in_mux_struct);
+    type(read_in_mux_struct);
+
+    value({read_addr, write_addr}, "addr");
+    value({read_data, write_data}, "int_ram_data");
+    value({read, write}, "log");
+    static({  q_ce,   q_inc,   q_rst}, "log", false);
+    static({ cq_ce,  cq_inc,  cq_rst}, "log", false);
+    static({_cq_ce, _cq_inc, _cq_rst}, "log", false);
+
+    static({_doff, init}, "log");
+
+    //------------------------------------------------------------------
+    // External QDR2 RAM trailer code
+    //
+    trailermodule ("QDR2 RAM") {
+        log(used, read_used || write_used);
+        if (!used) 
+            return;
+
+        if (matched(clk_0))
+            useclock(clk_0);
+
+        value({_r, _w}, "log");
+        value({k, _k}, "log");
+        value(sa, "bits:21");
+        value(d, "bits:18");
+
+        seq {
+            wait(250e-6); // wait until sure that c166 DCM is stable
+            _doff <- true;
+            wait(20e-6); // wait at least 2048 clock cycles for RAM DLL lock
+            init <- true;
+            stop();
+        }
+
+        if (!read_used && !write_used) {
+            output(, "log", false, loc=_doff_pin);
+            return;
+        }
+
+        output(,, _doff, loc=_doff_pin);
+
+        useclock(clk_90);
+        // Note: K and _K lag are clocked with clk_90 and data
+        // output by clk, whereas in XAPP853 the data is clocked
+        // by a leading 270 degree clock and K, _K by the 0 degree clock.
+        oddr(k <- true, false);
+        oddr(_k <- false, true);
+        output(,,  k, loc= k_pin, slew=slew, drive=drive);
+        output(,, _k, loc=_k_pin, slew=slew, drive=drive);
+        useclock();
+
+        if (read_used)
+            oddr(_r <- !read, true);
+        else
+            _r := true;
+        if (write_used)
+            oddr(_w <- !write, true);
+        else
+            _w := true;
+        oddr(sa <- read_addr, write_addr);
+        oddr(d <- cast(write_data, data), cast(write_data >> dwidth, data));
+        output(,, _r, loc=_r_pin, slew=slew, drive=drive);
+        output(,, _w, loc=_w_pin, slew=slew, drive=drive);
+        output(,, sa, loc=addr_pins,  slew=slew, drive=drive);
+        output(,,  d, loc=data_pins, slew=slew, drive=drive);
+        output(, "log", false, loc=_bw0_pin);
+        output(, "log", false, loc=_bw1_pin);
+        if (read_used) {
+            clock( cq);
+            clock(_cq);
+            clock(cq_raw, frequency=frequency(clk_0));
+            clock(_cq_raw, frequency=frequency(clk_0));
+            input( cq_in, "log", loc= cq_pin);
+            input(_cq_in, "log", loc=_cq_pin);
+            value({cq_in_del, _cq_in_del}, "log");
+            idelay( cq_in_del <-  cq_in,  cqdel, del_clk, cq_ce, cq_inc, cq_rst);
+            idelay(_cq_in_del <- _cq_in, _cqdel, del_clk, _cq_ce, _cq_inc, _cq_rst);
+            clockfromexpr( cq_raw <-  cq_in_del);
+            clockfromexpr(_cq_raw <- _cq_in_del);
+            clockbufio( cq <-  cq_raw, cqbufloc);
+            clockbufio(_cq <- _cq_raw, _cqbufloc);
+
+            input(q, "["+dwidth+"]bits:1", loc=q_pins);
+            value(q_del, "["+dwidth+"]bits:1");
+            for (int(i) ; i<dwidth ; i++)
+                idelay(q_del[i] <- q[i], qdel, del_clk, q_ce, q_inc, q_rst);
+            value(rd, "["+(2*dwidth)+"]bits:1");
+            for (int(j) ; j<dwidth ; j++) {
+                value(isd_out, "[4]bits:1");
+                clock(c);
+                c := currentclock();
+                negclock(_c, currentclock());
+                iserdes(isd_out <- width=4, clk=_cq, clkb=cq, oclk=c, oclkb=_c, clkdiv=currentclock(), din=q_del[j]);
+                rd[j]    := isd_out[1];  // ISERDES _CQ edge, low word
+                rd[j+18] := isd_out[0];  // ISERDES CQ edge, high word
+            }
+            read_data := cast(rd, int_ram_data);
+        }
+
+        if (!write_used && !read_used)
+            continue;
+
+        int(rports, entries(reads));
+        int(wports, entries(writes));
+
+        writeln(rpt, "\tqdr2_ram - write ports " + wports + " read ports " + rports + "\n");
+        write_in_mux_struct = multiplex_struct_l(write_in_struct, wports);
+        read_in_mux_struct = multiplex_struct_l(read_in_struct, rports);
+
+        // insert fifo control logic for write requests that have an output
+        for (int(i) ; i<wports ; i++) {
+            str(mkey, writes[i]);
+            var(mev, ems, writes[mkey]);
+            if (mev.out != null) {
+                queue(p, write_in_struct);
+                sync when (>mev.out->) {
+                    p <<- mev.in->;
+                    mev.in = &p;
+                }
+                writes[mkey] = mev;
+            }
+        }
+
+        // insert fifo control logic for read requests that have an output
+        for (int(i) ; i<rports ; i++) {
+            str(mkey, reads[i]);
+            var(mev, ems, reads[mkey]);
+            if (mev.out != null) {
+                value({full, pre_write}, "log");
+                mev.full = &full;
+                mev.prepush = &pre_write;
+
+                queue(p, read_in_struct);
+                sync when (!full) {
+                    p <<- mev.in->;
+                    pulse(pre_write <-);
+                    mev.in = &p;
+                }
+                reads[mkey] = mev;
+            }
+        }
+
+        if (write_used) {
+            // multiplex write input queues
+            var(l, "list");
+            int(n, entries(writes));
+            var(mev, ems);
+            queue({win, win_}, write_in_mux_struct);
+            for (int(i) ; i<n ; i++) {
+                str(mkey, writes[i]);
+                mev = writes[mkey];
+                append(l,, mev.in);
+            }
+            if (write_use_mode == pritype.FAIR) {
+                multiplext_l(win_ <- l);
+                win <<- win_; // extra queue needed to meet timing constraints!
+            } else
+                multiplexp_l(win <- l);
+            qdr2write(win);
+        } else {
+            write := false;
+            write_addr := 0;
+            write_data := 0;
+        }
+
+        if (read_used) {
+            // multiplex read input queues
+            var(l, "list");
+            int(n, entries(reads));
+            var(mev, ems);
+            queue({rin, rin_}, read_in_mux_struct);
+            for (int(i) ; i<n ; i++) {
+                str(mkey, reads[i]);
+                mev = reads[mkey];
+                append(l,, mev.in);
+            }
+            if (read_use_mode == pritype.FAIR) {
+                multiplext_l(rin_ <- l);
+                rin <<- rin_; // extra queue needed to meet timing constraints!
+            } else
+                multiplexp_l(rin <- l);
+            qdr2read(rin);
+        } else {
+            read := false;
+            read_addr := 0;
+        }      
+        
+        useclock();     // pop clk_90
+        if (matched(clk_0))
+            useclock(); // pop clk_0
+
+        module
+        qdr2write (queue(in, write_in_mux_struct)) {
+            write_addr := ?in.body.address;
+            write_data := ?in.body.data;
+            sync {
+                pulse(write <-);
+                null <<- in;
+            }
+
+            var(mev, ems);
+            int(ports, entries(writes));
+            for (int(port) ; port<ports ; port++) {
+                str(mkey, writes[port]);
+                mev = writes[mkey];
+                if (mev.out != null) {
+                    sync when (in.port[port]) {
+                        mev.out-> <<- in.body.address;
+                    }
+                }
+            }
+        }
+
+        module
+        qdr2read (queue(in, read_in_mux_struct)) {
+            value(push, "log", delay(<in, READ_DELAY));
+            value(in_del, read_in_mux_struct, delay(?in, READ_DELAY));
+
+            read_addr := ?in.body.address;
+            sync {
+                pulse(read <-);
+                null <<- in;
+            }
+
+            var(mev, ems);
+            int(ports, entries(reads));
+            for (int(port) ; port<ports ; port++) {
+                str(mkey, reads[port]);
+                mev = reads[mkey];
+                if (mev.out != null) {
+                    value(v,, read_data);
+                    pfifo(
+                        mev.out->,
+                        mev.full->
+                        <-
+                        v,
+                        mev.prepush->,
+                        push && in_del.port[port]
+                    );
+                }
+            }
+        }
+
+        module
+        pfifo (
+            queue(out),
+            value(fullout, "log")
+            <-
+            value(in),
+            value({prewrite, write}, "log")
+        ) {
+            log(is_null_out, typestring(out) == "null");
+            int(depth, 16);
+            int(dwidth, size(in));
+            int(awidth, size(depth-1));
+            int(cwidth, size(depth));
+            static({waddr, raddr}, "uint:"+awidth);
+            static({wcount, rcount}, "uint:"+cwidth);
+            static(empty, "log", true);
+            static(full, "log");
+            if (!is_null_out)
+                cmemory(mem, 2, "uint:"+awidth, type(in));
+            value(read, "log");
+
+            fullout := full;
+            when (write) {
+                par {
+                    if (!is_null_out)
+                        cmemorywrite(mem, 0, waddr, in);
+                    waddr++;
+                }
+            }
+
+            sync when (!empty) {
+                if (is_null_out)
+                    out <<- null;
+                else
+                    out <<- cast(cmemoryread(mem, 1, raddr), type(out));
+                raddr++;
+                pulse(read <-);
+            }
+
+            rcount <- addsub(rcount, 1, write, read ^^ write);
+            wcount <- addsub(wcount, 1, prewrite, read ^^ prewrite);
+            when (read && !prewrite && (wcount == depth))
+                full <- false;
+            when (read && !write && (rcount == 1))
+                empty <- true;
+            when (!read && prewrite && (wcount == (depth-1)))
+                full <- true;
+            when (!read && write && (rcount == 0))
+                empty <- false;
+        }
+    }
+
+    module
+    write (queue(addrout) <- varargs) {
+        qdr2write_(nullarg(addrout) <- , inargs);
+    }
+
+    module
+    writep (queue(addrout) <- int(pri), varargs) {
+        qdr2write_(nullarg(addrout) <- pri, inargs);
+    }
+
+    module
+    qdr2write_ (queue(addrout) <- int(pri), var(inargs, "[]->")) {
+        value(v, write_in_struct);
+
+        switch (dimension(inargs)) {
+        case 1:
+            // single argument to both indicates combined address/data in struct
+            if (!hasqueuereads(inargs[0]->))
+                texit("extramwrite(); input argument does not contain queue reads");
+            v.address := cast(inargs[0]->.address, addr);
+            v.data := inargs[0]->.data;
+        case 2:
+            // Separate address and data - both not necessarily queues.
+            // Combine into a single queue.
+            if (!hasqueuereads(inargs[0]->) && !hasqueuereads(inargs[1]->))
+                texit("extramwrite(); neither input arguments contains queue reads");
+            queue(pin, write_in_struct);
+            sync {
+                pin.address <<- cast(inargs[0]->, addr);
+                pin.data <<- cast(inargs[1]->, int_ram_data);
+            }
+            v.address := cast(pin.address, addr);
+            v.data := cast(pin.data, int_ram_data);
+        default:
+            texit("extramwrite(): wrong number of input arguments");
+        }
+        if (matched(pri)) {
+            switch (write_use_mode) {
+            case pritype.NONE:
+                write_use_mode = pritype.PRI;
+            case pritype.FAIR:
+                texit("extramwritep(): already non-priority");
+            }
+            wpindex = pri;
+        } else {
+            switch (write_use_mode) {
+            case pritype.NONE:
+                write_use_mode = pritype.FAIR;
+            case pritype.PRI:
+                texit("extramwrite(): already priority");
+            }
+            wpindex++;
+        }
+        var(mev, ems);
+        str(mkey, wpindex);
+        mev.in = &v;
+        mev.out = matched(addrout) ? &addrout : null;
+        writes[mkey] = mev;
+        write_used = true;
+    }
+
+    module
+    read (queue(data) <- queue(address)) {
+        qdr2read_(nullarg(data) <- , address);
+    }
+
+    module
+    readp (queue(data) <- int(pri), queue(address)) {
+        qdr2read_(nullarg(data) <- pri, address);
+    }
+
+    module
+    qdr2read_ (queue(data) <- int(pri), queue(address)) {
+        if (matched(pri)) {
+            switch (read_use_mode) {
+            case pritype.NONE:
+                read_use_mode = pritype.PRI;
+            case pritype.FAIR:
+                texit("extramreadp(): already non-priority");
+            }
+            rpindex = pri;
+        } else {
+            switch (read_use_mode) {
+            case pritype.NONE:
+                read_use_mode = pritype.FAIR;
+            case pritype.PRI:
+                texit("extramread(): already priority");
+            }
+            rpindex++;
+        }
+
+        value(v, read_in_struct);    
+        v.address := cast(address, addr);
+        var(mev, ems);
+        str(mkey, rpindex);
+        mev.in = &v;
+        mev.out = &data;
+        reads[mkey] = mev;
+        read_used = true;
+    }
+
+    // The use of toggled static mode variables instead of directly pulsed
+    // value mode variables is done to overcome problems meeting
+    // timing contraints!
+    
+    // Increment the Q input delay.
+    // Default 0.
+    procedure
+    incr_qdel () {
+        seq {
+            par {
+                q_ce <- true;
+                q_inc <- true;
+            }
+            par {
+                q_ce <- false;
+                q_inc <- false;
+            }
+        }
+    }
+
+    // Increment the CQ input delay.
+    // Default 12.
+    procedure
+    incr_cqdel () {
+        seq {
+            par {
+                cq_ce <- true;
+                cq_inc <- true;
+            }
+            par {
+                cq_ce <- false;
+                cq_inc <- false;
+            }
+        }
+    }
+
+    // Increment the _CQ input delay.
+    // Default 12.
+    procedure
+    incr__cqdel () {
+        seq {
+            par {
+                _cq_ce <- true;
+                _cq_inc <- true;
+            }
+            par {
+                _cq_ce <- false;
+                _cq_inc <- false;
+            }
+        }
+    }
+
+    // Decrement the Q input delay.
+    // Default 0.
+    procedure
+    decr_qdel () {
+        q_ce <- true;
+    }
+
+    // Decrement the CQ input delay.
+    // Default 12.
+    procedure
+    decr_cqdel () {
+        cq_ce <- true;
+    }
+
+    // Decrement the _CQ input delay.
+    // Default 12.
+    procedure
+    decr__cqdel () {
+        _cq_ce <- true;
+    }
+
+    // Reset the Q delay to initial value.
+    // Default 0.
+    procedure
+    reset_qdel () {
+        q_rst <- true;
+    }
+
+    // Reset the CQ delay to initial value.
+    // Default 12.
+    procedure
+    reset_cqdel () {
+        seq {
+            cq_rst <- true;
+            cq_rst <- false;
+        }
+    }
+
+    // Reset the _CQ delay to initial value.
+    // Default 12.
+    procedure
+    reset__cqdel () {
+        seq {
+            _cq_rst <- true;
+            _cq_rst <- false;
+        }
+    }
+    
+    // Determine if the interface has finished initialising.
+    function
+    initialised () {
+        return(init);
+    }
+}

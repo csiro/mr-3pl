@@ -1,0 +1,260 @@
+\pagebreak
+
+\section{External ZBT RAM interface - zbt\_ram.3pl}
+
+    \index{library!zbt\_ram.3pl}
+    This library provides read and write interfaces for zero bus turnaround
+    (ZBT) synchronous static RAM.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "zbt_ram.3pl"
+    \end{lstlisting}
+    
+    
+    The RAM address and data dimensions are inferred from the dimensions
+    of the address and data FPGA pin arguments supplied to the class
+    call.
+
+    Multiple read and write ports are allowed. Addresses and data are
+    transferred using queue mode variables and simultaneous requests are handled
+    by arbitration based on fair access or priority - see below.
+    
+    The interfaces to a single external RAM chip are incorporated in
+    an instance of a class. Reads and writes are provided by modules in
+    that class.
+
+
+    
+
+    \subsection{library modules}
+    
+        none.
+
+    \subsection{library procedures}
+    
+        None.
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        \subsubsection{class zbt\_ram\label{sec:lczbtram}}
+        
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                global class
+                zbt_ram (
+                    var(addr_pins, "[]str"),
+                    var(data_pins, "[]str"),
+                    str(_we_pin),
+                    str(_wea_pin),
+                    str(_web_pin),
+                    str(_wec_pin),
+                    str(_wed_pin),
+                    str(_cke_pin),
+                    clock(clk),
+                    str(slew, "fast"),
+                    int(drive, 12),     // 12mA
+                    str(tnm, "ZBTPAD")
+                ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            {\bf addr\_pins} are the RAM address FPGA output pins \\
+            {\bf data\_pins} are the RAM data FPGA bi-directional pins \\
+            {\bf \_we\_pin} is the RAM write enable FPGA output pin \\
+            {\bf \_wea\_pin} is the RAM byte A write enable FPGA output pin \\
+            {\bf \_web\_pin} is the RAM byte B write enable FPGA output pin \\
+            {\bf \_wec\_pin} is the RAM byte C write enable FPGA output pin \\
+            {\bf \_wed\_pin} is the RAM byte D write enable FPGA output pin \\
+            {\bf \_cke\_pin} is the RAM clock enable FPGA output pin \\
+            {\bf clk} is the clock domain of the RAM interface \\
+            {\bf slew} is the output pad slew rate ("fast", "slow") \\
+            {\bf drive} is the output pad current drive (2 to 24 mA)\\
+            {\bf tnm} is the timing group name for the pads \\
+            
+            It is presumed that the external RAM chip has a clock source
+            which is also input to the FPGA and that {\bf clk} is the
+            FPGA version of that clock. If that argument is missing the
+            current clock domain is used for the interface logic.
+            
+            The output pad slew rate and drive current are optional arguments
+            which if omitted have the default values shown.
+            
+            The timing group name {\bf tnm} is applied to all input and output pads
+            connected to this interface.
+            
+ 
+            The following is an example of creation of a class instance - 
+ 
+            \begin{lstlisting}[gobble=12, language=threepl]
+                class(zbt);
+                zbt =   zbt_ram(
+                            addr_pins=ext_ram_a_pins[0],
+                            data_pins=ext_ram_d_pins[0],
+                            _we_pin=_ext_ram_we_pins[0],
+                            _wea_pin=_ext_ram_wea_pins[0],
+                            _web_pin=_ext_ram_web_pins[0],
+                            _wec_pin=_ext_ram_wec_pins[0],
+                            _wed_pin=_ext_ram_wed_pins[0],
+                            _cke_pin=_ext_ram_cke_pins[0],
+                            clk=c166
+                        );
+            \end{lstlisting}
+
+ 
+            
+
+
+        \subsubsection{class module read - read from external ZBT memory\\
+                       class module readp - read from external ZBT memory with priority}\label{sec:lczbtramread}
+
+            {\bf Library: zbt\_ram.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               read (queue(data) <- queue(address))) {}
+            \end{lstlisting}
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               readp (queue(data) <- int(pri), queue(address)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf data} is the queue receiving the data read from the memory.
+
+            {\bf Input parameters:} \\
+            {\bf pri} is the priority of the read request. \\
+            {\bf addr} is the address to be read.
+
+            {\bf description:} \\
+            When the output and input queues are available an external memory
+            read will be executed, subject to access arbitration. The address
+            input queue and the data output queue may be any type, but a
+            crude pad/truncate cast to the address and data primitive sizes
+            will be performed.
+            
+            The internal code of this module executes in clock domain {\bf clk}
+            (but the call to the module returns with the current clock domain
+            restored). If the clock domains in which input queue {\em addr} is
+            written or output queue {\em data} is read are not the external memory
+            clock domain then these queues will be asynchronous, i.e. their read
+            and write clock domains will be different.
+            
+            For {\bf read()} access arbitration among competing read and
+            write requests is based on a fair strategy (but see the final
+            paragraph below). Access requests are funnelled to a single queue
+            via a binary tree of queues. At each node conflicting requests
+            are resolved in favour of one of the two inputs by a scheme which
+            alternates priority between the inputs based on the number of
+            tree leaves on each side.
+            
+            For {\bf readp()} access is subject to access priority, priority
+            order being given by input parameter {\bf pri}. Lower numbers are
+            higher priority. The priorities do not need to form a contiguous
+            set but the same priority must not be used on more than one call
+            to {\bf readp()} or {\bf writep()}.
+            
+            Calls to {\bf read()} and {\bf write()} cannot be mixed with calls
+            to {\bf readp()} and {\bf writep()}.
+
+
+        \subsubsection{class module write - write to external ZBT memory\\
+                       class module writep - write to external ZBT memory with priority}\label{sec:lczbtramwrite}
+
+            {\bf Library: zbt\_ram.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               write (queue(addrout) <- varargs) {}
+            \end{lstlisting}
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               writep (queue(addrout) <- int(pri), varargs) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf addrout} is optional and is the address of the datum that
+            has been written.
+
+            {\bf Input parameters:} \\
+            {\bf pri} is the priority of the write request. \\
+            {\bf varargs} expects either two arguments, the address and the data,
+            or a single argument which is a struct containing both address and
+            data.
+
+            {\bf description:} \\
+            The two forms allow the address and data to be given in a single
+            queue or as two separate queues or expressions.
+            
+            For the first form the address and data are contained in a
+            struct with fields {\bf address} and {\bf data} that is defined in
+            the class -            
+            \begin{lstlisting}[gobble=12, language=threepl]
+                struct(in_struct,
+                    address,    addr_t,
+                    data,       data_t,
+                    write,      "log"
+                );
+            \end{lstlisting}
+            (the {\bf write} field is assigned internally and can be ignored.)
+
+            
+            For the second form the address and data are separate arguments
+            which may be any type, but a crude pad/truncate cast to the
+            address and data primitive sizes will be performed. At least one of
+            the input arguments must contain a queue read.
+            
+            When the input queue or queues is/are available an external memory
+            write will be executed, subject to access arbitration.
+           
+            If the output parameter is passed a queue variable argument the
+            write address is written to the queue when the memory write occurs.
+            This can be used to verify that the write has occurred and at what
+            address. This might be used for example where the external
+            memory is being used as a FIFO and the read address must not
+            pass the write address. The output argument may be a queue of type
+            "null" if write notification is required but the address value is not
+            of interest.
+            
+            The internal code of this module executes in clock domain {\bf clk}
+            (but the call to the module returns with the current clock domain
+            restored). If the clock domains in which input queues {\em addr} and
+            {\em data} are written are not the external memory clock domain then
+            these queues will be asynchronous, i.e. their read and write clock
+            domains will be different. Any other sinks to these queues must be in
+            the external memory clock domain.
+            
+            For {\bf write()} access arbitration among competing read and
+            write requests is based on a fair strategy (but see the final
+            paragraph below). Access requests are funnelled to a single queue
+            via a binary tree of queues. At each node conflicting requests
+            are resolved in favour of one of the two inputs by a scheme which
+            alternates priority between the inputs based on the number of
+            tree leaves on each side.
+            
+            For {\bf writep()} access is subject to access priority, priority
+            order being given by input parameter {\bf pri}. Lower numbers are
+            higher priority. The priorities do not need to form a contiguous set
+            but the same priority must not be used on more than one call to {\bf
+            readp()} or {\bf writep()}.
+            
+            Calls to {\bf read()} and {\bf write()} cannot be mixed with calls
+            to {\bf readp()} and {\bf writep()}.
+
+

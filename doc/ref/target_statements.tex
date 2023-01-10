@@ -1,0 +1,2149 @@
+\pagebreak
+
+\chapter{Target Statements}\label{chap:target}
+
+    Target statements are copied to a target code structure during the
+    immediate execution. The immediate code selects which statements are
+    copied and may duplicate target code with variations introduced by
+    immediate expressions.
+    
+    Note that \\
+    {\bf value mode assignment}, \\
+    {\bf priority mode assignment} , \\
+    {\bf clock mode assignment} and \\
+    {\bf unconditional output mode assignment} \\
+    do not generate in-line target code and so
+    have been included under immediate assignment above
+    \autorefph{chap:immed}.
+
+    \section{expression availability and operators}
+
+        \index{queue!availability}
+        An expression is available when the contained queue variables are
+        available. This means that the conditional operator {\bf ?:} cannot be
+        used to select an available subexpression where the alternative is not
+        available. For example in the following case -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               q1 <<- l ? q2 : q3;
+        \end{lstlisting}
+        where {\bf q1} to {\bf q3} are queues, all three queues must be available
+        for the statement to execute even though only one of queues {\bf q2} and
+        {\bf q3} will be read. Similarly if this statement is enclosed in a
+        {\bf sync} control structure the sync body will not be executed
+        until all three queues are avaliable regardless of conditional selection
+        by variable {\bf l}.
+
+    \section{selectvalue mode assignment}\label{sec:target_selvalass}
+
+        \index{assignment!selectvalue mode}
+        A selectvalue assignment statement has the form -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable |- expression;
+        \end{lstlisting}
+        
+        Whole structs or arrays can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable |- variable;
+        \end{lstlisting}
+
+        \subsubsection{immediate execution}
+        
+            On immediate execution this generates one in-line target
+            statement.
+        
+        \subsubsection{target execution}
+        
+            Selectvalue assignment is assignment to a selectvalue variable.
+
+            RHS expressions may be immediate or target mode.
+
+            A selectvalue variable represents a bus, each assignment being a
+            drive onto the bus\footnote{CLB logic is used by default but where
+            the target device has internal 3-state buffers these can be used to
+            implement selectvalue variables. The attribute "threestate" is used
+            to force the use of 3-state buffers.}. This is a target assignment
+            in that the assignment is only valid for one clock cycle - the bus
+            is driven for one cycle when this statement executes. If the RHS
+            contains one or more queue reads execution may be delayed waiting for
+            queue availability \index{queue!availability}. The assignment can be
+            held if required by repeated execution.
+            
+            For compound types assignments can be made to individual fields
+            or array members. On any clock cycle when a component of the
+            variable is not assigned the output for that component will be
+            the default value specified when the selectvalue variable was
+            created.
+        
+            A selectvalue variable has a single clock domain for reading and
+            writing. When a selectvalue variable is created using the inbuilt
+            procedure {\bf selectvalue()} \autorefph{sec:ipselectvalue} it has
+            no associated clock domain. The clock domain is established by
+            \blist
+            \item   the first assignment to the variable (or component of
+                    the variable if the type is compound)
+            \item   the first use of the value
+                    of the variable or one of its components
+            \blend
+            The clock domain of the variable will be set to the current clock
+            domain.
+            
+            If a value to be assigned to a selectvalue variable has a different
+            clock domain it must be converted by one of the inbuilt functions
+            {\bf sample()} \autorefph{sec:ifsample} or {\bf accept()}
+            \autorefph{sec:ifaccept}. Note that evaluation of the variable in
+            any context, for example in inbuilt or library modules, procedures
+            or functions, will establish a clock domain if the variable does not
+            yet have a clock domain. This will always be the current clock
+            domain.
+
+            If the RHS expression contains queue variables their output (read)
+            clock domain must be the current clock domain (if this is the first
+            read or examine for a queue its output domain will be established by
+            the assignment).
+
+            Whether the assignment is of a primitive or a compound type the
+            widths of individual words may differ as long as the primitive types
+            match. Bits and unsigned integers will be padded or truncated as
+            needed. Signed integers will be truncated or sign extended. Signed
+            integers may not be assigned to unsigned integers. However, unsigned
+            integers may be assigned to signed integers, since size adjustments
+            are made by truncation or zero padding the sign of the result may be
+            incorrect unless the LHS is at least one bit larger than the RHS.
+
+
+
+
+
+    \section{static mode assignment}\label{sec:stat_ass}
+
+        \index{assignment!static mode}
+        Assignment to a static variable has the forms
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable <- expression;
+               variable +<- expression;
+               variable -<- expression;
+               variable *<- expression;
+               variable++;
+               variable--;
+        \end{lstlisting}
+        Where a variable is a structure or an array, fields or members can be
+        assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable.field <- expression;
+               variable[subscript] <- expression;
+               variable.field +<- expression;
+               variable[subscript] +<- expression;
+               variable.field -<- expression;
+               variable[subscript] -<- expression;
+               variable.field *<- expression;
+               variable[subscript] *<- expression;
+               variable.field++;
+               variable.field--;
+               variable[subscript]++;
+               variable[subscript]--;
+        \end{lstlisting}
+        or any depth of nesting of fields and members can be used. Whole
+        structures or arrays can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable <- variable;
+        \end{lstlisting}
+        
+        The increment and decrement statement forms can only be applied to types
+        "int:" and "uint:". The \verb'+<-', \verb'-<-' and \verb'*<-' forms can
+        only be applied to types "int:", "uint:", "fixed:" and "ufixed:". Type
+        conversions in assignment are allowed in many cases and these are
+        described in \autorefph{sec:assignments}.
+        
+
+        \subsubsection{immediate execution}
+        
+            On immediate execution this generates one in-line target statement.
+        
+        \subsubsection{target execution}        
+
+            RHS expressions and variables may contain queues or queue fields
+            which are read or examined.
+
+            Regardless of any context or enclosing constructs which control
+            execution, a static assignment can only execute if the RHS
+            expression is available.
+
+            If the LHS variable is a struct or an array several assignment
+            statements may be needed. These assignment statements may be
+            grouped to execute simultaneously.
+
+            Where assignment to a static variable which is a struct or array
+            is incomplete, the unassigned fields or array members will be
+            unchanged.
+
+            Whether the assignment is of a primitive or a compound type the widths
+            of individual words may differ as long as the primitive types match.
+            Bits and unsigned integers will be padded or truncated as needed. Signed
+            integers will be truncated or sign extended. Signed integers may not be
+            assigned to unsigned integers. However, unsigned integers may be
+            assigned to signed integers, since size adjustments are made by
+            truncation or zero padding the sign of the result may be incorrect
+            unless the LHS is at least one bit larger than the RHS.
+
+            In any one execution cycle the same array member or struct field
+            may not be assigned to by more than one assignment statement. Such
+            conflicts cannot be identified in general by the compiler. If an
+            assignment conflict occurs the resulting value is undefined.
+            \footnote{At the moment the compiler does not detect any
+            assignment conflicts. It may in a future version. Assignment
+            conflicts could also be detected at execution time and cause
+            exceptions to be thrown, but that has not been implemented yet.}
+            
+            Optimisation note: if an immediate value, or a variable
+            which is value mode and is constant, is assigned to a static
+            variable or one of its components, the constant is checked
+            against the initial value for that variable or component. If
+            they are the same the variable or component is reset to its
+            initial value rather than being assigned. This has
+            benefits in both gate usage and speed -
+            \blist
+            \item   with one fewer assignment the data input logic is simplified
+                    using fewer gates
+            \item   simpler data input logic means that it will usually be faster
+            \item   reset logic is inherently simpler, using fewer gates than
+                    data input logic
+            \item   being simpler reset logic is inherently faster
+            \blend
+            
+            A static variable, or one or more components of a variable, can be
+            explicitly reset by using the inbuilt procedure
+            {\bf reset()} \autorefph{sec:ipreset}
+                              
+            A static variable has a single clock domain for reading and
+            writing. When a static variable is created using the inbuilt
+            procedure {\bf static()} \autorefph{sec:ipstatic} it has no
+            associated clock domain. The clock domain is established by -
+            \blist
+            \item   the first assignment to the variable (or component of
+                    the variable if the type is compound)
+            \item   the first use of the value
+                    of the variable or one of its components
+            \blend
+            The clock domain of the variable will be set to the current clock
+            domain.
+
+            {\bf Note that evaluation of the variable in any context, for example
+            in inbuilt or library modules, procedures or functions, will establish
+            a clock domain if the variable does not yet have a clock domain.}
+            This will always be the current clock domain (unless the code has
+            been explicitly written to establish the clock domain of its argument
+            to something other than the current clock domain, in which case
+            this will presumably be well documented).
+
+            If the {\bf reset()} inbuilt procedure is used on a static variable -
+            \blist
+            \item   if the static variable has a clock domain established, it
+                    must be the same as the current clock domain
+            \item   if the static variable does not have a clock domain established,
+                    it will be given the current clock domain
+            \blend
+            
+            An assignment executes on one clock cycle unless the RHS
+            expression contains queue reads on queues which are not available.
+
+
+
+    \section{queue mode assignment}\label{sec:queue_ass}
+
+        \index{assignment!queue mode}
+        Assignment to a queue variable is of the form
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable <<- expression;
+        \end{lstlisting}
+        Where a variable is a structure or an array, fields or
+        members can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable.field <<- expression;
+               variable[subscript] <<- expression;
+        \end{lstlisting}
+        or any depth of nesting of fields and members can be used. Whole
+        structures or arrays can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable <<- variable;
+        \end{lstlisting}
+
+        \subsubsection{immediate execution}
+        
+            On immediate execution this generates one in-line target statement.
+        
+        \subsubsection{target execution}
+        
+            The {\bf \verb'<<-'} assignment writes to a queue. The datum
+            becomes available on the queue output.
+            
+            An assignment executes on one clock cycle unless the RHS
+            expression contains queues which are not available (are empty) or
+            the LHS queue is not available (is full).
+        
+            A queue variable has a clock domain for reading and another clock
+            domain for writing. When a queue variable is created using the
+            inbuilt procedure {\bf queue()} \autorefph{sec:ipqueue} it has no
+            associated clock domains.
+
+            The clock domain for writing is established by -
+            \blist
+            \item   the first write (assignment) to the queue variable (or
+                    component of the variable if the type is compound)
+            \item   the use of the write availability operator \verb'>' on the
+                    queue
+            \item   a call to {\bf queuewritestatus()} on the queue
+            \item   a call to {\bf reset()} on the queue
+            \blend
+            If the write clock domain is not yet established in any of these
+            situations then it will be set to the current clock domain,
+            otherwise it must be the same as the current clock domain.
+
+            The clock domain for reading is established by -
+            \blist
+            \item   the first read or examine of the variable (or component of
+                    the variable if the type is compound)
+            \item   the use of the read availability operator \verb'<' on the
+                    queue
+            \item   a call to {\bf queuereadstatus()} on the queue
+            \blend
+            If the read clock domain is not yet established in any of these
+            situations then it will be set to the current clock domain,
+            otherwise it must be the same as the current clock domain.
+
+            The read and write clock domains will usually be the same, in which
+            case the queue variable is called {\bf synchronous}.
+
+            When a queue variable is written (assigned), If it has no write
+            clock domain the current clock domain will be established as the
+            write clock domain of the variable. If it has a write clock domain
+            it must be the same as the current clock domain.
+
+            When a queue variable is written (assigned), the clock domain of the
+            assigned value must be the same as the current clock domain or
+            null.
+
+            If the {\bf reset()} inbuilt procedure is used on a queue variable -
+            \blist
+            \item   if the queue variable has a write clock domain established,
+                    it must be the same as the current clock domain
+            \item   if the queue variable does not have a write clock domain
+                    established, it will be given the current clock domain
+            \blend
+
+            When a queue variable read or examined the resulting value will have
+            the read clock domain of the queue variable.
+
+            RHS expressions and variables may contain queues or queue fields,
+            which may be read or examined.
+
+            Regardless of any context or enclosing constructs which control
+            execution, a queue assignment can only execute if the LHS queue is
+            available and the RHS expression is available.
+
+            When a queue of compound data type is accessed the entire compound
+            datum is read or written. On a read any unused struct fields or
+            array members are ignored. On a write any unassigned struct fields
+            or array members will be clear (0, false etc.)\footnote{For an
+            enumerated type the value with an ordinal of 0 will be assigned. If
+            the enumerated type has been created using enumv(), rather than
+            enum(), such that there is no value for ordinal 0 then the assigned
+            value will be invalid!}.
+
+            Compound types or subtypes can be assigned in a single assignment
+            statement where the RHS can be expressed as a single variable or
+            part of a variable. For example 
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   queue(p, "[4][2]uint:8");
+                   static(s, "[4][4]uint:10");
+
+                   p <<- s[][1..2];
+            \end{lstlisting}
+            will assign a subarray of static variable {\em s} to queue {\em p}
+            and will truncate the 10 bit unsigned integers to 8 bit.
+
+            Members of a compound data type can be accessed in separate
+            assignment statements as long as those statements are executed
+            simultaneously so that a single read or write occurs. Simultaneity
+            can be enforced by enclosing these statements in a {\em sync}
+            block. For example in the following
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   struct(s,
+                       f1,     "log",
+                       f2,     "uint:8"
+                   );
+                   queue(q1, s);
+                   queue(q2, s);
+
+                   q1.f1 <<- q2.f1;
+                   q1.f2 <<- q2.f2 + 3;
+            \end{lstlisting}
+            the two statements would execute simultaneously since the queue
+            dependencies are the same (q1 and q2). Where different queues are
+            used we need to synchronise the statements, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   struct(s,
+                       f1,     "log",
+                       f2,     "uint:8"
+                   );
+                   queue(q1, s);
+                   queue(q2, s);
+                   queue(q3, s);
+
+                   sync {
+                       q1.f1 <<- q2.f1;
+                       q1.f2 <<- q3.f2;
+                   }
+            \end{lstlisting}
+            
+            In any one execution cycle the same array member or struct field may
+            not be assigned to by more than one assignment statement. Such
+            conflicts cannot be identified in general by the compiler. If an
+            assignment conflict occurs the resulting value is undefined
+            (actually the data are ORed - also see the footnote in the
+            discussion of assignment conflicts for static assignments in the
+            previous section.) It is usual to rely on the logic of the code and
+            its timing to ensure mutual exclusion but in the case of data
+            resulting from multiple asynchronous external sources this may not
+            be possible. In this case the waitpri() control structure, section
+            \autorefph{sec:waitpri}, can be used to arbitrate.
+
+            \index{null!queue}
+            \index{queue!null}
+            A queue may have data type "null", e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   queue(trigger, "null");
+            \end{lstlisting}
+            in which case it will have no
+            associated data. Such a queue can be used to signal an event.
+            A queue whose data type is {\em null} can be written by
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   variable <<- null;
+            \end{lstlisting}
+            and can be read by
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   null <<- variable;
+            \end{lstlisting}
+            
+            A queue of type null can be assigned to another queue of type null.
+            
+            A queue of type null cannot return a value on reading, however
+            it can be used as if it were type "log" by casting it to
+            "log", in which case the value returned will always be {\bf true}.
+            
+            In the case of the target conditional statements {\bf when} and
+            {\bf sync when} the conditional expression can be a single queue
+            mode variable of type "null" which will be treated as though of
+            type "log" whose value will always evaluate as TRUE.            
+            
+            Thus a wait on a null queue can be explicit as in -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (trigger) sync {
+                       .
+                       .
+                       .
+                   }
+            \end{lstlisting}
+            Alternatively an assignment to null can be used. In the following
+            example it is enclosed in a sync block so will wait until the
+            queue is available and will then explicitly acknowledge (read)
+            the queue by assignment to null -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync {
+                       null <<- trigger;
+                       .
+                       .
+                       .
+                   }
+            \end{lstlisting}
+            In each case null queue {\bf trigger} will be waited upon and
+            then read.
+            
+            In other contexts a null queue may be cast to type "log" where
+            again its value will always be true.
+
+            To acknowledge queues whose values have been extracted by the
+            examine operator {\bf ?} assignment to null can be used (read and
+            ignore the result) -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   null <<- expression;
+            \end{lstlisting}
+            where if the expression contains any queues they will be
+            acknowledged without their values being read. It would be usual
+            for the RHS to be either a queue variable or a value variable
+            representing an expression. In the latter case any queue reads
+            contained in the expression would occur and be acknowledged.
+            An expression, rather than a variable, occurring on the RHS
+            would generate unused code (though this would be discarded by
+            the code generator optimiser) and hence is pointless, though
+            not erroneous.
+
+            Whether the assignment is of a primitive or a compound type the
+            widths of individual words may differ as long as the primitive
+            types match. Bits and unsigned integers will be padded or
+            truncated as needed. Signed integers will be truncated or sign
+            extended. Signed integers may not be assigned to unsigned
+            integers. Unsigned integers may be assigned to signed integers,
+            but since size adjustments are made by truncation or zero
+            padding the sign of the result may be incorrect unless the
+            LHS is at least one bit larger than the RHS.
+
+
+
+
+
+
+
+    \section{output mode conditional assignment}\label{sec:target_outputtass}
+
+        \index{assignment!selectvalue mode}
+        Conditional assignment of output mode variables is used where 3-state
+        output is required.
+        
+        Unconditional assignment to an output mode variable was described
+        previously (\autorefph{sec:outputiass}).
+
+        Conditional output mode assignment can have the form -
+        \begin{lstlisting}[gobble=8, language=threepl]
+        when (condition)
+               variable |- expression;
+        \end{lstlisting}
+        where the {\bf when} is at the top level, i.e. not nested within any other
+        control structure except a module. It is preferable that the condition be
+        simply a static variable of type "log" with the {\bf direct} and {\bf iob}
+        attributes set to true since in that case the static variable flip-flops
+        can be placed in the IO blocks for better timing.
+        
+        A conditional assignment may also be executed within any normal execution
+        thread, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+        seq {
+            .
+            .
+            variable |- expression;
+            .
+            .
+        }
+        \end{lstlisting}
+        
+        In each of the above the pad output will be in high impedance state except
+        for the clock cycle during which the conditional assignment statement
+        executes.
+                
+        The LHS variable may have a compound type and the assignment may reference
+        all or part of that variable. Assignments to components of a compound type
+        may be conditional, unconditional or a mixture of both.
+        
+        Conditional or unconditional assignment to a component of a variable can
+        only be done once.
+        
+        An output mode variable must have at least a {\bf loc} attribute,
+        providing a location for each pad.
+
+        \subsubsection{immediate execution}
+        
+            On immediate execution this generates one in-line target
+            statement.
+        
+        \subsubsection{target execution}
+
+            RHS expressions may be immediate or target mode. If the value to be
+            assigned has a different clock domain it must be converted by one of
+            the inbuilt functions {\bf sample()} \autorefph{sec:ifsample} or {\bf
+            accept()} \autorefph{sec:ifaccept}.
+            
+            A RHS expression cannot contain a queue read (but can contain a queue
+            examine or a queue availability operator).
+
+            An output variable represents a connection off-chip via output buffers
+            and pads. The buffers may be 2-state or 3-state.
+            
+            In the Xilinx implementation if the source of the output is a static
+            variable or an examined synchronous queue variable then the associated
+            flip-flops can be located in the IOBs. This can be done by a suitable
+            flag to the Xilinx tools but is best done by explicitly setting the IOB
+            attribute on the static variable since the 3PL netlist optimiser is
+            then aware of this. If the flip-flops go to other destinations as well
+            as the output buffers then they will be replicated, the replicants
+            being connected in parallel and located in IOBs while the originals
+            stay in CLBs. Similarly if the expression controlling conditional
+            output is a static variable or an examined synchronous queue variable
+            then the associated flip-flop will be replicated for each output bit,
+            the replicants being connected in parallel and located in IOBs.
+            Placement of output flip-flops in IOBs removes the necessity to apply
+            timing constraints to these outputs. In light of the above, in the
+            following code -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (l)
+                       o |- v;
+            \end{lstlisting}
+            {\bf l} and {\bf v} should be static variables if possible and {\bf o}
+            should have attribute {\bf direct} set. As described above in that case
+            the flip-flops for the variable will be located in the IOBs and the
+            propagation time from flip-flop to pad will be the minimum achievable
+            (controlled also by slew rate and drive current attributes). If those
+            conditions are not met then a timing constraint from the clock domain
+            to the output pads will usually need to be applied.
+
+            Whether the assignment is of a primitive or a compound type the widths
+            of individual words may differ as long as the primitive types match.
+            Bits and unsigned integers will be padded or truncated as needed.
+            Signed integers will be truncated or sign extended. Signed integers may
+            not be assigned to unsigned integers. Unsigned integers may be assigned
+            to signed integers, but since size adjustments are made by truncation
+            or zero padding the sign of the result may be incorrect unless the LHS
+            is at least one bit larger than the RHS.
+        
+            An output variable has a write clock domain but no read clock domain.
+            When an output variable is created using the inbuilt procedure {\bf
+            output()} \autorefph{sec:ipoutput} it has no associated clock domain. Its
+            clock domain is established by the first assignment to the variable (or
+            component of the variable if the type is compound) and is the current
+            clock domain. The RHS exression must also have the current clock domain
+            as its output (read) clock domain.
+
+
+
+
+
+
+
+
+
+
+    \section{the {\bf seq}, {\bf par} and {\bf sync} control structures}\label{sec:seqparsync}
+
+        \index{target!seq}
+        \index{target!par}
+        \index{target!sync}
+        These are of the form -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           seq {
+               body
+           }
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+           par {
+               body
+           }
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+           sync {
+               body
+           }
+        \end{lstlisting}
+        The body is executed sequentially during immediate execution but any
+        target statements encountered in the body generate code for the
+        target which will execute them sequentially (seq) or in parallel (par
+        and sync).
+
+        Target code in a {\bf seq \{\dots\}} block will be executed
+        sequentially in the target. It may contain any blocks or statements.
+        Each component of the body will execute when the previous one has
+        completed. Any components may wait on queues. In the target the block
+        will complete when the last component has finished execution.
+
+        Target code in a {\bf par \{\dots\}} block will be executed in
+        parallel. It may contain any blocks or statements. All components
+        will execute once. Any component may wait on queues. The block will
+        complete when all components have executed.
+
+        \index{queue!availability}
+        Target code in a synchronised block {\bf sync \{\dots\}} will be
+        executed in parallel when all queues read or written (but not examined
+        or availability tested) anywhere in the block are available. This
+        includes any queues read or written in procedures or functions called.
+        Note that if a queue read is conditional this is not taken into account
+        and the sync will still wait on read availability.
+        
+        Note that the {\em sync} only controls initial entry into the parallel
+        block and not any subsequent behaviour. For that reason it would be
+        unusual, though not erroneous, to include other blocks or loops within a
+        {\em sync} block.
+
+        Using a {\em sync} block can improve code by taking the queue
+        availability test away from individual statements in the block and
+        using a single test instead. In many cases the compiler recognises
+        that code is within a {\em sync} block and omits the queue
+        availability test. This is done with care since later queue reads in
+        say a {\em seq} block within a {\em sync} block need to check queue
+        availability since another read may have been done since the {\em
+        sync} availability test.
+
+
+
+
+
+
+
+
+    \section{the {\bf when} control structure}\label{sec:when_struct}
+    
+        \index{statement!when}
+        The {\bf when} has the formats -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               when (expression)
+                   body
+        \end{lstlisting}
+        and
+        \begin{lstlisting}[gobble=8, language=threepl]
+               when (expression)
+                   true_body
+               else
+                   false_body
+        \end{lstlisting}
+
+        The expression must evaluate to a logical result (see exception below)
+        and is usually target mode, but it may be immediate mode. If the test
+        expression is a constant value mode variable, or is immediate mode, then
+        the test will be omitted in the target code and the true or false block
+        will be created as appropriate. If the test expression is not a constant
+        value mode variable then it must have a single clock domain which is the
+        same as the current clock domain.
+        
+        The test expression may be a queue of type "null" in which case it will
+        be treated as though of type "log" whose value is true. This is treated
+        as a special case and hence a null queue cannot occur within a logical
+        expression without casting it to type "log".
+        
+        The code bodies are a single statement, which may be a {\em seq},
+        {\em par} or {\em sync} block. A code body may be a plain block
+        {\em \{\dots\}} as long as it does not contain more than one target
+        statement.
+        
+        Either of the above forms of {\bf when} may be followed by an
+        exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body or
+            bodies of the {\em when}.
+        
+        \subsection{target execution}
+
+            In the first form the target body will be executed if the
+            expression is true. In the second form one of the target code
+            bodies will be executed as selected. Following either of the above
+            the {\bf when} will complete execution.
+
+            If the test expression contains queue variables the test expression
+            may wait on queue availability \index{queue!availability}. If the test
+            expression reads a queue it will remove a datum. If a statement
+            within an enclosed code body also reads the same queue, care must be
+            taken to ensure that these reads occur simultaneously, otherwise two
+            data will be read rather than one (see examples below). In some
+            cases it may be best to use an examine rather than a read on a queue
+            variable within a test expression for a control structure.
+            
+            The {\em when} test adds no execution cycles so the {\em when}
+            executes in the number of cycles taken by the code body executed,
+            with the exception that a missing code body will execute in one
+            clock cycle (for example if there is no {\em else} body and the
+            test is false then the {\em when} will take one clock cycle).
+            
+            The following is an example of the correct use of queues -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (p == 3)
+                       s <- p;
+            \end{lstlisting}
+            The {\bf when} test will wait on the availability of queue {\bf p}.
+            Once {\bf p} is available its value will be tested. If the value
+            of the queue variable is 3, the assignment to the static variable
+            {\bf s} will be performed. If the test fails queue {\bf p} will
+            nevertheless have been read during evaluation of the test 
+            expression. If the test succeeds, the queue read in the test
+            expression and the queue read in the enclosed assignment statement
+            will take place in the same clock cycle and hence only a single read
+            of one datum will take place.
+            
+            The following example is incorrect -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (q1 == 3)
+                       s <- q1 + q2;
+            \end{lstlisting}
+            The {\bf when} test will wait on the availability of queue {\bf q1}.
+            Once {\bf q1} is available its value will be tested and if
+            successful the assignment will be executed. The assignment statement
+            may now wait on the availability of queue {\bf q2}, but the read of
+            queue {\bf q1} in the test expression will have gone ahead
+            regardless. When queue {\bf q2} becomes available and queue {\bf q1}
+            again becomes available {\bf q1} will be read again. This example is
+            easily fixed by enclosing the {\bf when} in a sync block -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync {
+                       when (q1 == 3)
+                           s <- q1 + q2;
+                   }
+            \end{lstlisting}
+            which will wait to enter the {\bf when} until all enclosed queues
+            are available, at which time the {\bf when} will execute both its
+            test evaluation and conditionally the enclosed statement in one
+            clock cycle. Alternatively it could have been written as -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (<q1 && ?q1 == 3)
+                       s <- q1 + q2;
+            \end{lstlisting}
+            which would do an examine of {\bf q1}, rather than a read, in the
+            test expression (having first verified availability of {\bf q1}).
+            This is less elegant than the previous solution and is less
+            efficient.
+            
+            The compiler recognises cases where a {\bf when()} contains
+            queue reads or writes in one of the code bodies and also reads
+            some but not all of these queues in the test expression and
+            issues a warning.
+
+            Note that {\bf when} statements pass execution control
+            through the test expression within the same cycle that the body
+            executes. There are two consequences of this that should be noted.
+            
+            Firstly the signal delay through the test expression may reduce
+            the timing margins for the first statement (seq block) or statements
+            (par block) in the code bodies. In some cases it may for example
+            be possible to change the order of statements in a seq block so that
+            a complex statement is not the first.
+            
+            Secondly nested {\bf when} statements concatenate the control delay
+            through each of their test expressions. For this reason the depth to
+            which it is prudent to nest {\bf when} statements depends on the clock
+            frequency. At high clock frequencies it is preferable to use multiple
+            parallel {\bf when} statements, for example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (l1)
+                       when (l2)
+                           statement1
+                       else
+                           statement2
+            \end{lstlisting}
+            may be better written as -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (l1 && l2)
+                       statement1
+                   when (l1 && !l2)
+                       statement2
+            \end{lstlisting}
+            assuming that these are in a parallel execution context (and
+            assuming that the clock frequency is too high for the nested
+            example). Note that if a logical expression is complex, e.g. -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (i < 4567)
+                       when (l2)
+                           statement1
+                       else
+                           statement2
+            \end{lstlisting}
+            its duplication can be avoided by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   value(l, "log", i < 4567);
+                   when (l && l2)
+                       statement1
+                   when (l && !l2)
+                       statement2
+            \end{lstlisting}
+                    
+            If an exception termination construct is appended, execution within
+            the {\bf when} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+
+
+
+
+
+
+    \section{the {\bf sync when} control structure}\label{sec:sync_when_struct}
+    
+        \index{statement!sync when}
+        The {\bf sync when} has the format -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               sync when (expression) {
+                   body
+               }
+        \end{lstlisting}
+
+        The expression must evaluate to a logical result (see exception below)
+        and is usually target mode, but it may be immediate mode. If the test
+        expression is a constant value mode variable, or is immediate mode, then
+        the test will be omitted in the target code and the code block will be
+        created or not as appropriate. If the test expression is not a constant
+        value mode variable then it must have a single clock domain which is the
+        same as the current clock domain. The test expression cannot contain
+        unbuffered queue reads.
+
+        The test expression may be a queue of type "null" in which case it will
+        be treated as though of type "log" whose value is true. This is treated
+        as a special case and hence in general a null queue cannot occur within
+        a logical expression without casting it to type "log".
+
+        The code body in braces is a parallel block as in the case of {\bf sync}
+        and {\bf sync while}. The code block cannot contain unbuffered queue
+        reads or writes.
+        
+        The {\bf sync when} may be followed by an
+        exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body of
+            the {\em sync when}.
+        
+        \subsection{target execution}
+
+            The {\bf sync when} will execute the enclosed code block if the
+            test expression is true and all queue variables in the test
+            expression and code block are available. If not, execution of the
+            statement terminates. This differs from a {\bf when} inside a 
+            {\bf sync} where the {\bf sync} will wait on queue availability.
+            If the {\bf sync when} fails execution of the thread continues
+            with no delay, i.e. the statement takes no clock cycles to execute.
+            
+            It is important to note that the {\bf sync} takes no account
+            of conditional access to queues within its block, i.e. -
+            \blist
+            \item   queue reads or writes within a {\bf when} statement
+            \item   queue reads within operands to the ternary conditional
+                    operator \verb'?:'
+            \blend
+            If queue reads or writes are located within the block the {\bf sync}
+            will test for availability on all of these before execution of the
+            target code in the block, even though some of these queue accesses
+            may not eventuate due to conditional execution.
+            
+            For example in the following case -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                queue({q1, q2", "log");
+                sync when (q1) {
+                    seq {
+                        q1 <<- q2;
+                        q2 <<- q3;
+                    }
+                }
+            \end{lstlisting}
+            the statement will only succeed if queue q2 contains a single datum
+            since it has the default depth of 2. If q2 is empty \verb'<q2' will be
+            false and if q2 is full \verb'>q2' will be false. No account is taken
+            of the fact that q2 is read before it is written.
+            
+            The target code body will be executed if the expression is true and all
+            queues read in the test expression or read or written anywhere in the
+            code body are available. Statements in the code body are executed in
+            parallel. If any queues to be read in the test expression, or any queues
+            in the code body, are not available the {\bf sync when} will not
+            evaluate the test expression and hence will not execute the code body
+            and execution of the {\bf sync when} will finish. Similarly if
+            evaluation of the test expression yields a false result the code body
+            will not be executed.
+
+            If the test expression contains queue variables the test expression
+            will not wait on their availability \index{queue!availability}. No
+            queues in the test expression will be read unless all queues to be
+            read in the test expression are available and all queues to be read
+            and written in the code block are available.
+
+            The {\em sync when} test adds no execution cycles so the {\em sync
+            when} executes in the number of cycles taken by the code body.
+
+            Note that {\bf sync when} statements pass execution control
+            through the test expression within the same cycle that the body
+            executes. The signal delay through the test expression may reduce
+            the timing margins for the first statement (seq block) or statements
+            (par block) in the code bodies. In some cases it may for example
+            be possible to change the order of statements in a seq block so that
+            a complex statement is not the first.
+                    
+            If an exception termination construct is appended, execution within
+            the {\bf sync when} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+            
+            The {\bf sync when} is intended to be used where queue waits are to be
+            avoided. For example to control queue assignment one might write -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (go)
+                       q2 <<- q1;
+            \end{lstlisting}
+            The disadvantage of this is that if {\bf go} is true but {\bf q1} is not
+            available for reading, or {\bf q2} is not available for writing, then
+            the assignment statement will hang waiting for queue availability.
+            If we attempt to avoid entering the {\bf when} by enclosing it in
+            a {\bf sync} -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync {
+                       when (go)
+                           q2 <<- q1;
+                   }
+            \end{lstlisting}
+            the {\bf sync} itself will hang waiting for availability. We could
+            change the first attempt to -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (>q2 && <q1 && go)
+                       q2 <<- q1;
+            \end{lstlisting}
+            which achieves what we want. The {\bf when} will not execute the assignment
+            unless the two queues are available and {\bf go} is true. If these
+            conditions are not met the {\bf when} finishes and passes execution on.
+
+            Using a {\bf sync when} we could instead write -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync when (go) {
+                       q2 <<- q1;
+                   }
+            \end{lstlisting}
+            The {\bf sync when} achieves the same result as the final example above
+            while avoiding the necessity of finding all queue reads and writes in
+            the code block and explicitly testing for their availability.
+            
+            If in the above example the variable {\bf go} was a queue then the last
+            two examples are no longer equivalent. A queue read encountered in the
+            test expression of a {\bf when} will cause the {\bf when} to hang
+            waiting for the queue to become available before it can evaluate its
+            test expression. The {\bf sync when} will abandon any attempt to evaluate the
+            test expression in that case since it can see that the queue is not
+            available. It could notionally be coded as -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (<go)
+                       when (go && >q2 && <q1)
+                           q2 <<- q1;
+            \end{lstlisting}
+            While this is functionally equivalent to the use of {\bf sync when} as
+            listed above, it generates logic which is much less efficient, both
+            in path delays and resource usage.
+
+
+
+
+
+    \section{the {\bf branch} control structure}\label{sec:branch_struct}
+    
+        \index{statement!branch}
+        The {\bf branch} has the format -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               branch (expression) {
+               case cexpr1:
+                   body1
+               case cexpr2:
+                   body2
+               default:
+                   body3
+               }
+        \end{lstlisting}
+        
+        This branches to one of the case code bodies as a result of testing
+        the value of the expression, which must be a target mode. The case
+        expressions must be immediate mode. A case body target code does not flow
+        on to the next case body target code.
+        
+        A case may have a comma separated list of immediate expressions
+        within braces, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+               branch (expression) {
+               case {cexpr1, cexpr2, cexpr3}:
+                   body1
+               case cexpr4:
+                   body2
+               }
+        \end{lstlisting}
+        in which case if the branch expression matches any of the case
+        expression values the code body will be executed.
+
+        Case values are immediate expressions which evaluate to constants for
+        the target code. The resulting case values must be unique. Primitive
+        types allowed are "bits", "uint", "int" and "enum".
+
+        The branch statement terminates when the selected code body terminates.
+
+        The default case is optional. If no cases are matched then no target
+        statements are executed and the branch statement terminates.
+
+        The branch expression and the case expressions must be compatible types.
+        The test expression must have a single clock domain which is the same as
+        the current clock domain.
+
+        The code bodies are single statements, which may of course be {\em seq},
+        {\em par} or {\em sync} blocks.
+        
+        The {\bf branch} may be followed by an exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out through all the case
+            expressions and the associated code bodies in order.
+        
+        \subsection{target execution}
+
+            The branch test expression is evaluated and compared simultaneously
+            with all case values (the case values are constant in the target
+            code but may have been evaluated from expressions during immediate
+            execution). If the branch test expression value matches a case value
+            then the associated target statement is executed. The target
+            statement may be a control structure containing nested target
+            statements.
+
+            If the test expression contains queue variables the test expression
+            may wait on queue availability \index{queue!availability}. If the test
+            expression reads a queue it will remove a datum. If a statement
+            within an enclosed code body also reads the same queue, care must be
+            taken to ensure that these reads occur simultaneously, otherwise two
+            data will be read rather than one. In some cases it may be best to
+            use an examine rather than a read on a queue variable within a test
+            expression for a control structure if it is known that the queue
+            variable is available for reading.
+
+            The case selection takes no clock cycles but the branch test
+            expression evaluation and parallel case comparison delay is added to
+            the execution delay of every case block. If a case is not matched
+            the {\em branch} statement will take one clock cycle).
+            
+
+
+    \section{the {\bf seq while}, {\bf par while} and {\bf sync while}
+                                                        control structures}
+
+        \index{statement!seq while}
+        \index{statement!par while}
+        \index{statement!sync while}
+        This statement creates a {\bf while} loop in target code. The body
+        of the loop is enclosed in a {\bf seq} block, a {\bf par} block or a
+        {\bf sync} block.
+        
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               seq while (expression) {
+                   body
+               }
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               par while (expression) {
+                   body
+               }
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               sync while (expression) {
+                   body
+               }
+        \end{lstlisting}
+
+        The expression must evaluate to a logical result. It is usually target
+        mode but may be immediate mode. If the expression is immediate and
+        false the body will not be subject to immediate execution and no
+        target code will be generated for the statement. If the expression is
+        immediate and true an infinite target loop will be created. Similarly
+        the test expression may be a constant value mode variable in which
+        case the behaviour is the same as for an immediate expression. If the
+        expression is target mode and is not a constant value mode variable
+        then it must have a single clock domain which is the same as the current
+        clock domain.
+        
+        The code body is one or more statements.
+        
+        Any of the above forms of {\bf while} may be followed by an
+        exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body
+            of the {\em while} as long as the test expression is not immediate
+            mode and false in value.
+        
+        \subsection{target execution}
+
+            The {\bf seq while}, {\bf par while} and {\bf sync while} control
+            structures repeatedly execute the code body while the test
+            expression is true.
+
+            When the expression and body are both available and the expression
+            evaluates to true, control passes to the body.
+
+            When the expression is available and evaluates to false the {\em
+            while} will terminate.
+
+            If the test expression contains queue variables the test expression may
+            wait on queue availability \index{queue!availability}. If the test
+            expression reads a queue it will remove a datum. If a statement within
+            the enclosed code body also reads the same queue, care must be taken to
+            ensure that these reads occur simultaneously, otherwise two data will
+            be read rather than one. See the examples in the section on {\bf
+            when()} (\autorefph{sec:when_struct} above) which also pertain to the
+            target {\bf while()}.
+            
+            The compiler recognises cases where a target {\bf while()} contains
+            queue reads or writes in the code body and also reads some but not
+            all of these queues in the test expression, and in such cases issues
+            a warning.
+            
+            The target {\em while} adds no extra cycles for each loop
+            iteration test, but termination of the loop, even when there
+            are no iterations, takes one extra clock cycle.
+
+            Note that {\bf seq while}, {\bf par while} and {\bf sync while} control
+            structures pass execution control through the test expression within the
+            same cycle that the body executes. As a consequence the signal delay
+            through the test expression may reduce the timing margins for the first
+            statement (seq block) or statements (par block) in the code body. In
+            some cases it may for example be possible to change the order of
+            statements in a seq block so that a complex statement is not the first.
+
+            If an exception termination construct is appended, execution within
+            the {\bf while} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+
+
+    \section{the {\bf seq do while}, {\bf par do while} and {\bf sync
+                                            do while} control structures}
+
+        \index{statement!seq do while}
+        \index{statement!par do while}
+        \index{statement!sync do while}
+        This statement creates a {\bf do while} loop in target code. The body
+        of the loop is enclosed in a {\bf seq} block, a {\bf par} block or a
+        {\bf sync} block.
+
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               seq do {
+                   body
+               } while (expression);
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               par do {
+                   body
+               } while (expression);
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               sync do {
+                   body
+               } while (expression);
+        \end{lstlisting}
+
+        The expression must evaluate to a logical result and must be target
+        mode.
+        
+        The code body is one or more statements.
+        
+        Any of the above forms of {\bf do while} may be followed by an
+        exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see  \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body
+            of the {\em do while}.
+        
+        \subsection{target execution}
+
+            The {\bf seq do while}, {\bf par do while} and {\bf sync do
+            while} control structures repeatedly execute the body while the
+            test expression remains true. This differs from the {\bf while}
+            in that the body is executed at least once.
+            
+            If the code body contains queue reads and the test expression also
+            reads the same queues care must be taken to ensure that where the
+            code body and test expression are intended to read the same datum
+            simultaneously the intent is not thwarted by unexpected waits in
+            the body code. In particular if the test expression contains
+            queue reads then the body code should either not read those queues
+            or else should not contain any other queue reads or any queue writes.
+            The test expression must have a single clock domain which is the
+            same as the current clock domain.          
+            
+            Note that in the following -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   par do {
+                       s <- p;
+                   } while (p);
+            \end{lstlisting}
+            queue {\bf p} will be read on the initial execution of the body.
+            In the next clock cycle the test expression will again read q1
+            and if the result is true the body will execute on the same
+            clock cycle reading queue {\bf p} simultaneously with the test
+            expression.
+                        
+            The compiler recognises cases where a target {\bf do while()} contains
+            queue reads or writes in the code body and also reads some but not
+            all of these queues in the test expression, and in such cases issues
+            a warning.
+            
+            The target {\em while} adds no extra cycles for each loop
+            iteration test, but one extra clock cycle is required for
+            loop termination.
+
+            If an exception termination construct is appended, execution within
+            the {\bf do while} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+
+
+    \section{the {\bf seq\{\dots\}} sequential block}
+
+        \index{statement!seq}
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               seq {
+                   body
+               }
+        \end{lstlisting}
+        The code body is one or more statements.
+        
+        The {\bf seq} may be followed by an exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body
+            of the {\em seq}.
+        
+        \subsection{target execution}
+
+            The {\bf seq} control structure executes the in-line target
+            statements within it sequentially. The control structure
+            finishes when the last contained statement finishes execution.
+            
+            The target {\em seq} adds no extra cycles to the time taken
+            by the code body target statements.
+
+            If an exception termination construct is appended, execution within
+            the {\bf seq} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+
+
+    \section{the {\bf par\{\dots\}} parallel block}
+
+        \index{statement!par}
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               par {
+                   body
+               }
+        \end{lstlisting}
+        The code body is one or more statements.
+        
+        The {\bf par} may be followed by an exception termination
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body
+            of the {\em par}.
+        
+        \subsection{target execution}
+
+            The {\bf par} control structure executes the in-line target
+            statements within it in parallel. The control structure
+            finishes when the last contained statement finishes execution.
+            
+            The target {\em par} adds no extra cycles to the time taken
+            by the longest code body target statement.
+
+            If an exception termination construct is appended, execution within
+            the {\bf par} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+
+
+    \section{the {\bf sync\{\dots\}} synchronised parallel block}\label{sec:sync}
+
+        \index{statement!sync}
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               sync {
+                   body
+               }
+        \end{lstlisting}
+        The code body is one or more statements.
+        
+        The {\bf sync} may be followed by an exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        Exception termination constructs are allowed on several control structures
+        - see \autorefph{sec:excep_term}.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an in-line target statement.
+            Immediate sequential execution is carried out on the code body
+            of the {\em sync}.
+        
+        \subsection{target execution}
+
+            The {\bf sync} control structure executes the in-line target statements
+            within it in parallel but it will not begin parallel execution of
+            the body until all queues read or written within the code body are
+            available \index{queue!availability}. The control structure finishes
+            when the last contained statement finishes execution.
+            
+            It is important to note that the {\bf sync} takes no account
+            of conditional access to queues within its block, i.e. -
+            \blist
+            \item   queue reads or writes within a {\bf when} statement
+            \item   queue reads within operands to the ternary conditional
+                    operator \verb'?:'
+            \blend
+            If queue reads or writes are located within the block the {\bf sync}
+            will wait for availability on all of these before execution of the
+            target code in the block, even though some of these queue accesses
+            may not eventuate due to conditional execution.
+            
+            The {\em sync} adds no extra cycles to the time taken
+            by the code block unless it must wait for queue availability.
+            
+            Because the {\bf sync} block will not execute the code block
+            within it until any queues referenced in that block are available,
+            many statements which would otherwise test for queue availability
+            before executing do not do so if they are within a {\bf sync}
+            block. For example assignment statements immediately
+            within a {\bf sync} block omit the queue availability test.
+            Although the validity of execution is not affected by these
+            considerations, using a {\bf sync}, rather than a {\bf par},
+            to create a parallel block can result in savings in both
+            logic components and path delays. The omission of
+            queue availability tests within a {\bf sync} block does not extend -
+            \blist
+            \item   beyond the initial entry test of a {\bf seq while()\{\}}
+                    or {\bf par while()\{\}} block
+            \item   into a {\bf seq do while()\{\}} or {\bf par do while()\{\}}
+                    block
+            \item   beyond the first target statement of a {\bf seq} block
+            \blend
+            The omission of queue availability tests within a {\bf sync} block
+            does extend into -
+            \blist
+            \item   when blocks
+            \item   par and sync blocks
+            \item   for, while and do while blocks
+            \blend
+            Generally it is good practice to use a {\bf sync} instead of
+            a {\bf par} when queues are used and it is not necessary to
+            wait on individual availability of those queues. It is also
+            preferable to enclose a {\bf when} in a {\bf sync} rather than
+            use {\bf sync} blocks within the {\bf when}, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync {
+                       when (...) par {
+                           a <<- c;
+                           b <<- d;
+                       } else par {
+                           a <<- e;
+                           b <<- f;
+                       }
+                   }
+            \end{lstlisting}
+            or
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   sync {
+                       when (...) sync {
+                           a <<- c;
+                           b <<- d;
+                       } else sync {
+                           a <<- e;
+                           b <<- f;
+                       }
+                   }
+            \end{lstlisting}
+            are preferable to
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   when (...) sync {
+                       a <<- c;
+                       b <<- d;
+                   } else sync {
+                       a <<- e;
+                       b <<- f;
+                   }
+            \end{lstlisting}
+            In the last case each assignment statement will contain logic to
+            test for the availability of the queues concerned, whereas the
+            previous two cases will test only once for all queues before
+            executing the {\bf when}. However, note that this might not be
+            desirable where the alternative blocks in the {\bf when} handle
+            different queues. In the last case the {\bf when} might select the
+            true block and execute it when queues {\em a}, {\em b}, {\em c} and
+            {\em d} are available regardless of the availability of queues {\em
+            e} and {\em f}. The other two cases would not enter the outer sync
+            unless all six queues were available even though two of them would
+            not be used.
+
+            If an exception termination construct is appended, execution within
+            the {\bf sync} can be prematurely terminated
+            - see \autorefph{sec:excep_term}.
+
+    \section{the {\bf [\dots]} inline module}
+
+        \index{module!in-line}
+        The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               [
+                   body
+               ]
+        \end{lstlisting}
+        The code body is one or more statements.
+        
+        \subsection{immediate execution}
+        
+            On immediate execution this generates an inline module.
+            Immediate sequential execution is carried out on the code body.
+        
+        \subsection{target execution}
+
+            The inline module created is separate from the module in
+            which it is created though it shares the scope of the
+            module, procedure or function in which it is created. It does not
+            generate any in-line target code in the module, procedure or
+            function in which it is created.
+
+
+    \section{the exception termination construct}\label{sec:excep_term}
+        
+        \index{target!exception termination}
+        \index{unless construct}
+        \index{unless construct}
+        The control structures -
+        \blist
+        \item   when
+        \item   branch
+        \item   seq
+        \item   par
+        \item   sync
+        \item   sync when
+        \item   seq while
+        \item   par while
+        \item   sync while
+        \item   seq do while
+        \item   par do while
+        \item   sync do while
+        \blend        
+        may be followed by an exception termination
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {}
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               unless (exception_expression) {
+                   exception_body
+               }
+        \end{lstlisting}
+        
+        The exception body is a single target statement but this might be a
+        {\bf seq}, {\bf par} or other type of target code block statement.
+                
+        A control structure with an exception termination cannot be nested
+        within another control structure with an exception termination, either
+        in a control structure code block or an exception code block\footnote{
+        This restriction may be removed in the future.}.
+        
+        \subsection{immediate execution}
+        
+            Following immediate execution of the code within the control structure
+            the code in the exception body, if present, is executed. An exception
+            body cannot execute a {\bf break}, {\bf continue} or {\bf return} (but
+            a {\bf break} or {\bf continue} could be nested within a {\bf for} loop
+            in the exception body for example).
+        
+        \subsection{target execution}
+        
+            When the exception expression is true, any target code executing
+            within the associated control structure will cease, including
+            execution within any nested target control structures. The clock
+            cycle in which the exception expression is true will override any
+            statements executing in the control structure. If there is an
+            exception code block, that code will then be executed. The control
+            structure then terminates as though it had executed to completion
+            normally.
+
+            An exception termination takes a minimum of one cycle.
+
+            Note that if code within a control structure has executed a {\bf
+            stop()} it would never ordinarily complete. An exception termination
+            will force completion of that control structure regardless of the
+            stop(), i.e. the code block will skip to the end despite any
+            intervening stop() even if the code has already reached the stop().
+
+            An exception block may contain a {\bf stop()} in which case
+            execution of the exception block will cease at that point and the
+            associated control structure will not complete.
+
+            If the exception expression does not contain queue reads, it may
+            remain true for an indefinite time. Execution of the associated
+            control structure will cease immediately and any exception code will
+            be executed. Completion of the associated control structure will
+            then occur if the exception expression is now false, otherwise
+            completion will be delayed until the exception expression becomes
+            false. By prolonging the exception expression true value completion
+            of the associated control structure can be delayed. Any excursions
+            of the exception expression value during execution of the exception
+            block will be ignored.
+
+            If the exception expression contains queue reads then the exception
+            condition will occur when a queue read occurs and the resulting value
+            is true. False values are read and ignored. Execution of the
+            associated control structure will cease immediately, any exception
+            code will be executed and completion of the associated control
+            structure will then occur. If the exception expression is available
+            on completion the expression will again be evaluated and if true
+            another exception will occur.
+
+            An exception code block may contain queue reads and writes. These
+            will wait on queue availability as usual.
+
+        \subsection{notes}
+        
+            Cessation of execution on an exception termination includes any
+            statements waiting on queues or {\bf waitpri} statements waiting on
+            priority. The queue variables themselves are not affected, a pending
+            read or write simply failing to execute. A single assignment
+            involving queues can be terminated on an exception by enclosing it
+            in a {\bf seq}, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   seq {
+                       q1 <<- q2 + 2;
+                   } unless (reset) {}
+            \end{lstlisting}
+            but this example is pointless as the statement would simply
+            continue with another execution after the reset. A more likely
+            scenario would be to clear a processing pipeline when the exception
+            occurs, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   seq {
+                       q1 <<- q2 + 2;
+                   } unless (reset) {
+                       par {
+                           reset(q1, q2);
+                           .
+                           . other resetting code
+                           .
+                       }
+                    }
+            \end{lstlisting}
+            The pending assignment will be killed, the queues cleared and other
+            reset code executed, then, if at the top level, the {\bf seq} will
+            resume execution.
+            This might alternatively have been written
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   seq {
+                       q1 <<- q2 + 2;
+                   } unless (reset) {}
+                   
+                   when (reset) par {
+                       reset(q1, q2);
+                       .
+                       . other resetting code
+                       .
+                   }
+            \end{lstlisting}
+            Note that in this case if {\bf reset} is true for one cycle the {\bf
+            seq} will execute again on the following cycle if it is at the top
+            level, since there is no exception code block to delay completion,
+            but the queues will have been cleared on the same clock cycle as the
+            reset prior to continued execution of the {\bf seq}.
+
+    \section{the waitpri () construct}\label{sec:waitpri}
+    
+        \index{waitpri}
+        \index{wait on priority}
+        The {\bf waitpri} control structure allows arbitration between
+        conflicting statements, usually but not necessarily involving queue
+        writes or memory reads or writes. It takes the forms -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               waitpri (pv, p)
+                   statement
+        \end{lstlisting}
+        or
+        \begin{lstlisting}[gobble=8, language=threepl]
+               waitprilock (pv, p)
+                   statement
+        \end{lstlisting}
+        where {\bf pv} is a priority mode variable and {\bf p} is an immediate
+        mode expression with an integer value. {\bf p} can have a non-zero
+        positive value where lower values have a higher priority (zero is
+        reserved). {\bf p} has a maximum value which is one less than the
+        dimension of the priority variable array (default dimension is 20).
+        Priority values for a particular priority variable do not have to be
+        contiguous but must be unique.
+        
+        The priority variable must not be assigned anywhere (the {\bf waitpri
+        ()} and {\bf waitprilock} perform assignments to the priority variable).
+        The values of the priority variable boolean array may be used elsewhere,
+        each member being true when the associated statement executes. The first
+        entry in the priority array, subscript 0, is used to lock out priority
+        requests when execution has been granted by {\bf waitprilock}. This
+        output will go high on the clock cycle following execution granting at
+        any priority level and will remain high until inbuilt target procedure
+        {\bf priunlock()} is called.
+        
+        In the case of {\bf waitprilock} if there are no enclosed target
+        statements (or perhaps no statements at all, i.e. just a ";") then a
+        single cycle {\bf nop()} is provided. The {\bf waitpri} must have a
+        single target statement (which might be a {\bf sync} statement or a {\bf
+        sync when} statement containing multiple target statements).
+        
+        A {\bf waitpri} requests granting of execution of its enclosed
+        statement via the priority variable and the specified priority
+        level. Where queue availability is required this is waited upon
+        if necessary prior to requesting priority. Priority is only
+        held for one clock cycle.
+        
+        The {\bf waitprilock} is the same as {\bf waitpri} but it continues
+        to hold priority. Priority is released by executing the inbuilt
+        inline target code procedure {\bf priunlock()}
+        \autorefph{sec:ippriunlock}. {\bf priunlock()} takes one clock cycle to
+        execute but can usually be executed in parallel with the last
+        statement to be executed under mutual exclusion.
+        
+        The same priority variable may be used by both {\bf waitpri} and
+        {\bf waitprilock} statements.
+        
+        By default each priority level for a priority variable may be
+        used only once. A situation may occur where it is desired to have
+        two or more waitpri or waitprilock statements waiting on the same
+        priority where it is known that the execution logic ensures that
+        they are mutually exclusive. In that case the default can be
+        overridden by setting the attribute "multiplein" true on the
+        priority variable.
+
+        The {\bf waitpri} or {\bf waitprilock} will delay execution until a
+        clock cycle on which -
+        \blist
+        \item   all queue variables in the statement are available
+        \item   the priority variable grants execution, i.e. no higher
+                priority request has pre-empted it
+        \blend
+        These conditions are not latched; queue availability may come and
+        go cycle by cycle as may priority pre-emption. If these conditions
+        are met immediately then execution is not delayed, i.e. no clock cycle
+        overheads are imposed unless queue non-availability or priority
+        pre-emption intervenes.
+
+        The statement enclosed within a {\bf waitpri} or {\bf waitprilock}
+        may only be -
+        \blist
+        \item   a target assignment statement
+        \item   a {\bf sync} block
+        \item   a {\bf par} block which contains no queue reads or writes
+        \item   cmemorywrite()
+        \item   rmemoryread()
+        \item   rmemorywrite()
+        \item   nop() (restricted to single cycle)
+        \item   assert()
+        \item   reset()
+        \blend
+        
+        Inbuilt inline target procedure {\bf stop()} is not allowed.
+        
+        Nested sync or par blocks in turn must also only contain
+        statements from the same restricted list.
+
+        The {\bf waitpri} only guarantees priority for a single cycle so
+        execution must occur in one cycle. Thus the enclosed statement must be
+        controlled at a single point. At this point in execution a request is
+        made for priority to be granted. Thus a single assignment is OK and a
+        {\bf sync} block also controls execution of an enclosed block at a
+        single point (where it waits on queue availability). A {\bf par} block
+        will also exxecute in a single clock cycle as long as it does not read
+        or write a queue mode variable.
+
+        These restrictions are enforced by the compiler.
+        
+        {\bf Note that for a waitprilock these restrictions only apply to the
+        statement associated with the waitprilock, not to following
+        statements up to the priunlock() call!}
+        
+        A {\bf waitpri} or {\bf waitprilock} should not be nested within -
+        
+        \blist
+        \item   a {\bf sync} block
+        \item   a {\bf sync when } block
+        \blend
+        
+        however it is not an error. A sync block is intended to ensure that its
+        enclosed statements (or at least the first of a nested {\bf seq}) can
+        execute simultaneously. An enclosed {\bf waitpri} or {\bf waitprilock}
+        might not execute because of priority pre-emption. While this would not
+        be an error it rather defeats the purpose of the {\bf sync} since the
+        delay means that queue availability would again have to be tested.
+        
+        A {\bf waitpri} or {\bf waitprilock} cannot be nested within another
+        {\bf waitpri} or {\bf waitprilock} as the statement enclosed in the
+        outer one must be able to execute when enabled but the inner one may
+        preclude that. Again the compiler prohibits this.
+        
+        Where a {\bf sync} is nested within a {\bf waitpri} or {\bf
+        waitprilock}  the {\bf waitpri} or {\bf waitprilock} actually passes
+        control of priority seeking to the enclosed {\bf sync} so that the sync
+        waits on both queue availability (if there are queue reads or writes in
+        its body) and priority granting.
+        
+        The following example arbitrates writes to a queue -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               queue({p, q1, q2}, t);
+               
+               waitpri (pv, 1)
+                   p <<- q1;
+               waitpri (pv, 2)
+                   p <<- q2;
+        \end{lstlisting}
+        Data appearing in queues {\bf q1} or {\bf q2} will be written to
+        queue {\bf p}. Where they arrive simultaneously {\bf q1} will prevail.
+        If multiple assignments are required then a {\bf sync} block may be used -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               queue(p, "[2]t");
+               queue({q1, q2, q3}, t);
+               static(s, t);
+
+               waitpri (pv, 1)
+                   sync {
+                       p[0] <<- q1;
+                       p[1] <<- q2;
+                   }
+               waitpri (pv, 2)
+                   sync {
+                       p[0] <<- q3;
+                       p[1] <<- s;
+                   }
+        \end{lstlisting}
+        If sequential statements are to be executed while holding
+        priority then a waitprilock must be used -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               queue(p, t);
+               queue({q1, q2, q3}, t);
+               static(s, t);
+
+               seq {
+                   waitprilock (pv, 1)
+                       p <<- q1;
+                   p <<- q2;
+                   sync {
+                       p <<- q3;
+                       priunlock(pv);
+                   }
+               }
+        \end{lstlisting}
+        
+        A {\bf waitprilock} may be used as an execution gate to inhibit
+        processing of queue data until downstream processing of the previous
+        datum has finished. In that case the priunlock() may be executed
+        in a different execution thread -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               queue(p, "[4]uint:8");
+               queue(q1, "log");
+
+               seq {
+                   static(x, "[4]uint:8");
+                   static({count, addr, i}, "uint:3");
+                   
+                   waitprilock (pv, 1)
+                       sync {
+                           x <- p;
+                           count <- 4;
+                           addr <- 0;
+                           i <- 0;
+                       }
+                   par while (count != 0) par {
+                       rmemorywrite(m, 0, addr, x[i]);
+                       addr++;
+                       count--;
+                       i++;
+                   }
+                   q1 <<- true;
+               }
+               
+               seq {
+                   when (q1)
+                   .
+                   .
+                   .
+                   rmemoryread(m, 1, 0);
+                   par while (...) {
+                       ... <- r memoryout(m, 1);
+                       rmemoryread(m, 1, a);
+                   }
+                   .
+                   .
+                   priunlock(pv);
+               }
+        \end{lstlisting}
+        The first {\bf seq} will attempt to repeatedly execute as long as
+        queues {\bf p} and {\bf q1} are available. The second {\bf seq}
+        repeats, waiting on queue {\bf q1} each time. The assumption here is
+        that the first {\bf seq} alters state that is shared with the second
+        {\bf seq} and this requires that data be received singly. In
+        this example each repeat of the first {\bf seq} will wait at the {\bf
+        waitprilock()} until the second {\bf seq} executes the {\bf
+        priunlock()} at the end of processing the previous datum.
+
+        If the data sources are not queues, conditional statements may
+        be used -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               queue(p, t);
+               static({s1, s2}, t);
+               input(l1, "log", ........);
+               input(l2, "log", ........);
+               
+               when (l1)
+                   waitpri (pv, 1)
+                       p <<- s1;
+               when (l2)
+                   waitpri (pv, 2)
+                       p <<- s2;
+        \end{lstlisting}
+        Note that a {\bf when} cannot be nested within a {\bf waitpri}.
+        
+        {\bf Waitpri} is also useful for arbitration among memory accesses
+        where the arguments to the inbuilt procedure call may or may not
+        involve queues -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               rmemory(m, 1, atype, dtype);
+               static(addr1, atype);
+               queue(addr2, atype);
+               static(data, dtype);
+               value(l, "log");
+               
+               when (l)
+                   waitpri (pv, 1)
+                       rmemorywrite(m, 0, addr1, data);
+               waitpri (pv, 2)
+                   rmemoryread(m, 0, addr2);
+        \end{lstlisting}
+        
+        {\bf Waitpri} may also be used for mutually exclusive control of
+        a bus -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               priority(pv);
+               selectvalue(bus, t);
+               static(s, t);
+               value(l, "log");
+               queue(p, t);
+               
+               when (l)
+                   waitpri (pv, 1)
+                       bus <<- s;
+               waitpri (pv, 2)
+                   bus <<- p;
+        \end{lstlisting}
+        Here when {\bf l} is true static variable {\bf s} will be written to the
+        bus for one clock cycle. In this case no queue waits are involved. When
+        queue {\bf p} is available it will be written to the bus when not
+        pre-empted by the other write.
+        
+        
+
+    \section{the petrinet construct}
+    
+        \index{petrinet}
+        A Petri net contains a number of nodes known as {\em places}. Each
+        place can hold one token (a {\em finite capacity} Petri net where each
+        place has a capacity of 1). A single token can be taken from
+        one or more source places and a single token put in one or
+        more destination places as a result of a transition
+        (an {\em ordinary} petri net). A transition can also additionally
+        depend on a logical {\em predicate}. The Petri net must be
+        {\em marked} to initially place tokens in some places.
+        
+        A Petri net where only one place is marked and each transition
+        has one source place and one destination place is a simple state
+        machine.
+        
+        The Petri net is effectively a module in that the generated logic is
+        not in-line and the Petri net acts as a single queue destination for
+        queue acknowledgement.
+        
+        The syntax is illustrated by the following example -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               petrinet (r) {
+                   initial q1, q2;
+                   q1, q2 -> q3, q4 when (a && (b != 0)) {i = 1; s <- queue1;};
+                   q3 ->> q1 {l1 <- queue1;};
+                   q4 -> q2, q3 when (!l2);
+               }
+        \end{lstlisting}
+        Here the Petri net has four places, {\bf q1} to {\bf q4}. If these
+        identifiers have already been created they must be mode static
+        and type log and must not have been previously assigned. If they
+        have not been created {\bf petrinet} will create them. Normal scope
+        rules apply to these variables. Place variables cannot be assigned
+        values except via the Petri net mechanism. The values of place
+        variables can be used as for normal variables.
+        
+        The first line contains \verb'(r)' which is an optional (parenthesised)
+        reset expression. If present a logical true value of this expression
+        will reset the Petri net to its initial marking. This will override any
+        concurrent transitions. The reset will not affect any transition code
+        blocks that are currently executing.
+        
+        The second line must be present and lists the place marking. In this
+        case places {\bf q1} and {\bf q2} will initially contain tokens (will
+        be true).
+        
+        The following lines describe allowed transitions. A transition
+        is a list of initial (source) places, a right single or double arrow,
+        a list of final (destination) places, an optional predicate and
+        finally an optional code block to be executed on transition. Each
+        transition statement is terminated by a semicolon.
+        
+        A single right arrow specifies a {\em weak} transition. The transition
+        occurs when the source places each contain a token (are true) and the
+        predicate, if present, is true. The transition results in the source
+        places losing their tokens (all become false) and the destination places
+        each receiving a token (all become true). With a weak transition a
+        destination place may already have a token but since it can only hold
+        one token it still contains a single token after the transition.
+              
+        A double right arrow specifies a {\em strict} transition. This
+        has the additional constraint over a weak transition that the
+        transition can only occur if none of the destination places have
+        a token.
+        
+        When a transition occurs an associated code block will be
+        simultaneously executed. If the code block takes longer than one
+        clock cycle to execute then the transition associated with the code
+        block cannot occur again until the code block has finished execution.
+        This does not inhibit any other transitions, including transitions
+        which affect the same places.
+        
+        The optional predicate is an additional condition which must be met
+        for a transition to fire. It may contain any logical expression and that
+        expression may include place variables. Note that all place
+        variables are created prior to analysing the transitions hence
+        they can be used in transition predicates ahead of any other occurrences.
+
+        A transition may be duplicated if the predicates differ. This
+        effectively ORs the predicates but allows each transition to
+        execute a separate code block.
+
+        Predicates may contain queue reads but these must be used with
+        caution. The {\bf when} clause specifying the predicate executes
+        every clock cycle and thus will execute any queue reads whenever
+        those queues are available regardless of whether a transition is
+        possible. It only makes sense to use a queue read in a predicate
+        if the transition is always ready to fire when the queue becomes
+        available.
+        
+        Transition execution blocks may also contain queue reads (or writes).
+        The Petri net as a whole is a module and so queue reads wherever they
+        occur within the Petri net will be acknowledged individually. The
+        Petri net will act as a single queue destination and a queue source
+        will wait until a read has occurred within the Petri net before
+        advancing to the next datum. Queue reads occurring anywhere within
+        the Petri net, either in predicates or code blocks, will constitute
+        a single read if they occur simultaneously or as separate reads
+        otherwise.
+        
+        A transition code block may contain any number of immediate statements but
+        must contain exactly one in-line target statement. The latter of course may
+        be a {\bf seq}, {\bf par} etc. which nest other target statements.
+        Immediate statements within code blocks are executed sequentially from top
+        to bottom of the Petri net construct. Care must be taken if a transition
+        code block executes for more than two cycles. A transition cannot occur if
+        an associated transition code block is executing (because of a previous
+        occurence of the same transition).
+
+
+
+
+ 

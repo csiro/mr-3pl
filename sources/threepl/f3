@@ -1,0 +1,39 @@
+#! /bin/csh -f
+
+grep -Hn $1 *.java
+
+cd codegen
+grep -Hn $1 *.java
+cd ..
+
+cd exec
+grep -Hn $1 *.java
+cd ..
+
+cd funcs
+grep -Hn $1 *.java
+cd ..
+
+cd mods
+grep -Hn $1 *.java
+cd ..
+
+cd netlist
+grep -Hn $1 *.java
+cd ..
+
+cd netlist/xilinx
+grep -Hn $1 *.java
+cd ../..
+
+cd nodes
+grep -Hn $1 *.java
+cd ..
+
+cd parser
+grep -Hn $1 *.java
+cd ..
+
+cd procs
+grep -Hn $1 *.java
+

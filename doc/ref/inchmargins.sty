@@ -1,0 +1,50 @@
+% inchmargins.sty -- page layout like the "old" LaTeX
+% This is just until I sort out the "right" way (if there is one)
+%
+% The idea is to get the edges of the main block of text 1 inch from
+% each edge of the paper, with the header and footer vertically centred in 
+% the top and bottom margins resepectively.
+%
+% If things seem not to be quite like this, make sure \paperheight and
+% \paperwidth are defined correctly (by an a4paper class option) and 
+% that the printer is not introducing an offset (correctable using dvips)
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{inchmargins}[1995/08/30 Inch Margins]
+
+% We assume that \paperheight and \paperwidth are
+% already set by the document class file
+
+
+% WIDTH
+
+% this make the left margin 1" from the edge of the page
+% and we don't care about two-sidedness
+\oddsidemargin 0mm
+\evensidemargin 0mm
+
+% make the textwidth such that the right margin is also 1"
+\textwidth\paperwidth \advance\textwidth -2.0in
+
+
+% HEIGHT
+
+% the header \vbox is 0.25in
+\headheight .25in
+%\topskip\baselineskip
+\topskip 0pt
+
+% the text proper starts 1 in down from top of page
+% the header \vbox is centered in the margin
+\topmargin -0.5in \advance\topmargin -0.5\headheight
+\headsep 0.5in \advance\headsep -0.5\headheight
+
+% the text is about 2 inches shorter than the page
+\textheight\paperheight \advance\textheight -2.0in
+
+% the footer is also centred in the bottom margin
+% Note there is no longer a footheight length in LaTeX2e
+\footskip 0.5in 
+
+
+% end

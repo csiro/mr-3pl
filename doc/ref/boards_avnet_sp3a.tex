@@ -1,0 +1,70 @@
+\pagebreak
+
+\section{\\AVNET Spartan3A Evaluation Board Header File - boards/avnet/aes\_sp3a\_eval400.3pl}
+
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/avnet/aes_sp3a_eval400.3pl"
+    \end{lstlisting}
+    
+    A 16MHz clock is available as {\bf c16}. The clock source is a Maxim silicon
+    oscillator hence the frequency is not accurate and displays short term
+    variation.
+    
+    The header code sets the current clock as {\bf c16}.
+
+    The following pins are defined (as strings for single pins and arrays
+    of strings otherwise) -
+
+    \begin{tabular}{| l | r | l |}
+    \hline
+    name & pins & \\
+    \hline
+    \hline
+    c12\_pin           &    & 12MHz clock input - seems to be 3MHz! \\ \hline
+    c16\_pin           &    & 16MHz clock input \\ \hline
+    c32\_pin           &    & 32MHz clock input - doesn't seem to work! \\ \hline
+    j6\_pins           & 4  & 4 pin digilent header J6 \\ \hline
+    j7\_pins           & 4  & 4 pin digilent header J7 \\ \hline
+    j4\_r0\_pins       & 17 & row of 2 x 20 pin connector J4 \\ \hline
+    j4\_r1\_pins       & 18 & row of 2 x 20 pin connector J4 \\ \hline
+    flash\_ce\_pin     &    & flash CE \\ \hline
+    flash\_oe\_pin     &    & flash OE \\ \hline
+    flash\_we\_pin     &    & flash WE \\ \hline
+    flash\_ry\_by\_pin &    & flash ready/busy \\ \hline
+    flash\_word\_pin   &    & flash 8/16 bit mode selector \\ \hline
+    flash\_reset\_pin  &    & flash reset \\ \hline
+    flash\_addr\_8     & 22 & flash 8-bit mode address \\ \hline
+    flash\_data\_8     & 8  & flash 8-bit mode data \\ \hline
+    flash\_addr\_16    & 21 & flash 16-bit mode address \\ \hline
+    flash\_data\_16    & 16 & flash 16-bit mode data \\ \hline
+    cap\_button\_pins  & 4  & touch buttons \\ \hline
+    led\_pins          & 4  & LEDs \\ \hline
+    \end{tabular}
+
+
+
+
+    \subsection{library modules}
+    
+        None.
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

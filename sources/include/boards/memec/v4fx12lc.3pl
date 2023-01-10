@@ -1,0 +1,52 @@
+nosource
+
+// 3pl board support for Memec DS-BD-V4FX12LC Evaluation Board
+//
+//---------------------------------------------------------------------//
+// This header file is only partially completed.                       //
+// There are still many board devices without pinouts or interfaces.   //
+//---------------------------------------------------------------------//
+
+part("XC4VFX12FF668-10");
+module "xilinx/xc4v.3pl"
+
+// Package pins
+str(lvcmos33, "LVCMOS33");
+
+// clock generator
+iopins(global.c100_pin, "str", "B15",
+    iostandard=lvcmos33, frequency=100.0e6, ibufg=true
+);
+
+// user interaction
+iopins(global.led_pins, "[4]str", {
+	"D13", "D12", "C11", "D11"
+    }, iostandard=lvcmos33
+);
+iopins(global.button_pins, "[4]str", {
+	"C14", "C13", "B14", "C15"
+    }, iostandard=lvcmos33
+);
+iopins(global.dip_switch_pins, "[8]str", {
+	"G2", "G1", "H2", "H1", "Y10", "Y9", "Y7", "Y8"
+    }, iostandard=lvcmos33
+);
+
+// LCD connections
+iopins(global.lcd_data_pins, "[8]str", {
+	"H3", "G4", "G3", "F3", "F4", "E3", "E4", "D3"
+    }, iostandard=lvcmos33
+);
+iopins(global.lcd_en_pin, "str", "H4", iostandard=lvcmos33);
+iopins(global.lcd_rs_pin, "str", "H5", iostandard=lvcmos33);
+
+// RS-232C connections
+iopins(global.serial_rxd_pin, "str", "F1", iostandard=lvcmos33);
+iopins(global.serial_txd_pin, "str", "A9", iostandard=lvcmos33);
+iopins(global.serial_rts_pin, "str", "B9", iostandard=lvcmos33);
+iopins(global.serial_cts_pin, "str", "E1", iostandard=lvcmos33);
+
+// create default 100MHz clock 
+clock(global.c100_in, loc=c100_pin);
+simpleclock(global.c100, c100_in);
+useclock(c100);

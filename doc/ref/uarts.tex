@@ -1,0 +1,208 @@
+\pagebreak
+
+\section{Simple UART Library File - uarts.3pl}
+
+    \index{library!uarts.3pl}
+    This library provides a simple Universal Asynchronous Receiver/Transmitter
+    whose configuration is set at compile time. For a UART which can be
+    dynamically reconfigured see the previous chapter "General UART library
+    file - uart.3pl". The number of data bits is determined from the size
+    of the data input or output argument.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "uarts.3pl"
+    \end{lstlisting}
+    
+    For a baud rate $br$ and a current clock frequency $f_c$,
+    $br < f_c / 32$ unless $br = f_c / 16$.
+    Serial data sampling is controlled by a counter which runs at approximately
+    16 times the baud rate. The error on the rate of this counter results
+    in a cumulative error which has most impact on the sampling of the
+    last serial data bit. If the sampling tolerance exceeds 1/16 of the bit
+    width of the last bit a warning message is printed. The calculated sampling tolerance
+    includes both the error in the sampling counter and an allowance of
+    plus or minus 100ppm in the clocks at either end.
+
+
+    \subsection{library modules}
+
+
+
+        \subsubsection{subsecond\_clocks - millisecond and microsecond
+                                    clocks}\label{sec:lmssubsecondclocks}
+
+            {\bf Library: uarts.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               subsecond_clocks (value({ms, us}, "log") <- ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf ms} is a millisecond clock.\\
+            {\bf us} is a microsecond clock.
+
+            {\bf Input parameters:} \\            
+            none           
+
+            {\bf description:} \\
+            Outputs a millisecond clock and a microsecond clock.
+
+
+
+
+        \subsubsection{uart\_rx - simple UART receiver}\label{sec:lmsuartrx}
+
+            {\bf Library: uarts.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               uart_rx (
+                   queue(out), value({oferr, operr, overflow, rts}, "log")
+               <-
+                   value(rxd, "log"),
+                   int(br),
+                   value(rxen, "log", true),
+                   log(parenb),
+                   log(parodd, true),
+                   log({cstopb, tq})
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the 8-bit output output.\\
+            {\bf oferr} indicates a framing error.\\
+            {\bf operr} indicates a parity error.\\
+            {\bf overflow} indicates an output queue buffer overflow.\\
+            {\bf rts} is 'ready to send'.
+
+            {\bf Input parameters:} \\
+            {\bf rxd} is the serial input.\\
+            {\bf br} is the baud rate.\\
+            {\bf rxen} is receive enable.\\
+            {\bf parenb} is parity enable.\\
+            {\bf parodd} selects odd parity.\\
+            {\bf cstopb} expects a second stop bit.
+
+            {\bf description:} \\
+            A UART receiver section. {\bf rxd} is the receive input, usually
+            connected direct to an input pin.
+
+            {\bf out} is the output data. The size of the argument to
+            this parameter determines the number of bits to be received.
+
+            {\bf oferr} is true if there was a framing error, and {\bf operr}
+            indicates a parity error (can only occur if {\bf parenb} is true).
+            {\bf oferr} and {\bf operr} are valid whenever out is available.
+
+            Optional input {\bf rxen} if false will disable the receiver when
+            the current character is complete. Output {\bf rts} is true when
+            the receiver will accept a character. It goes false when {\bf rxen}
+            is false or a received character was not acknowledged before the
+            expected start of the next character.
+
+            {\bf br} is the baud rate.
+            
+            If {\bf parenb} is true, an even parity bit is added, odd if {\bf
+            parodd} is also true. If {\bf cstopb} is true, a second stop bit is
+            added.
+            
+            {\bf tq} if true shifts the data sampling point from the
+            middle of the serial bit period to the 3/4 point. This is
+            useful where an open collector driver is the serial data source
+            as the -ve transition of the start bit and any data bits is fast
+            but +ve transitions rely on the pullup resistor and may be slow.
+            Thus the start bit starts the data sampling at the right time
+            but later slow +ve transitions on data bits dictate later sampling.
+
+            Flow-control ({\bf rts}) is supported but has not been tested.
+            BREAK should be detect but is not.
+
+
+
+
+
+        \subsubsection{uart\_tx - simple UART transmitter}\label{sec:lmsuarttx}
+
+            {\bf Library: uarts.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               uart_tx (
+                   value({txd, txbusy}, "log"),
+                   value(brc, "log")
+                   <-
+                   value(in),
+                   int(br),
+                   value(txen, "log", true),
+                   value(cts, "log", true),
+                   log(parenb),
+                   log(parodd, false),
+                   log(cstopb)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf txd} is the serial output.\\
+            {\bf brc} is the baud rate clock.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input.\\
+            {\bf br} is the baud rate.\\
+            {\bf txen} is transmit enable.\\
+            {\bf cts} is 'clear to send'.\\
+            {\bf csize} is the number of data bits.\\
+            {\bf parenb} is parity enable.\\
+            {\bf parodd} selects odd parity.\\
+            {\bf cstopb} adds a second stop bit.
+
+            {\bf description:} \\
+            A UART output section. {\bf txd} is the transmit output, usually
+            connected direct to an output pin.
+
+            {\bf in} is the input data. The size of {\bf in} determines the
+            number of bits transmitted. If the data input is a queue or an
+            expression containing a queue, transmission will only occur when the
+            input is available.
+
+            Transmission occurs only if {\bf txen} and {\bf cts} (if connected)
+            are asserted. If either go false the transmitter will stop at the
+            end of the current character. {\bf cts} usually connects to an
+            output pin. {\bf txbusy} indicates the transmitter is operating.
+
+            {\bf br} is the baud rate.
+            
+            If {\bf parenb} is true, an even parity bit is added, odd if {\bf
+            parodd} is also true. If {\bf cstopb} is true, a second stop bit is
+            added.
+
+            {\bf brc} is the internal baud clock and is brought out in case
+            anything wants it.
+
+            The default is 8-bit characters, no parity, 1 stop bit.
+
+            Flow-control ({\bf cts}) has not yet been tested. {\bf uart\_tx}
+            cannot produce BREAK.
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

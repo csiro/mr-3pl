@@ -1,0 +1,108 @@
+nosource
+
+global module
+capture (
+    queue(out),
+    static({running, triggered}, "log")
+    <-
+    value(in),
+    int(length),
+    value(trigger_position, "uint:20", 0),
+    value({start, trigger, readout}, "empty")
+) {
+    if (hasqueuereads(in))
+        texit("capture() - 'in' contains queue reads");
+    if (hasqueuereads(trigger_position))
+        texit("capture() - 'trigger_position' contains queue reads");
+    if (istargconst(trigger_position)) {
+        int(tp, targconsttoimmed(trigger_position));
+        if (tp >= length)
+            texit("capture() - constant 'trigger_position' out of range of 'length'");
+    }
+    if (length != 1 << bitsfor(length-1))
+        texit("capture() - 'length' not a power of 2");
+
+    type(atype, "uint:"+bitsfor(length-1));
+    type(dtype, type(in));
+    rmemory(m, 2, atype, dtype);
+    static({waddr, raddr}, atype); attributes(raddr, ALU=true);
+    static({rcount, runon}, "uint:"+bitsfor(length)); attributes(runon, ALU=true);
+    static(readingout, "log");
+    value({start_pulse, trigger_pulse, readout_pulse}, "log", false);
+    if (matched(start)) {
+        if (mode(start) == "queue") {
+            start_pulse := <start;
+            null <<- start;
+        } else {
+            if (typestring(start) != "log")
+                texit("capture() - start argument not type log");
+            start_pulse := to_pulse(start);
+        }
+    }
+    if (matched(trigger)) {
+        if (mode(trigger) == "queue") {
+            trigger_pulse := <trigger;
+            null <<- trigger;
+        } else {
+            if (typestring(trigger) != "log")
+                texit("capture() - trigger argument not type log");
+            trigger_pulse := to_pulse(trigger);
+        }
+    }
+    if (matched(readout)) {
+        if (mode(readout) == "queue") {
+            readout_pulse := <readout;
+            null <<- readout;
+        } else {
+            if (typestring(readout) != "log")
+                texit("capture() - readout argument not type log");
+            readout_pulse := to_pulse(readout);
+        }
+    }
+    
+    when (!readingout && (start_pulse || !matched(start))) seq {
+        par {
+            running <- true;
+            triggered <- false;
+            runon <- 0;
+        }
+        par do {
+            rmemorywrite(m, 0, waddr, in);
+            waddr++;
+            when (triggered)
+                runon++;
+        } while (!triggered || !bitset(runon, bitsfor(length - 1)));
+        running <- false;
+        if (!matched(readout))
+            pulse(readout_pulse <-);
+    }
+    
+    when (running && !triggered && trigger_pulse) par {
+        triggered <- true;
+        runon <- trigger_position + 1;
+    }
+      
+
+    when (!start_pulse && !running && readout_pulse) seq {
+        par {
+            readingout <- true;
+            raddr <- waddr;
+            rcount <- 1;
+        }
+        par {
+            rmemoryread(m, 1, raddr);
+            raddr++;
+        }
+        sync while (!bitset(rcount, bitsfor(length-1))) {
+            out <<- rmemoryout(m, 1);
+            rmemoryread(m, 1, raddr);
+            raddr++;
+            rcount++;
+        }
+        par {
+            out <<- rmemoryout(m, 1);
+            readingout <- false;
+            triggered <- false;
+        }
+    }
+}

@@ -1,0 +1,179 @@
+The topological description is in terms of basic
+hardware units such as registers, selectors,
+control structures etc. linked by signals or signal
+arrays.
+
+The topological description class includes the following
+fields -
+
+{\bf type}
+
+This indicates the type of element. Types are (see class
+{\bf TDEConstants} -
+\blist
+\item   TDEType.SIG -       declare a signal or signal array
+\item   TDEType.CONNECT -   connect a signal or signal array to another or to a
+                            constant
+\item   TDEType.SELECT -    select one of several inputs
+\item   TDEType.TSELECT -   a 3-state driver
+\item   TDEType.REG -       a register
+\item   TDEType.WAIT -      wait for completion of parallel execution streams
+\item   TDEType.DIVERGE -   handle queue divergence
+\item   TDEType.INV -       invert a signal
+\item   TDEType.AND -       AND 2 or more signals
+\item   TDEType.OR -        OR 2 or more signals
+\item   TDEType.XOR -       XOR 2 or more signals
+\item   TDEType.OPERATOR -  apply an expression operator to operands
+\item   TDEType.START -     start an execution stream
+\item   TDEType.EXECP -     delay execution on queue availability
+\item   TDEType.ILOOP -     control an infinite loop
+\item   TDEType.DEL -       delay a signal one or more clock cycles
+\item   TDEType.WHEN -      a 'when' statement
+\item   TDEType.WHILE -     a 'while' statement
+\item   TDEType.DOWHILE -   a 'do while' statement
+\item   TDEType.PRIORITY -  a priority encoder
+\item   TDEType.RESYNC -    resynchronise a pulse or edge to another clock
+\item   TDEType.SAMPLE -    sample a value in another clock domain
+\item   TDEType.QUEUEBUFFER - a queue variable (buffer)
+\item   TDEType.IBUF -      an FPGA pad input buffer
+\item   TDEType.OBUF -      an FPGA pad output buffer
+\item   TDEType.DFF -       a D-type flip-flop
+\item   TDEType.CRAM -      a combinatorial-output RAM
+\item   TDEType.RRAM -      a registered-output RAM
+\item   TDEType.CLOCK -     create a clock signal source
+\item   TDEType.CLOCKINFO - a wrapper for information about a clock signal
+\item   TDEType.ELEMENT -   create a specific FPGA vendor library element
+\item   TDEType.PORT -      an external signal connection to/from another netlist
+\item   TDEType.SPECIAL -   special functions for specific FPGA families
+%            \item   TDEType.SIMREAD -   read a value for a variable from a file during simulation
+%            \item   TDEType.SIMWRITE -  write a value from a variable to a file during simulation
+%            \item   TDEType.SIMVAR -    communicate program variables to the simulator
+\blend
+
+{\bf ArrayList params} is a parameter section which includes such
+things as initial values and flags. Items in the parameter
+list may be type {\bf Integer}, {\bf String} or {\bf
+Boolean}.
+
+{\bf ArrayList inputs} and {\bf ArrayList outputs} are lists of 
+TDEVars which are inputs and outputs to the TDE.
+
+{\bf location}
+
+This field gives the source file location.
+Since these structures represent the hardware rather than the
+source code the source file location does not provide a very
+good cross reference to the source code. For example the
+structure for a variable declaration includes all the logic
+required to assign values to that variable, including input
+selectors, however the selector logic is derived from the
+various assignment statements which target that variable. The
+line numbers of these statements are not available in the
+variable structure. We could partition the logic into smaller
+units to improve this situation, but that might impose
+restrictions on the implementation and might also preclude some
+simple low-level optimisations.
+
+{\bf active}
+
+This field indicates if the TDE is still in use.
+During optimisation some TDEs are eliminated
+and rather than delete them from the list of elements they
+are instead tagged as inactive via this field.
+
+{\bf no\_delete}
+
+If this field is true the element should not be deleted. I
+think the only use for this is for the SELECT TDE where
+it is required when used for queue variable assignment that
+a single input SELECT not be eliminated as redundant.
+
+\subsection{constructors}
+
+    There are a number of constructors all of which require the
+    TDE type but which may omit parameter, input or output lists
+    or source file location. Where omitted the lists are added
+    later.
+
+\subsection{methods}
+
+
+    {\bf add2i()} \\ Add a signal to the input list.
+
+    {\bf add2o()} \\ Add a signal to the output list.
+
+    {\bf add2p()} \\ These add an item to the parameter list. There are multiple
+    signatures for different argument types.
+
+    {\bf addPin2Element()} \\ This method adds a pin and a connected signal to a
+    TDE instance of type ELEMENT.
+
+    {\bf addProperty2Element()} \\ This method adds a property to a TDE instance
+    of type ELEMENT. The property name and value are added to the parameter list
+    of the TDE instance.
+
+    {\bf setElementPin()} This method adds a pin to a TDE instance of type
+    ELEMENT. The port name, type (input, output, 3-state output or clock),
+    associated TDEVar, port width and EDIF port array format are passed as
+    arguments. The array size is used later (in XTDECode) to pad input nets
+    formed from the TDEvar so that the full port width is connected even though
+    the signal array may be narrower. Padding is GND unless the TDEVar is for a
+    signed type in which case the MSB is propagated.
+
+
+    {\bf redundant()} \\ This method examines a TDE to see if it contains
+    redundancies or is entirely redundant. For example a duplicated selector
+    data input is removed and the select input is ORed with the duplicate
+    select. Logic gates with a single input are effectively removed (see below)
+    and the single input is connected to the output directly.
+
+    If the TDE is completely redundant it has all inputs, outputs and parameters
+    removed, the active flag is made false and the method returns true. If the
+    TDE is already in the TDE list it will be recognised as inactive during any
+    traversals of the list and will be ignored.
+
+    The method is called in only two places, TDEList.addTDE() and
+    TDEList.optimise(). The first is called to add a TDE to the TDE list but
+    does not do so if the TDE is wholly redundant (redeundant() returns true).
+    The second is a TDE list optimiser which calls redundant() only for SELECT
+    TDEs as a part of its optimisation of the list. Since the TDE is already in
+    the list a true return from redundant() simply means the TDE has been made
+    inactive and will be ignored when encountered again in any context.
+
+
+    {\bf ncode()} \\ This method generates netlist code from the TDE. A switch
+    on the TDE type selects a matching method in abstract class {\bf TDECode},
+    these methods being overridden in class XTDECode in the case of Xilinx.
+
+    {\bf deactivate()} \\ Make a TDE inactive by unlinking all inputs and
+    outputs from the associated TDEVars (removing the reverse link), clearing
+    the parameter list and setting boolean {\bf active} to false.
+
+    {\bf removeInput()} \\ Remove a control signal input to a TDE. This is not
+    used for signals which are arrays. The TDEVar is removed from the list of
+    inputs and this TDE is removed from the destination list of the associated
+    TYDEVar. This method assumes that there is only one occurrence of the TDEVar
+    in the input list.
+
+    {\bf replaceInput()} \\ Replace a TDEVar in the input list with another. The
+    source link in the associated TDEVar is not changed by this method; it is
+    assumed that that is done elsewhere.
+
+    {\bf replaceOutput()} \\ Replace a TDEVar in the output list with another.
+    The destination link in the associated TDEVar is not changed by this method;
+    it is assumed that that is done elsewhere.
+    
+    {\bf dump()} \\ print a description of the TDE to the .icl file.
+
+
+\subsection{signal linking}
+
+    Input and output signals to a TDE are representad by class TDEVar.
+    TDE fields {\bf input} and {\bf output} are lists of TDEVars (class
+    {\bf TDEVarList} which extends class {\bf ArrayList}). The function of
+    each input and output is dependant on the specific TDE type. A TDEVar
+    in turn has a list of TDEs to which it is linked (within subclass Common).
+    
+    Optimisation of TDEs must handle this double linking where TDEVars are
+    to be removed or relocated.
+    

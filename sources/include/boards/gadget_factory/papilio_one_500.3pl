@@ -1,0 +1,49 @@
+nosource
+
+// 3pl board support for GadgetFactory Papilio One 500k board
+
+part("XC3S500EVQ100-4");
+
+module "xilinx/xc3s.3pl"
+
+// all IO is 3.3V on this board
+str(lvcmos33, "LVCMOS33");
+
+// clock generator 32MHz
+iopins(c32_pin, "str", "P89", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+
+// 48 I/O pins across A (wing 1A), B (wing 1B), C (wing 2A)
+iopins(global.A_pins, "[16]str", {
+	"P18", "P23", "P26", "P33", "P35", "P40", "P53", "P57",
+	"P60", "P62", "P65", "P67", "P70", "P79", "P84", "P86"
+    }, iostandard=lvcmos33
+);
+iopins(global.B_pins, "[16]str", {
+	"P85", "P83", "P78", "P71", "P68", "P66", "P63", "P61",
+	"P58", "P54", "P41", "P36", "P34", "P32", "P25", "P22"
+    }, iostandard=lvcmos33
+);
+iopins(global.C_pins, "[16]str", {
+	"P91", "P92", "P94", "P95", "P98", "P2",  "P3",  "P4",
+	"P5",  "P9",  "P10", "P11", "P12", "P15", "P16", "P17"
+    }, iostandard=lvcmos33
+);
+
+iopins(global.flash_cs_pin, "str", "P24", iostandard=lvcmos33);
+iopins(global.flash_clk_pin, "str", "P50", iostandard=lvcmos33);
+iopins(global.flash_mosi_pin, "str", "P27", iostandard=lvcmos33);
+iopins(global.flash_miso_pin, "str", "P44", iostandard=lvcmos33);
+
+// FTDI USB channel B serial receive and transmit
+// Labelling is reversed to schematic!
+// 'tx' should be an FPGA output, 'rx' an input
+iopins(global.serial_rxd_pin, "str", "P88", iostandard=lvcmos33);
+iopins(global.serial_txd_pin, "str", "P90", iostandard=lvcmos33);
+
+// create 32MHz clock
+clock(c32_in, loc=c32_pin);
+simpleclock(global.c32, c32_in);
+useclock(c32);
+
+directive("comms_baud_rate", 115200); // define default serial device baud rate
+module "xilinx/uart_cpu.3pl"

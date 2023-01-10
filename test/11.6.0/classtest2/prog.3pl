@@ -1,0 +1,21 @@
+module "dummy.3pl"
+
+int(i);
+int(j, 1234);
+class(k);
+
+k = m(i <- j);
+println(i + " (1234)");
+println(k.m + "   (57)");
+println(k.f() + " (1434)");
+
+class
+m (int(o) <- int(i)) {
+    int(m, 57);
+    
+    o = i;
+    
+    function f () {
+        return(i + 200);
+    }
+}

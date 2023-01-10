@@ -1,0 +1,632 @@
+\pagebreak
+
+\chapter{Code structure}
+
+    A program usually consists of modules interconnected by queues. A module
+    code body contains one or more code elements each of which is initiated
+    repeatedly, i.e. is contained in an infinite loop.
+
+    A program file contains optional global scope and file scope structure and
+    variable creation calls and executable code intermixed with module,
+    procedure and function declarations. It is preferable to have
+    top level code first followed by the module, procedure and function
+    declarations.
+    
+    Execution begins with the initial file module which in turn calls other
+    modules, procedures and functions.
+
+    Execution of statements in {\bf 3PL} is controlled by two mechanisms -
+    \blist
+    \item    execution sequence
+    \item    queue availability
+    \blend
+    
+    Statements in a module (including the main file module) which are not nested
+    within control structures, such as conditional statements or loops, will be
+    refered to as {\bf top level} statements.
+
+    All top level statements are executed in an implied infinite loop.
+    Statements within control structures are executed under the control of those
+    structures. Statements may additionally wait upon the availability of queues.
+
+    Top level simple assignment statements occurring immediately within
+    a module will execute whenever referenced queues are available.
+    If no queues are referenced, the statements will execute on
+    every clock cycle.
+
+    An assignment statement enclosed in a {\bf when} which itself
+    is immediately inside a module will be controlled primarily
+    by the {\bf when} which will execute every clock cycle. The
+    {\bf when} body may wait on queues when the {\bf when} is true,
+    otherwise it will execute at once.
+
+    A great deal of code can be written without using
+    explicit serial and parallel constructs, relying on queue
+    availability alone to control execution.
+
+    A simple program might be -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       cmemory(m, 2, 8, 8);
+       queue(a, "uint:8");
+       queue(b, "uint:8");
+       queue(addr, "uint:8");
+       queue(d, "bits:8");
+
+       [addr <<- a + b;]
+       [d <<- cmemoryread(d <- m, 0, addr);]
+    \end{lstlisting}
+    The two target statements within the initial file module are themselves
+    modules. The first is an inline module and the single assignment
+    statement within will execute when its queues are available. The second is
+    also an inline module and again will wait on the availability of its
+    queues.
+
+    If a module has more than one statement, e.g. -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           y <<- a + b;
+           z <<- c - d;
+       ]
+    \end{lstlisting}
+    each statement in the module would execute when its
+    queues were available. We could have simply made these
+    independent modules -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [y <<- a + b;]
+       [z <<- c - d;]
+    \end{lstlisting}
+    The first form would be used had we needed to share
+    local static variables.
+
+    There are three structures giving parallelism within a module
+    which we must understand.
+
+    The first has been used above, simply enclosing statements
+    in inline module brackets
+    \begin{lstlisting}[gobble=4, language=threepl]
+       
+          y <<- a + b;
+          z <<- c - d;
+       
+    \end{lstlisting}
+    Each statement in the module will execute independently and repeatedly
+    whenever it can. If a statement contains only static variables it will
+    execute on every clock cycle (such statements would normally be contained
+    within a {\bf when} or other such conditional statement to control their
+    execution). If a statement contains queue variables it will execute when
+    these are available (both input on the RHS and output on the LHS).
+
+    If we enclose the statements in a {\bf par} block
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           par {
+               y <<- a + b;
+               z <<- c - d;
+           }
+       ]
+    \end{lstlisting}
+    each statement within the block will execute exactly once as
+    soon as it can. The parallel block will then have completed
+    execution and since it is immediately enclosed within a module
+    the parallel block will execute repeatedly. Note that the
+    statements within the parallel block are paired in execution but
+    will not necessarily execute at the same time.
+
+    If we wish to ensure that parallel statements execute simultaneously
+    we must enclose them in a {\bf sync} block
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           sync {
+               y <<- a + b;
+               z <<- c - d;
+           }
+       ]
+    \end{lstlisting}
+    which will execute both statements in the block when all queue variables
+    in the block are available, i.e. they are guaranteed to execute
+    simultaneously and in a single clock cycle. Note that if a {\bf sync}
+    block contains a sequential block or an iterative statement the {\bf
+    sync} simply controls entry into the block after which it behaves ilke a
+    {\bf par} block, hence it would not control any further reads or
+    writes of those queues.
+
+    A situation to be wary of with queue dependencies occurs
+    when queue fields are being assigned. For example
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           v.a <<- y;
+           v.b <<- z;
+       ]
+    \end{lstlisting}
+    If {\bf y} and {\bf z} are not available simultaneously
+    then the assignment will occur separately on each
+    becoming available, the other field of {\bf v} being
+    assigned zero. In that case they must be locked together by
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           sync {
+               v.a <<- y;
+               v.b <<- z;
+           }
+       ]
+    \end{lstlisting}        
+
+    We can use parallel blocks to control static
+    assignments, e.g.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           static(s, "uint:8");
+
+           par {
+               a <<- b + c;
+               s++;
+           }
+       ]
+    \end{lstlisting}
+    where the static assignment {\bf s++} will only occur as
+    often as the queue assignment, and the availability of
+    input and output queues will control both. For actual
+    simultaneous execution we would again write
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           static(s, "uint:8");
+
+           sync {
+               a <<- b + c;
+               s++;
+           }
+       ]
+    \end{lstlisting}
+
+    In the previous examples we might have been using {\bf s} to
+    count queue data processed. If we wished to count total cycles
+    to determine the proportion of active cycles we could write -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       [
+           static({s, t}, "uint:8");
+
+           par {
+               a <<- b + c;
+               s++;
+           }
+           t++;
+       ]
+    \end{lstlisting}
+    The static assignment to {\bf t} will occur every clock cycle
+    since it is immediately within a module.
+
+    For queues which are structures or arrays we can
+    simply assign them, e.g.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct {t1,
+           d,  "uint:8",
+           l,  "log"
+       };
+       queue({a, b}, t1);
+
+       module
+       m () {
+           a <<- b;
+       }
+    \end{lstlisting}
+    will assign the entire structure. We
+    can mix different queue types as long as each component assignment
+    type matches, e.g.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct {t1,
+           d,  "uint:8",
+           l,  "log"
+       };
+       queue(a, t1);
+       queue(pixel, "uint:8");
+       queue(j, "log");
+
+       module
+       m () {
+           sync {
+               a.d <<- pixel;
+               a.l <<- j;
+           }
+       }
+    \end{lstlisting}
+    but note that we have used the {\bf sync \{\dots\}} parallel
+    block to ensure that the two fields are assigned simultaneously.
+    If we do not ensure simultaneity then two separate data will
+    we written, one with the {\bf l} field false, the other with
+    the {\bf d} field zero. There is no conflict assigning to
+    output queue {\bf a} as the assignments are to separate
+    fields of the structure.
+
+    If we want to examine two inputs but only advance one
+    of them -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+
+       [
+           sync {
+               when (?i1 > ?i2)
+                   o <<- i1;
+               else
+                   o <<- i2;
+           }
+       ]
+    \end{lstlisting}
+    The input queues {\bf i1} and {\bf i2} are examined
+    without reading (the {\bf \verb'?'} operator) and then
+    the larger is read and assigned to the output queue.
+    The {\em when} will not wait for queues {\bf i1} and {\bf i2} to 
+    become available in the test expression because the queues are examined,
+    not read, but we have enclosed the {\em when} in a {\em sync} block
+    and there are reads of queues {\bf i1} and {\bf i2} within that block so
+    the {\em sync} will wait until queues {\bf i1}, {\bf i2} and {\bf o} are
+    available before executing the {\em when}.
+
+    We could shorten the code, using a {\bf? :} operator, to
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+
+       [o <<-  (?i1 > ?i2) ? i1 : i2;]
+    \end{lstlisting}
+    Note that we now have a single assignment statement and
+    that statement will not execute until all queues read or written
+    (but not examined) within it are available.
+
+    If we wanted to do the same but advance both inputs
+    each time we could do this by
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+
+       [o <<-  (i1 > i2) ? i1 : i2;]
+    \end{lstlisting}
+    since both inputs are read regardless of which is selected
+    for assignment to the output queue.
+
+    If we wished to take inputs when they become available
+    and channel them to one output queue we might write -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       // BAD CODE!
+       queue({o, i1, i2}, "uint:8");
+
+       [
+           when (<i1)
+               o <<- i1;
+           when (<i2)
+               o <<- i2;
+       ]
+    \end{lstlisting}
+    but this is both pointless and incorrect. Firstly the
+    availability tests are not necessary as the assignments will
+    not execute unless the input queues are available anyway.
+    Secondly if both input queues are available
+    the assignments would conflict. We could check both
+    explicitly by -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+
+       [
+           when (<i1 && !<i2)
+               o <<- i1;
+           when (!<i1 && <i2)
+               o <<- i2;
+           when (<i1 && <i2)
+               o <<- i1;
+       ]
+    \end{lstlisting}
+    Here there are no conflicts as the three conditions are
+    mutually exclusive (we do not need mutual exclusion
+    like this if there is no assignment conflict).
+    The above code will favour the first input when both are
+    available. To give both inputs an even chance
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+       static(first, "log");
+
+       [
+           when (<i1 && !<i2)
+               o <<- i1;
+           when (!<i1 && <i2)
+               o <<- i2;
+           when (<i1 && <i2) par {
+               when  (first)
+                   o <<- i1;
+               else
+                   o <<- i2;
+               first <- !first;
+           }
+       ]
+    \end{lstlisting}
+    The inner {\em when} and the static assignment will be done in
+    parallel in one cycle. It is preferable to not nest {\em when}s
+    as they are not optimised and the nesting increases the length of logic
+    paths. We could instead write -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+       static(first, "log");
+
+       [
+           when (<i1 && !<i2)
+               o <<- i1;
+           when (!<i1 && <i2)
+               o <<- i2;
+           when (<i1 && <i2 && first) par {
+               o <<- i1;
+               first <- false;
+           }
+           when (<i1 && <i2 && !first) par {
+               o <<- i2;
+               first <- true;
+           }
+       ]
+    \end{lstlisting}
+
+    The inner {\em when} could be contracted into a single assignment
+    using the ternary operator {\bf? :} on the RHS.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({o, i1, i2}, "uint:8");
+       static(first, "log");
+
+       [
+           if (<i1 && !<i2)
+               o <<- i1;
+           if (!<i1 && <i2)
+               o <<- i2;
+           if (<i1 && <i2) par {
+               o <<- first ? i1 : i2;
+               first <- !first;
+           }
+       ]
+    \end{lstlisting}
+
+    {\bf Value} variables serve two purposes - they can represent
+    a combinatorial expression that is to be used in more than
+    one place without duplicating the logic, and they can also
+    be used simply to refer to other variables (the same thing
+    really - an expression consisting of a single variable).
+
+    The first usage is quite straightforward, for example
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({q1, q2, q3, q4}, "uint:8");
+
+       [
+           q3 <<- q1 + q2;
+           q4 <<- q1 + q2;
+       ]
+    \end{lstlisting}
+    would duplicate the logic performing the addition, whereas
+    \begin{lstlisting}[gobble=4, language=threepl]
+       queue({a, b, c, d}, "uint:8");
+
+       [
+           value(v, "uint:8");
+
+           v := q1 + q2;
+           q3 <<- v;
+           q4 <<- v;
+       ]
+    \end{lstlisting}
+    would build only one instance of the addition. Note that where
+    a value expression contains queues those queues will be read and
+    acknowledged as though they appeared separately in the statements
+    in which the value variable is used, even though any operators
+    within the expression will only be instantiated once. This of course
+    applies equally to queues appearing in array subscript expressions
+    within a value expression.
+
+    The second usage of a value variable is as a reference or pointer.
+    For example we may wish to devise a module each invokation of which
+    reports to a central module. We can do this as follows
+    \begin{lstlisting}[gobble=4, language=threepl]
+           queue({q1, q2, .... }, "uint:8");
+           value(p_report, "[10]uint:8");
+           int(reports);
+
+           .
+           .
+           m(q1);
+           .
+           .
+           m(q2);
+           .
+           .
+           report();
+
+       module
+       m (queue(in, "uint:8")) {
+           p_report[reports++] := in;
+       }
+
+       module
+       report () {
+           int(i);
+
+           for (i=0 ; i<reports ; i++)
+               .....  p_report[i];
+       }
+    \end{lstlisting}
+    Each time module {\bf m} is invoked it establishes a reference
+    in value array {\bf p\_report} to the module input queue. At the
+    end of the module {\bf report} is invoked which iterates
+    through the value array {\bf p\_report} and assigns the referenced
+    queues to something. We might like to do something like the following
+    \begin{lstlisting}[gobble=4, language=threepl]
+       when (<p_report[0])
+           p_out <<- p_report[0];
+       else when (<p_report[1])
+           p_out <<- p_report[1];
+       else when (<p_report[2])
+           p_out <<- p_report[2];
+       .
+       etc
+       .
+    \end{lstlisting}
+    which will read from one of the queues in a priority order. We could
+    generalise the above program by means of recursion - \index{recursion}
+    \begin{lstlisting}[gobble=4, language=threepl]
+           queue({result, q1, q2, q3}, "uint:8");
+           var(v, value, "[3]uint:8");
+           .
+           .
+           v[0] := q1;
+           .
+           .
+           v[1] := q2;
+           .
+           .
+           v[2] := q3;
+           .
+           .
+           [pri(result <- v, 0, 3);]
+
+       procedure
+       pri (queue(o) <- value(i), int({index, size})) {
+           when (<i[index])
+               o <<- i[index];
+           else
+               if (index < (size - 1))
+                   pri(o <- i, index+1, size);
+       }
+    \end{lstlisting}    
+    All of the above code examples using nested {\em when}s will generate
+    cascaded logic which can quickly lead to control logic paths which are
+    too long for signals to propagate within a clock cycle.
+
+    The use of immediate code to control target code generation can
+    be illustrated by the following examples. If we wish to create
+    a delay line we could write the following -
+    \begin{lstlisting}[gobble=4, language=threepl]
+           static({y, z}, "uint:8");
+
+           .
+           .
+           z <- del(y, 5);
+           .
+           .
+
+       function
+       delay (value(in, "uint:8"), int(n)) {
+           var(d, static, "[10]uint:8");
+           [
+               d[0] <- in;
+               for (int(i,1) ; i<n ; i++)
+                   d[i] <- d[i-1];
+           ]
+           return(d[n-1]);
+       }
+    \end{lstlisting}
+    We have had to include the code for the delay line itself in a module,
+    the function just returning a value which is the last static variable in
+    the delay line. Thus the function itself does not contain any in-line
+    target code (functions cannot), the module being an independent executing
+    entity.
+    
+    The {\em for} loop is immediate and executes {\em n} times. Each time it
+    iterates it generates one target assignment statement. Since we are at
+    the top level of a module the target assignment statement before the loop
+    and each of the target assignment statements generated by the loop will
+    each be wrapped in their own infinite loops to run completely
+    independently in parallel. Had we used a loop like this below the top
+    level of a module it would have had to be enclosed in a {\em seq}, {\em
+    par} or {\em sync}. The function above, as called, is equivalent to
+    having written -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       function
+       delay (value(in, "uint:8"), int(n)) {
+           var(d, static, "[10]uint:8");
+           [
+               d[0] <- in;
+               d[1] <- d[0];
+               d[2] <- d[1];
+               d[3] <- d[2];
+               d[4] <- d[3];
+           ]
+           return(d[4]);
+       }
+    \end{lstlisting}
+    
+    There are two annoying limitations of the above code: the data type is
+    fixed and the static array in the function has a fixed dimension. The
+    following version removes both these limitations -
+    \begin{lstlisting}[gobble=4, language=threepl]
+           static({y, z}, "uint:8");
+
+           .
+           .
+           z <- del(y, 5);
+           .
+           .
+
+       function
+       delay (value(in), int(n)) {
+           var(d, static, "["+n+"]"+type(in));
+           [
+               d[0] <- in;
+               for (int(i,1) ; i<n ; i++)
+                   d[i] <- d[i-1];
+           ]
+           return(d[n-1]);
+       }
+    \end{lstlisting}
+    Parameter {\em in} is now created without a data type, which it will
+    take from the matching argument. It now uses that data type by getting the
+    string version by means of {\em type()} and prepending the required
+    dimension in brackets from parameter {\em n}. The data type of the
+    function return will be the same as {\em d}, which is the same as the
+    input {\em in}.
+
+    If an immediate loop is to contain more than one target statement
+    then these must be bracketed, e.g.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       for (i=0 ; i<3 ; i++) {
+           a[i] <- b[i] + i;
+           c[i] <- d[i] - i;
+       }
+    \end{lstlisting}
+    is equivalent to writing
+    \begin{lstlisting}[gobble=4, language=threepl]
+       a[0] <- b[0] + 0;
+       c[0] <- d[0] - 0;
+       a[1] <- b[1] + 1;
+       c[1] <- d[1] - 1;
+       a[2] <- b[2] + 2;
+       c[2] <- d[2] - 2;
+    \end{lstlisting}    
+
+    If we were to use such a loop inside a procedure we would have to enclose
+    the resulting target statements in a {\em seq}, {\em par} or {\em sync}
+    because the body of a procedure can only contain one top level target
+    statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       procedure
+       p () {
+           par {
+               for (i=0 ; i<3 ; i++) {
+                   a[i] <- b[i] + i;
+                   c[i] <- d[i] - i;
+               }
+           }
+       }
+    \end{lstlisting}
+    in this case a {\em par} block.
+
+    An immediate loop that contains target code in its
+    body simply replicates the target code and it is the context
+    in which the immediate loop occurs that decides whether the
+    resultant replicated statements are to be executed
+    sequentially, in parallel or in individual infinite loops.
+    For example array variables are not allowed in expressions, so if
+    we wish to do array arithmetic we must code it explicitly. For example
+    to add two 2D arrays we could write -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       static({a, b, c}, "[3][4]uint:8");
+       
+       par {
+           for (int(i) ; i<3 ; i++)
+               for (int(j) ; j<4 ; j++)
+                   c[i][j] <- a[i][j] + b[i][j];
+       }
+    \end{lstlisting}
+    If this code is at the top level in a module then we may not want the {\em
+    par}. However, note that this will execute on every clock cycle so we may
+    want some execution control using a {\em when}. If the variables were
+    queues rather than statics then their execution would be controlled by queue
+    availability.

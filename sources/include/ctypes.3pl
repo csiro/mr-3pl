@@ -1,0 +1,117 @@
+nosource
+
+var(enum_map, "map");
+
+// Return a string declaring a C data type which matches the given 3pl type
+// <t>. The C type has the name <name>. This function works for 3pl enum and
+// struct types; the latter must not have nested structs, and must fit in 64
+// bits.
+global function
+ctypes (type(t), str(name), str(prefix, "")) {
+    str(s, typevalstring(t));
+    switch (head(s, 1)) {
+    case "{":   // enum
+        str(e, s);
+        s = tail(s, strlen(s)-1); // remove leading "{"
+        s = head(s, strlen(s)-1); // remove trailing "{"
+        var(l, "[]str", split(s, ","));
+        put(enum_map, e, size(dimension(l) / 2 - 1));
+        s  = "typedef enum {\n";
+        for (int(i) ; i<dimension(l) ; i+=2) {
+            s += "    " + prefix + l[i] + " = " + l[i+1];
+            if (i != (dimension(l) - 2))
+                s += ",\n";
+            else
+                s += "\n";
+        }
+        s += "} " + name + ";\n";
+        return(s);
+
+    case "(":   // struct
+        s = tail(s, strlen(s)-1); // remove leading "("
+        s = head(s, strlen(s)-1); // remove trailing ")"
+        s = replaceall(s, "[\t ]", "");
+        var(l, "[]str", split(s, ","));
+
+        log({left, right});
+        int(n, dimension(l));
+        int({j, count});
+        for (int(i) ; i<n ; i++) {
+            if (count == 0)
+                l[j] = l[i];
+            else
+                l[j] += "," + l[i];
+            left  = (strpos(l[i], "(") >= 0) ||
+                    (strpos(l[i], "{") >= 0);
+            right = (strpos(l[i], ")") >= 0) ||
+                    (strpos(l[i], "}") >= 0);
+            if (left && !right)
+                count++;
+            if (!left && right)
+                count--;
+            if (count == 0)
+                j++;
+        }
+        n = j;
+        s =  "typedef union {\n";
+        s += "    struct {\n";
+        int(bits);
+        for (int(i) ; i<n ; i+=2) {
+            if (startswith(l[i+1], "("))
+                texit("cdecls() - cannot handle nested struct");
+            if (startswith(l[i+1], "{")) {
+                if (get(enum_map, l[i+1]) == null)
+                    texit("cdecls() - unknown enum in struct");
+                bits += get(enum_map, l[i+1]);
+            } else {
+                type(x, l[i+1]);
+                bits += size(x);
+            }
+        }
+        if (bits > 64)
+            texit("cdecls() - struct width (" + bits + ") > 64 bits");
+        int(w, bits > 32 ? 64 : 32);
+        str(t, bits > 32 ? "uint64_t" : "uint32_t");
+        if (bits % 32 != 0)
+            s += "        unsigned _pad: " + (w-bits) + ";\n";
+        for (int(i, n-2) ; i>=0 ; i-=2) {
+            type(x, l[i+1]);
+            s += "        unsigned " + l[i] + ": " + size(x) + ";\n";
+        }
+        s += "    } bits;\n";
+        s += "    " + t + " word;\n";
+        s += "} " + name + ";\n";
+        return(s);
+
+    default:
+        texit("ctypes() - type '" + s + "' not enum or struct");
+    }
+}
+
+// Return a string defining a C data object that matches the given type <t>.
+// The object has the C name given by <name>. Presently this function only
+// operates on enum types, where the C object is a NULL-terminated string
+// table formed from the enum values.
+
+global function
+cdatas (type(t), str(name)) {
+    str(s, typevalstring(t));
+    switch (head(s, 1)) {
+    case "{":   // enum
+        str(e, s);
+        s = tail(s, strlen(s)-1); // remove leading "{"
+        s = head(s, strlen(s)-1); // remove trailing "{"
+        var(l, "[]str", split(s, ","));
+        put(enum_map, e, size(dimension(l) / 2 - 1));
+        s = "static const char *" + name + "[] __attribute((unused)) = {\n";
+        for (int(i) ; i<dimension(l) ; i+=2) {
+            s += "    \"" + l[i] + "\",\n";
+        }
+        s += "    NULL\n";
+        s += "};\n";
+        return(s);
+
+    default:
+        texit("cdatas() - type '" + s + "' not enum");
+    }
+}

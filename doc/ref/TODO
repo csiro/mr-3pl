@@ -1,0 +1,22 @@
+in running the compiler section
+    check command line options in detail and explain related directives
+
+add postprocessing section to leader, trailer discussion - may
+have already done so. Note about global variables still present
+and user functions, procedure and modules still accessible, but
+should not have any target code (most BUT PERHAPS NOT ALL is
+detected and gives fatal error).
+
+Note somewhere that if execution is skipped post-processing can still
+proceed.
+
+Some programming guidlines for post-processing? Examples of
+useful directives, how to get file modification times, use of
+environment variables.
+
+Sort out assignment and use of directive netlistComment -
+Want directives listed in -
+    report file
+    netlist file
+    probably not net file
+    probably not info file

@@ -1,0 +1,82 @@
+\pagebreak
+
+\chapter{Using CPLDs}
+
+    The Xilinx Coolrunner and XC9500 CPLDs are supported. The variable modes {\bf
+    selectvalue}, {\bf queue}, {\bf cmemory} and {\bf rmemory} cannot be used.
+    
+    For {\bf static} mode variables the {\bf continuous} attribute is true by
+    default. This means that top level static assignments will not have an
+    initiated execution thread containing an infinite loop but instead the register
+    clock enable will be continuously asserted.
+
+    For {\bf output} mode variables the {\bf direct} attribute is true by default.
+    This means that conditional (3-state) output will have the enable
+    driven directly from the conditional test expression rather than from
+    an initiated execution thread.
+    
+    Target multiplication, division, remainder and variable left or right shift
+    are not implemented for CPLDs.
+    
+    The following 3PL program illustrates XC9500 usage -
+    \begin{lstlisting}[gobble=4, language=threepl]
+        part("XC9536PC44-5");
+
+        module "xilinx/xc95.3pl";
+
+        var(inpins, "[]str", {"P11", "P12", "P13", "P14", "P18", "P19", "P20"});
+        str(outpin, "P22");
+        var(countpins, "[]str", {"P34", "P35", "P36"});
+        str(clkpin, "P5");
+
+        clock(clk, frequency=1.0e6, loc=clkpin);
+
+        useclock(clk);
+
+        input(in, "[7]log", loc=inpins);
+
+        static(o, "log");
+        static(count, "uint:3", 5);
+        output(,, count, loc=countpins);
+
+        count++;
+
+        seq {
+            o <- in[0] && in[1] && in[2] && in[3] && in[4] && in[5] && in[6];
+            o <- false;
+        }
+
+        output(,, o, loc=outpin);
+    \end{lstlisting}
+    
+\pagebreak
+
+    For Coolrunner CPLDs the I/O standard can be specified -   
+    \begin{lstlisting}[gobble=4, language=threepl]
+        part("XC2C32APC44-6");
+
+        module "xilinx/xc2c.3pl";
+
+        var(inpins, "[]str", {"P25", "P26", "P27", "P28", "P29", "P33", "P34"});
+        var(outpin, "str", "P35");
+        var(clkpin, "str", "P5");
+
+        clock(clk, frequency=1.0e6, loc=clkpin);
+
+        useclock(clk);
+
+        input(in, "[7]log", loc=inpins);
+
+        static(o, "log");
+
+        seq {
+            o <- in[0] && in[1] && in[2] && in[3] && in[4] && in[5] && in[6];
+            o <- false;
+        }
+
+        output(,, o, loc=outpin);
+    \end{lstlisting}
+    
+    The 3PL compiler will run the appropriate Xilinx CPLD fitting software,
+    if post-processing is not disabled.
+    The final product is a JEDEC file with a {\bf .jed} file name extension.

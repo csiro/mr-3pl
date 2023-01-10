@@ -1,0 +1,37 @@
+
+nosource
+
+// 3pl board support file for a Dangerous Prototypes XC9572XL breakout board
+//
+// This provides a Xilinx XC9572XL CPLD with minimal support. IO pins are
+// expanded to a DIP-pattern header. There are two LEDs driven from IO pins,
+// a button, and an optional clock oscillator. An on-board power regulator
+// provides 3.3V.
+
+part("XC9572XL-10-VQ44");
+module "xilinx/xc95.3pl"
+
+// 33 IO pins across bank 1 (16 pins) and bank 2 (17 pins)
+iopins(global.bank1_pins, "[16]str", {
+	"P39", "P40", "P41", "P42", "P43", "P44", "P1", "P2",
+	"P3", "P5", "P6", "P8", "P12", "P13", "P14", "P16"
+    }
+);
+iopins(global.bank2_pins, "[17]str", {
+	"P38", "P37", "P36", "P34", "P33", "P32", "P31", "P30",
+	"P29", "P28", "P27", "P23", "P22", "P21", "P20", "P19",
+	"P18"
+    }
+);
+
+// the two yellow LEDs are connected between pin 0 of each bank and GND
+var(global.led_pins, "[2]str", {bank1_pins[0], bank2_pins[0]});
+
+// the pushbutton pulls pin 16 of bank 2 high (the pin should be an input)
+str(global.button_pin, bank2_pins[16]);
+
+// We assume a 16MHz clock oscillator is installed on the underside of the
+// board. It drives bank 1, pin 6, P1 (GCK3).
+iopins(global.clock_pin, "str", bank1_pins[6], frequency=16.0e6);
+clock(global.c16, loc=clock_pin, tnm="C16");
+useclock(c16);

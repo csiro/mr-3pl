@@ -1,0 +1,35 @@
+// Class trailermodule test
+// Should print -
+//  123     class variable 'j' via module 'm'
+//  456     common 'j' via module 'm'
+//  123     class variable 'j' via trailermodule
+//  456     common 'j' via trailermodule
+//
+class(cl, c());
+cl.m();
+
+class c() {
+    common {
+        int(k, 456);
+    }
+    int(j, 123);
+
+    module m () {
+        println(f());
+        println(fc());
+    }
+    
+    // Return class instance variable 'j'
+    function f () {
+        return(j);
+    }
+    // return class common variable 'k'
+    function fc () {
+        return(k);
+    }
+    
+    trailermodule ("XXX") {
+        println(f());
+        println(fc());
+    }
+}

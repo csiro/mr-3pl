@@ -1,0 +1,1379 @@
+\pagebreak
+
+\section{Clock Manager and Clock Buffer Library File - xilinx/clocks.3pl}
+
+    \index{library!xilinx/clocks.3pl}
+    This library creates any clock managers or clock buffers for all Xilinx
+    FPGAs.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/clocks.3pl"
+    \end{lstlisting}
+    
+    {\bf This library is already incorporated by all FPGA family header files.}
+    
+    The procedures in this library attempt to propagate clock frequencies and
+    periods from inputs to outputs using the parameters controlling clock
+    division or synthesis. For that reason most take an error exit if an input
+    clock does not have a frequency-period attribute.
+
+    At the moment clkmmcm(), pll\_adv() are exceptions to the last paragraph.
+    They will be changed to conform ASAP.
+    
+    Where clock input pads, clock buffers and clock manager are interconnected
+    clock mode variables are used (required by parameter modes). Where a clock
+    is derived from CLB logic the inbuilt function {\bf clockfromexpr()}
+    \autorefph{sec:ipclockfromexpr} can be used to assign a value mode variable
+    to a clock mode variable. Where input delays are required for an input clock
+    path (see {\bf idelay()} \autorefph{sec:lpidelay}) the input should be input
+    mode rather than clock mode. The output from the delay can then be convert
+    to clock mode by using {\bf clockfromexpr()}.
+
+
+
+    \subsection{library modules}
+    
+        None.
+
+
+    \subsection{library procedures}
+
+        \subsubsection{clkdcm - create a Spartan3, Virtex2, Virtex2Pro, Virtex4 or Virtex5 DCM digital clock manager}\label{sec:lpclkdcm}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkdcm (
+                   clock({clk0, clk90, clk180, clk270, clk2x, clk2x180, clkdv, clkfx, clkfx180}),
+                   value({locked, psdone, drdy}, "log"), value(dout, "uint:16"), value(status, "uint:8")
+                   <-
+                   str(loc), log({clkin_divide_by_2, duty_cycle_correction, startup_wait}),
+                   str(clkdv_divide),
+                   float(clkin_period), int({clkfx_divide, clkfx_multiply, phase_shift}),
+                   str({clk_feedback,
+                   clkout_phase_shift, dfs_frequency_mode, dll_frequency_mode, deskew_adjust}),
+                   clock({clkin, clkfb, psclk}), value({reset, psincdec, psen, dwe, den}, "log"),
+                   value(din, "bits:16"), value(daddr, "uint:7")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf clk0}     & clock &         & output clock \\ \hline
+            {\bf clk90}    & clock &         & output clock shifted 90$\deg$ \\ \hline
+            {\bf clk180}   & clock &         & output clock shifted 180$\deg$ \\ \hline
+            {\bf clk270}   & clock &         & output clock shifted 270$\deg$ \\ \hline
+            {\bf clk2x}    & clock &         & output clock at double frequency \\ \hline
+            {\bf clk2x180} & clock &         & output clock at double frequency shifted 180$\deg$ \\ \hline
+            {\bf clkdv}    & clock &         & divided output clock \\ \hline
+            {\bf clkfx}    & clock &         & frequency synthesised output clock \\ \hline
+            {\bf clkfx180} & clock &         & frequency synthesised output clock shifted 180$\deg$ \\ \hline
+            {\bf locked}   & value & log     & DLL is locked \\ \hline
+            {\bf status}   & value & uint:8  & status \\ \hline
+            {\bf psdone}   & value & log     & phase shift has finished \\ \hline
+            {\bf drdy}     & value & log     & DCM ready for reconfiguration \\ \hline
+            {\bf dout}     & value & bits:16 & status and reconfiguration data output \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optional location \\ \hline
+            {\bf clkin\_divide\_by\_2}    & immed     & log   & DLL clock output at $f_{in}/2$ \\ \hline
+            {\bf duty\_cycle\_correction} & immediate & log   & correct duty cycle to 50\%  \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf clkdv\_divide}           & immed     & str   & $n$ for clock output at $f_{in}/n$ \\ \hline
+            {\bf clkin\_period}           & immediate & float & input clock period, ns \\ \hline
+            {\bf clkfx\_divide}           & immed     & int   & $m$ for DFS clock output at $f_{in} \times n / m$ \\ \hline
+            {\bf clkfx\_multiply}         & immed     & int   & $n$ for DFS clock output at $f_{in} \times n / m$ \\ \hline
+            {\bf phase\_shift}            & immediate & int   & fixed phase shift value \\ \hline
+            {\bf clk\_feedback}           & immediate & str   & "1x", "2x", "none" \\ \hline
+            {\bf clkout\_phase\_shift}    & immediate & str   & "none", "fixed", "variable" \\ \hline
+            {\bf dfs\_frequency\_mode}    & immediate & str   & "high" or "low" \\ \hline
+            {\bf dll\_frequency\_mode}    & immediate & str   & "high" or "low" \\ \hline
+            {\bf deskew\_adjust}          & immediate & str   & "system\_synchronous", "source\_synchronous", or 0 - 15 \\ \hline
+            {\bf clkin}                   & clock     &       & input clock \\ \hline
+            {\bf clkfb}                   & clock     &       & clock feedback \\ \hline
+            {\bf psclk}                   & clock     &       & phase shift clock\\ \hline
+            {\bf reset}                   & value     & log   & reset \\ \hline
+            {\bf psincdec}                & value     & log   & phase shift increment or decrement\\ \hline
+            {\bf psen}                    & value     & log   & phase shift enable\\ \hline
+            {\bf dwe}                     & value     & log   & reconfiguration data write enable\\ \hline
+            {\bf den}                     & value     & log   & select reconfiguration data or status output\\ \hline
+            {\bf din}                     & value     & log   & reconfiguration data input \\
+            {\bf daddr}                   & value     & log   & reconfiguration address input \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a Virtex4 or Virtex5 DCM digital clock manager. See Xilinx
+            documentation for signal and attribute details. The first group of input
+            parameters are immediate mode and are attributes. The remaining input
+            parameters are input signals, clock mode for clocks and value mode for
+            control signals.
+
+            \heading{Attributes}
+
+                {\bf loc} is an optional location string from the
+                following list - "DLL0P", "DLL1P", "DLL2P", "DLL3P", "DLL0S", "DLL1S",
+                "DLL2S", "DLL3S". These select from the four primary and four secondary
+                delay-locked loops. If "" it is ignored.
+
+                {\bf clkin\_divide\_by\_2} - see Xilinx documentation.
+
+                If {\bf duty\_cycle\_correction} is true or missing then duty cycle
+                correction is enabled, giving a DLL output duty cycle of 50\%. If
+                this attribute is false then the duty cycle will be the same as that
+                of the input.
+
+                {\bf startup\_wait} if true causes startup following configuration to
+                be delayed until the DCM achieves lock.
+
+                {\bf clkfx\_divide} is the frequency divider for the DFS (1 to 32).
+
+                {\bf clkfx\_multiply} is the frequency multiplier for the DFS (2 to 32).
+
+
+                {\bf phase\_shift} is the phase shift value which must be in the
+                range -255 to +255 inclusive. A unit value represents 1/256 of a cycle.
+
+                {\bf clkdv\_divide} indicates that the divided
+                frequency output is being used. The division ratio is a
+                string argument which must be one of "1.5", "2.0", "2.5", "3.0",
+                "3.5", "4.0", "4.5", "5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0",
+                "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0" or "16.0".
+
+                {\bf clkin\_period} is the input clock period. This must be
+                specified if the DFS is used.
+
+                {\bf clk\_feedback} must be "2X" if the clock feedback is at twice
+                input frequency. By default the feedback is at the input frequency, or
+                this attribute can be explcitly "1X" to achieve the same.
+
+                {\bf clkout\_phase\_shift} is a string selecting the mode of the
+                phase shifter. If omitted or "none" the outputs are not phase shifted.
+                If this argument is "fixed" a clock skew is added to the input clock
+                shifting the phase of all clock outputs. The phase shift is specified by
+                the next input argument. If "variable" is specified the phase shift
+                is initially set as specified by the next argument, but it can be
+                dynamically incremented or decremented - see the 17th to 19th input
+                arguments. On reset the phase shift returns to the initial value.
+
+                {\bf dfs\_frequency\_mode} indicates that the DFS is on
+                the high frequency range. The low and high frequency ranges are
+                given in the data sheets.
+
+                {\bf dll\_frequency\_mode} indicates that the DLL is in
+                the high frequency range (see data sheets). In this mode the 90 degree
+                and 270 degree outputs and the 2X frequency outputs  are not available.
+
+                {\bf deskew\_adjust} controls the amount of delay in the feedback
+                path. Its values can be "system\_synchronous" (default),
+                "source\_synchronous" or "0 to 15".
+
+                {\bf dcm\_performance\_mode} optimises the DCM for high frequency low jitter
+                ("max\_speed", the default) or low frequency and maximum phase shift range
+                ("max\_range").
+
+            \heading{input signals}
+            
+                {\bf din}, {\bf daddr}, {\bf dwe},  {\bf den} and {\bf dclk}
+                are only available on Virtex4 and Virtex5.
+
+                {\bf clkin} is the input clock. This argument must be
+                supplied and is the first target mode input argument.
+
+                {\bf clkfb} is the clock feedback. This argument must be
+                supplied. This is usually a buffered version of the output clock at
+                phase 0.
+
+                {\bf reset} is an optional reset. This resets the
+                DLL, DFS and phase shifter and re-establishes lock.
+
+                {\bf psincdec} is true if a phase increment is to be
+                executed or false if a phase decrement is to be executed. Execution is
+                controlled by the following two inputs.
+
+                {\bf psen} is the phase increment/decrement enable.
+                This must be held true for one period of the phase shift adjustment
+                clock (the next input argument). 
+
+                {\bf psclk} is the phase increment/decrement clock.
+
+                {\bf din} is data input for a dynamic reconfiguration write.
+
+                {\bf daddr} is the address input for a dynamic reconfiguration
+                write.
+
+                {\bf dwe} is driven high for one {\bf dclk} cycle along with
+                {\bf den} to execute a dynamic reconfiguration write.
+
+                {\bf den} is driven high for one {\bf dclk} cycle to execute
+                a dynamic reconfiguration read or write.
+
+                {\bf dclk} is a clock controlling dynamic reconfiguration
+                operations.
+
+            \heading{output signals}
+
+                {\bf drdy} and {\bf dout} are only available on Virtex4 and
+                Virtex5.
+                
+                {\bf status} is only available on Spartan3, Virtex2 and Virtex2Pro.
+                
+                {\bf clk0}, {\bf clk90}, {\bf clk180} and {\bf clk270} are clock
+                outputs at the input frequency. These are at phases 0, 90, 180 and 270
+                degree respectively relative to the input clock.
+
+                {\bf clk2x} and {\bf clk2x180} are at twice the input frequency
+                at phases 0 and 180 degree respectively.
+
+                {\bf clkdv} is the divided clock frequency where the division ratio
+                is given by the 3rd input argument.
+
+                {\bf clkfx} and {\bf clkfx180} are the frequency synthesised clock
+                at phases 0 and 180 degree respectively. The frequency is the input
+                multiplied by the value of {\bf clkfx\_multiply} and divided by the value
+                of {\bf clkfx\_divide}.
+
+                {\bf locked} is high when the DLL and DFS are locked to the input
+                clock. This signal has a null clock domain.
+
+                {\bf status} is an 8 bit status (see Xilinx unified library
+                documentation). This signal has a null clock domain.
+
+                {\bf psdone} goes high when a phase shift adjustment has been done.
+                It remains high for one period of the phase adjustment clock. Note
+                that this signal has a null clock domain, but it is synchronous
+                with {\bf psclk}.
+
+                {\bf drdy} goes high when the dynamic configuration port finishes
+                an operation. On a read the data on {\bf do} must be captured on
+                the next rising {\bf dclk} edge. When writing the next operation
+                can commence on the same clock cycle in which {\bf drdy} goes high.
+
+                {\bf dout} is the data output when reading dynamic configuration data.
+                The data on {\bf do} must be captured on
+                the rising {\bf dclk} edge when {\bf drdy} is high.
+
+
+
+        \subsubsection{clkdll - create a Spartan2, Virtex or VirtexE DLL delay-locked loop clock manager}\label{sec:lpclkdll}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkdlle (
+                   clock({clk0, clk90, clk180, clk270, clk2x, clkdv}),
+                   value(locked, "log")
+                   <-
+                   str(loc), log({duty_cycle_correction, startup_wait}),
+                   int(clkdv_divide),
+                   clock({clkin, clkfb}), value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf clk0}     & clock &        & output clock \\ \hline
+            {\bf clk90}    & clock &        & output clock shifted 90$\deg$ \\ \hline
+            {\bf clk180}   & clock &        & output clock shifted 180$\deg$ \\ \hline
+            {\bf clk270}   & clock &        & output clock shifted 270$\deg$ \\ \hline
+            {\bf clk2x}    & clock &        & output clock at double frequency \\ \hline
+            {\bf clkdv}    & clock &        & divided output clock \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optional location \\ \hline
+            {\bf clkin\_divide\_by\_2}    & immediate & log   & divide clock by 2 \\ \hline
+            {\bf duty\_cycle\_correction} & immediate & log   & correct duty cycle \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf clkdv\_divide}           & immediate & int   & clock division ratio \\ \hline
+            {\bf clkin}                   & clock     &       & input clock \\ \hline
+            {\bf clkfb}                   & clock     &       & clock feedback \\ \hline
+            {\bf reset}                   & value     & log   & reset \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a Virtex DLL delay-locked loop clock manager. See Xilinx
+            documentation for signal and attribute details. The first group of input
+            parameters are immediate mode and are attributes. The remaining input
+            parameters are input signals, clock mode for clocks and value mode for
+            control signals.
+
+            \heading{attributes}
+
+                {\bf loc} is an optional location string from the
+                following list - "DLL0P", "DLL1P", "DLL2P", "DLL3P", "DLL0S", "DLL1S",
+                "DLL2S", "DLL3S". These select from the four primary and four secondary
+                delay-locked loops. If "" it is ignored.
+
+                {\bf clkin\_divide\_by\_2} - see Xilinx documentation.
+
+                If {\bf duty\_cycle\_correction} is true or missing then duty cycle
+                correction is enabled, giving a DLL output duty cycle of 50\%. If
+                this attribute is false then the duty cycle will be the same as that
+                of the input.
+
+                {\bf startup\_wait} if true causes startup following configuration to
+                be delayed until the DLL achieves lock.
+
+                {\bf clkdv\_divide} indicates that the divided
+                frequency output is being used. The division ratio is a
+                string argument which must be an integer from 1 to 32 inclusive.
+
+            \heading{input signals}
+
+                {\bf clkin} is the input clock. This argument must be
+                supplied and is the first target mode input argument.
+
+                {\bf clkfb} is the clock feedback. This argument must be
+                supplied. This is usually a buffered version of the output clock at
+                phase 0.
+
+                {\bf reset} is an optional reset. This resets the
+                DLL, DFS and phase shifter and re-establishes lock.
+                operations.
+
+            \heading{output signals}
+
+                {\bf clk0}, {\bf clk90}, {\bf clk180} and {\bf clk270} are clock
+                outputs at the input frequency. These are at phases 0, 90, 180 and 270
+                degree respectively relative to the input clock.
+
+                {\bf clk2x} is at twice the input frequency.
+
+                {\bf clkdv} is the divided clock frequency where the division ratio
+                is given by the 3rd input argument.
+
+                {\bf locked} is high when the DLL and DFS are locked to the input
+                clock. This signal has a null clock domain.
+
+
+
+
+
+
+        \subsubsection{clkdlle - create an extended Spartan2, Virtex or VirtexE DLL delay-locked loop clock manager}\label{sec:lpclkdlle}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkdlle (
+                   clock({clk0, clk90, clk180, clk270, clk2x, clk2x180, clkdv}),
+                   value(locked, "log")
+                   <-
+                   str(loc), log({duty_cycle_correction, startup_wait}),
+                   int(clkdv_divide),
+                   clock({clkin, clkfb}), value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf clk0}     & clock &        & output clock \\ \hline
+            {\bf clk90}    & clock &        & output clock shifted 90$\deg$ \\ \hline
+            {\bf clk180}   & clock &        & output clock shifted 180$\deg$ \\ \hline
+            {\bf clk270}   & clock &        & output clock shifted 270$\deg$ \\ \hline
+            {\bf clk2x}    & clock &        & output clock at double frequency \\ \hline
+            {\bf clk2x180} & clock &        & output clock at double frequency shifted 180$\deg$ \\ \hline
+            {\bf clkdv}    & clock &        & divided output clock \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optional location \\ \hline
+            {\bf clkin\_divide\_by\_2}    & immediate & log   & divide clock by 2 \\ \hline
+            {\bf duty\_cycle\_correction} & immediate & log   & correct duty cycle \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf clkdv\_divide}           & immediate & int   & clock division ratio \\ \hline
+            {\bf clkin}                   & clock     &       & input clock \\ \hline
+            {\bf clkfb}                   & clock     &       & clock feedback \\ \hline
+            {\bf reset}                   & value     & log   & reset \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a Virtex DLLE extended delay-locked loop clock manager. See
+            Xilinx documentation for signal and attribute details. The first group
+            of input parameters are immediate mode and are attributes. The remaining
+            input parameters are input signals, clock mode for clocks and value mode
+            for control signals.
+
+            \heading{attributes}
+
+                {\bf loc} is an optional location string from the
+                following list - "DLL0P", "DLL1P", "DLL2P", "DLL3P", "DLL0S", "DLL1S",
+                "DLL2S", "DLL3S". These select from the four primary and four secondary
+                delay-locked loops. If "" it is ignored.
+
+                {\bf clkin\_divide\_by\_2} - see Xilinx documentation.
+
+                If {\bf duty\_cycle\_correction} is true or missing then duty cycle
+                correction is enabled, giving a DLL output duty cycle of 50\%. If
+                this attribute is false then the duty cycle will be the same as that
+                of the input.
+
+                {\bf startup\_wait} if true causes startup following configuration to
+                be delayed until the DLL achieves lock.
+
+                {\bf clkdv\_divide} indicates that the divided
+                frequency output is being used. The division ratio is a
+                string argument which must be an integer from 1 to 32 inclusive.
+
+            \heading{input signals}
+
+                {\bf clkin} is the input clock. This argument must be
+                supplied and is the first target mode input argument.
+
+                {\bf clkfb} is the clock feedback. This argument must be
+                supplied. This is usually a buffered version of the output clock at
+                phase 0.
+
+                {\bf reset} is an optional reset. This resets the
+                DLL, DFS and phase shifter and re-establishes lock.
+                operations.
+
+            \heading{output signals}
+
+                {\bf clk0}, {\bf clk90}, {\bf clk180} and {\bf clk270} are clock
+                outputs at the input frequency. These are at phases 0, 90, 180 and 270
+                degree respectively relative to the input clock.
+
+                {\bf clk2x} and {\bf clk2x180} are at twice the input frequency
+                at phases 0 and 180 degree respectively.
+
+                {\bf clkdv} is the divided clock frequency where the division ratio
+                is given by the 3rd input argument.
+
+                {\bf locked} is high when the DLL and DFS are locked to the input
+                clock. This signal has a null clock domain.
+
+
+
+
+
+
+        \subsubsection{clkdllhf - create a high frequency Spartan2, Virtex or VirtexE DLL delay-locked loop clock manager}\label{sec:lpclkdllhf}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkdlle (
+                   clock({clk0, clk180, clkdv}),
+                   value(locked, "log")
+                   <-
+                   str(loc), log({duty_cycle_correction, startup_wait}),
+                   int(clkdv_divide),
+                   clock({clkin, clkfb}), value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf clk0}     & clock &        & output clock \\ \hline
+            {\bf clk180}   & clock &        & output clock shifted 180$\deg$ \\ \hline
+            {\bf clkdv}    & clock &        & divided output clock \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optional location \\ \hline
+            {\bf clkin\_divide\_by\_2}    & immediate & log   & divide clock by 2 \\ \hline
+            {\bf duty\_cycle\_correction} & immediate & log   & correct duty cycle \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf clkdv\_divide}           & immediate & int   & clock division ratio \\ \hline
+            {\bf clkin}                   & clock     &       & input clock \\ \hline
+            {\bf clkfb}                   & clock     &       & clock feedback \\ \hline
+            {\bf reset}                   & value     & log   & reset \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a Virtex DLL high frequency delay-locked loop clock manager. See
+            Xilinx documentation for signal and attribute details. The first group
+            of input parameters are immediate mode and are attributes. The remaining
+            input parameters are input signals, clock mode for clocks and value mode
+            for control signals.
+
+            \heading{attributes}
+
+                {\bf loc} is an optional location string from the
+                following list - "DLL0P", "DLL1P", "DLL2P", "DLL3P", "DLL0S", "DLL1S",
+                "DLL2S", "DLL3S". These select from the four primary and four secondary
+                delay-locked loops. If "" it is ignored.
+
+                {\bf clkin\_divide\_by\_2} - see Xilinx documentation.
+
+                If {\bf duty\_cycle\_correction} is true or missing then duty cycle
+                correction is enabled, giving a DLL output duty cycle of 50\%. If
+                this attribute is false then the duty cycle will be the same as that
+                of the input.
+
+                {\bf startup\_wait} if true causes startup following configuration to
+                be delayed until the DLL achieves lock.
+
+                {\bf clkdv\_divide} indicates that the divided
+                frequency output is being used. The division ratio is a
+                string argument which must be an integer from 1 to 32 inclusive.
+
+            \heading{input signals}
+
+                {\bf clkin} is the input clock. This argument must be
+                supplied and is the first target mode input argument.
+
+                {\bf clkfb} is the clock feedback. This argument must be
+                supplied. This is usually a buffered version of the output clock at
+                phase 0.
+
+                {\bf reset} is an optional reset. This resets the
+                DLL, DFS and phase shifter and re-establishes lock.
+                operations.
+
+            \heading{output signals}
+
+                {\bf clk0} and {\bf clk180} are clock
+                outputs at the input frequency. These are at phases 0 and 180
+                degree respectively relative to the input clock.
+
+                {\bf clkdv} is the divided clock frequency where the division ratio
+                is given by the 3rd input argument.
+
+                {\bf locked} is high when the DLL and DFS are locked to the input
+                clock. This signal has a null clock domain.
+
+
+
+
+
+
+        \subsubsection{simpleclock - create a clock of specified frequency}\label{sec:lpsimpleclock}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               simpleclock (ident(v), clock(in), float(freq), float(tol)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none.
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                                          & mode  & type   & \\
+            \hline \hline
+            {\bf v}     & -         & -       & new clock variable identifier \\ \hline
+            {\bf in}    & clock     & -       & input clock                   \\ \hline
+            {\bf freq}  & immediate & float   & requested frequency           \\ \hline
+            {\bf tol}   & immediate & float   & frequency tolerance           \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a clock variable using a clkdcm and clock buffer as its source.
+            {\bf At present it can only be used on FPGA platforms that contain DCMs.}
+            
+            {\bf v} is an identifier for the new clock mode variable.
+            
+            {\bf in} is a clock that can be used to drive the DCM.
+            
+            {\bf freq} is the requested frequency in Hz. If this has no argument
+            then the clock frequency will be the same as that of the input clock.
+            This can be used to simply add a DCM and clock buffer to an input clock
+            from an input buffer.
+
+            {\bf tol} is the allowable tolerance on the requested frequency in Hz.
+
+            If a frequency within the specified tolerance cannot be generated then
+            a fatal error occurs.
+
+            This procedure does not attempt to optimise the use of DCMs to generate
+            multiple clocks. It uses a new DCM for each call.
+            
+            The procedure determines the multiplier and divisor which will produce
+            the closest synthesiser frequency to that requested. If the requested
+            frequency is lower than the input frequency the procedure also attempts
+            to find a clock division ratio close to that required to achieve the
+            requested frequency. The closest match from the above is then chosen. If
+            the resulting frequency is not within tolerance a fatal error occurs.
+            
+            The clock variable will have the generated frequency attribute, not
+            that of the requested frequency.
+            
+            Example of simple clock input.
+
+            \begin{lstlisting}[gobble=12, language=threepl]
+               iopins(c32_pin, "str", "P94", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+
+               clock(c32_in, loc=c32_pin);     // clock input from pin and input buffer
+               simpleclock(global.c32, c32_in);// global clock
+            \end{lstlisting}
+
+
+            Example of multiple global clocks generated from c32 clock.
+
+            \begin{lstlisting}[gobble=12, language=threepl]
+               simpleclock(global.c16, c32, 16.0e6, 0.1);    // 16 MHz clock
+               simpleclock(global.c25, c32, 25.0e6, 0.1);    // 25 MHz clock
+            \end{lstlisting}
+
+
+
+
+        \subsubsection{clkmmcm\_adv - create an advanced MMCM multi-mode clock manager }\label{sec:lpmmcma}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkmmcm_adv (
+                   clock({ clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkout6,
+                           clkout0b, clkout1b, clkout2b, clkout3b, clkfbout, clkfboutb}),
+                   value({clkfbstopped, clkinstopped, drdy, locked, psdone}, "log"),
+                   value(dout, "bits:16")
+                   <-
+                   str(loc),
+
+                   log({   clkfbout_use_fine_ps, clkout0_use_fine_ps, clkout1_use_fine_ps,
+                           clkout2_use_fine_ps, clkout3_use_fine_ps, clkout4_use_fine_ps,
+                           clkout5_use_fine_ps, clkout6_use_fine_ps, clock_hold, startup_wait}),
+                   int(divclk_divide),
+                   float({ clkfbout_phase, clkfbout_mult_f,
+                           clkout0_divide_f,
+                           clkout0_duty_cycle, clkout0_phase, clkout1_divide_f,
+                           clkout1_duty_cycle, clkout1_phase, clkout2_divide_f,
+                           clkout2_duty_cycle, clkout2_phase, clkout3_divide_f,
+                           clkout3_duty_cycle, clkout3_phase, clkout4_divide_f,
+                           clkout4_duty_cycle, clkout4_phase, clkout5_divide_f,
+                           clkout5_duty_cycle, clkout5_phase, clkout6_divide_f,
+                           clkout6_duty_cycle, clkout6_phase, ref_jitter1, ref_jitter2}),
+                   str(compensation)
+                   clock({clkfb, clkin1, clkin2, dclk, psclk}),
+                   value({clkinsel, den, dwe, psen, psincdec, pwrdwn, reset}, "log"),
+                   value(din, "bits:16"), value(daddr, "uint:7")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                               & mode  & type   & \\
+            \hline \hline
+            {\bf clkout0}      & clock &         & output clock 0 \\ \hline
+            {\bf clkout1}      & clock &         & output clock 1 \\ \hline
+            {\bf clkout2}      & clock &         & output clock 2 \\ \hline
+            {\bf clkout3}      & clock &         & output clock 3 \\ \hline
+            {\bf clkout4}      & clock &         & output clock 4 \\ \hline
+            {\bf clkout5}      & clock &         & output clock 5 \\ \hline
+            {\bf clkout6}      & clock &         & output clock 6 \\ \hline
+            {\bf clkout0b}     & clock &         & output inverted clock 0 \\ \hline
+            {\bf clkout1b}     & clock &         & output inverted clock 1 \\ \hline
+            {\bf clkout2b}     & clock &         & output inverted clock 2 \\ \hline
+            {\bf clkout3b}     & clock &         & output inverted clock 3 \\ \hline
+            {\bf clkfbout}     & clock &         & output clock feedback \\ \hline
+            {\bf clkfboutb}    & clock &         & output inverted clock feedback \\ \hline
+            {\bf clkfbstopped} & value & log     & clock feedback stopped indicator \\ \hline
+            {\bf clkinstopped} & value & log     & input clock stopped indicator \\ \hline
+            {\bf drdy}         & value & log     & DRP ready \\ \hline
+            {\bf locked}       & value & log     & MMC locked \\ \hline
+            {\bf psdone}       & value & log     & phase shift done \\ \hline
+            {\bf dout}         & value & log     & DRP data output \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                                          & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optional location \\ \hline
+            {\bf clkfbout\_use\_fine\_ps} & immediate & log   & enable feedback phase shift fine counter \\ \hline
+            {\bf clkout0\_use\_fine\_ps}  & immediate & log   & enable output 0 phase shift fine counter  \\ \hline
+            {\bf clkout1\_use\_fine\_ps}  & immediate & log   & enable output 1 phase shift fine counter  \\ \hline
+            {\bf clkout2\_use\_fine\_ps}  & immediate & log   & enable output 2 phase shift fine counter  \\ \hline
+            {\bf clkout3\_use\_fine\_ps}  & immediate & log   & enable output 3 phase shift fine counter  \\ \hline
+            {\bf clkout4\_use\_fine\_ps}  & immediate & log   & enable output 4 phase shift fine counter  \\ \hline
+            {\bf clkout5\_use\_fine\_ps}  & immediate & log   & enable output 5 phase shift fine counter  \\ \hline
+            {\bf clkout6\_use\_fine\_ps}  & immediate & log   & enable output 6 phase shift fine counter  \\ \hline
+            {\bf clock\_hold}             & immediate & log   & not documented \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf divclk\_divide}          & immediate & int   & divider ratio, 1 to 128 \\ \hline
+            {\bf clkfbout\_phase}         & immediate & float & clock feedback phase, -360.0 to 360.0\\ \hline
+            {\bf clkfbout\_mult\_f}       & immediate & float & clock feedback multiplier, 1.0 to 64.0\\ \hline
+            {\bf clkout0\_divide\_f}      & immediate & float & clock 0 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout0\_duty\_cycle}    & immediate & float & clock 0 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout0\_phase}          & immediate & float & clock 0 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout1\_divide\_f}      & immediate & float & clock 1 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout1\_duty\_cycle}    & immediate & float & clock 1 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout1\_phase}          & immediate & float & clock 1 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout2\_divide\_f}      & immediate & float & clock 2 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout2\_duty\_cycle}    & immediate & float & clock 2 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout2\_phase}          & immediate & float & clock 2 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout3\_divide\_f}      & immediate & float & clock 3 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout3\_duty\_cycle}    & immediate & float & clock 3 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout3\_phase}          & immediate & float & clock 3 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout4\_divide\_f}      & immediate & float & clock 4 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout4\_duty\_cycle}    & immediate & float & clock 4 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout4\_phase}          & immediate & float & clock 4 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout5\_divide\_f}      & immediate & float & clock 5 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout5\_duty\_cycle}    & immediate & float & clock 5 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout5\_phase}          & immediate & float & clock 5 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout6\_divide\_f}      & immediate & float & clock 6 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout6\_duty\_cycle}    & immediate & float & clock 6 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout6\_phase}          & immediate & float & clock 6 phase, -360.0 to 360.0\\ \hline
+            {\bf ref\_jitter1}            & immediate & float & input clock 1 jitter, 0.000 to 0.999\\ \hline
+            {\bf ref\_jitter2}            & immediate & float & input clock 2 jitter, 0.000 to 0.999\\ \hline
+            {\bf compensation}            & immediate & str   & see Xilinx documentation\\ \hline
+            {\bf clkfb}                   & clock     &       & clock feedback input   \\ \hline
+            {\bf clkin1}                  & clock     &       & input clock 1   \\ \hline 
+            {\bf clkin2}                  & clock     &       & input clock 2    \\ \hline
+            {\bf dclk}                    & clock     &       & DRP clock input   \\ \hline
+            {\bf psclk}                   & clock     &       & phase shift clock   \\ \hline 
+            {\bf clkinsel}                & value     & log   & input clock selector \\ \hline
+            {\bf den}                     & value     & log   & DRP enable  \\ \hline
+            {\bf dwe}                     & value     & log   & DRP write enable   \\ \hline
+            {\bf psen}                    & value     & log   & phase shift enable  \\ \hline
+            {\bf psincdec}                & value     & log   & phase shift increment or decrement \\ \hline
+            {\bf pwrdwn}                  & value     & log   & power down  \\ \hline
+            {\bf reset}                   & value     & log   & reset  \\ \hline
+            {\bf din}                     & value     & bits: & DRP data input   \\ \hline
+            {\bf daddr}                   & value     & uint: & DRP address input    \\ \hline 
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates an advanced Virtex6 or series 7 mixed mode clock manager. See Xilinx
+            documentation for signal and attribute details. The first group of input
+            parameters are immediate mode and are attributes. The remaining input
+            parameters are input signals, clock mode for clocks and value mode for
+            control signals.
+
+        \subsubsection{clkmmcm\_base - create a basic MMCM multi-mode clock manager }\label{sec:lpmmcmb}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clkmmcm_base (
+                   clock({ clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkout6,
+                           clkout0b, clkout1b, clkout2b, clkout3b, clkfbout, clkfboutb}),
+                   value(locked, "log")
+                   <-
+                   str(loc),
+                   str(bandwidth),
+                   float(clkfbout_mult_f),
+                   float(clkfbout_phase),
+                   float(clkin1_period),
+                   int({clkout1_divide, clkout2_divide, clkout3_divide,
+                        clkout4_divide, clkout5_divide, clkout6_divide}),
+                   float(clkout0_divide_f),
+                   float(clkout0_duty_cycle, clkout1_duty_cycle,
+                         clkout2_duty_cycle, clkout3_duty_cycle,
+                         clkout4_duty_cycle, clkout5_duty_cycle,
+                         clkout6_duty_cycle),
+                   float(clkout0_phase, clkout1_phase, clkout2_phase,
+                         clkout3_phase, clkout4_phase, clkout5_phase,
+                         clkout6_phase),
+                   int(divclk_divide),
+                   float(ref_jitter1),
+                   log(startup_wait),
+                   clock({clkin, clkfb}),
+                   value({pwrdwn, reset}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                               & mode  & type   & \\
+            \hline \hline
+            {\bf clkout0}      & clock &         & output clock 0 \\ \hline
+            {\bf clkout1}      & clock &         & output clock 1 \\ \hline
+            {\bf clkout2}      & clock &         & output clock 2 \\ \hline
+            {\bf clkout3}      & clock &         & output clock 3 \\ \hline
+            {\bf clkout4}      & clock &         & output clock 4 \\ \hline
+            {\bf clkout5}      & clock &         & output clock 5 \\ \hline
+            {\bf clkout6}      & clock &         & output clock 6 \\ \hline
+            {\bf clkout0b}     & clock &         & output inverted clock 0 \\ \hline
+            {\bf clkout1b}     & clock &         & output inverted clock 1 \\ \hline
+            {\bf clkout2b}     & clock &         & output inverted clock 2 \\ \hline
+            {\bf clkout3b}     & clock &         & output inverted clock 3 \\ \hline
+            {\bf clkfbout}     & clock &         & output clock feedback \\ \hline
+            {\bf clkfboutb}    & clock &         & output inverted clock feedback \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                                          & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                     & immediate & str   & optionallocation \\ \hline
+            {\bf bandwidth}               & immediate & str   & bandwidth \\ \hline
+            {\bf clkfbout\_mult\_f}       & immediate & float & output multiplier \\ \hline
+            {\bf clkfbout\_phase}         & immediate & float & output phase \\ \hline
+            {\bf clkin1\_period}          & immediate & float & input clock period \\ \hline
+            {\bf clkout0\_divide\_f}      & immediate & float & clock 0 divider, 1.0 to 128.0\\ \hline
+            {\bf clkout1\_divide}         & immediate & int   & clock 1 divider, 1 to 128\\ \hline
+            {\bf clkout2\_divide}         & immediate & int   & clock 2 divider, 1 to 128\\ \hline
+            {\bf clkout3\_divide}         & immediate & int   & clock 3 divider, 1 to 128\\ \hline
+            {\bf clkout4\_divide}         & immediate & int   & clock 4 divider, 1 to 128\\ \hline
+            {\bf clkout5\_divide}         & immediate & int   & clock 5 divider, 1 to 128\\ \hline
+            {\bf clkout6\_divide}         & immediate & int   & clock 6 divider, 1 to 128\\ \hline
+            {\bf clkout0\_duty\_cycle}    & immediate & float & clock 0 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout1\_duty\_cycle}    & immediate & float & clock 1 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout2\_duty\_cycle}    & immediate & float & clock 2 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout3\_duty\_cycle}    & immediate & float & clock 3 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout4\_duty\_cycle}    & immediate & float & clock 4 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout5\_duty\_cycle}    & immediate & float & clock 5 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout6\_duty\_cycle}    & immediate & float & clock 6 duty cycle, 0.001 to 0.999\\ \hline
+            {\bf clkout0\_phase}          & immediate & float & clock 0 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout1\_phase}          & immediate & float & clock 1 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout2\_phase}          & immediate & float & clock 2 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout3\_phase}          & immediate & float & clock 3 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout4\_phase}          & immediate & float & clock 4 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout5\_phase}          & immediate & float & clock 5 phase, -360.0 to 360.0\\ \hline
+            {\bf clkout6\_phase}          & immediate & float & clock 6 phase, -360.0 to 360.0\\ \hline
+            {\bf divclk\_divide}          & immediate & int   & divider ratio, 1 to 128 \\ \hline
+            {\bf startup\_wait}           & immediate & log   & delay startup on lock \\ \hline
+            {\bf clkin}                   & clock     &       & input clock   \\ \hline 
+            {\bf clkfb}                   & clock     &       & clock feedback input   \\ \hline
+            {\bf pwrdwn}                  & value     & log   & power down  \\ \hline
+            {\bf reset}                   & value     & log   & reset  \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a basic Virtex6 or series 7 mixed mode clock manager. See Xilinx
+            documentation for signal and attribute details. The first group of input
+            parameters are immediate mode and are attributes. The remaining input
+            parameters are input signals, clock mode for clocks and value mode for
+            control signals.
+
+
+
+        \subsubsection{pll\_base - create a series-7 basic PLL}\label{sec:lmpllb}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               pll_base (
+                   clock({clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkfbout}),
+                   value(locked, "log")
+                   <-
+                   str(loc),
+                   int({   clkout0_divide, clkout1_divide, clkout2_divide, clkout3_divide,
+                           clkout4_divide, clkout5_divide, clkfbout_mult, clkfbout_phase,
+                           divclk_divide}),
+                   str({compensation, bandwidth}),
+                   float({clkout0_phase, clkout1_phase, clkout2_phase, clkout3_phase, clkout4_phase,
+                           clkout5_phase, clkout0_duty_cycle, clkout1_duty_cycle, clkout2_duty_cycle,
+                           clkout3_duty_cycle, clkout4_duty_cycle, clkout5_duty_cycle, ref_jitter,
+                           clkin_period}),
+                   clock({clkin, clkfbin}), value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf clkout0}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkout1}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkout2}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkout3}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkout4}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkout5}  & clock &         & output clock 0 \\ \hline    
+            {\bf clkfbout} & clock &         & feedback output \\ \hline   
+            {\bf locked}   & value & log     & PLL is locked \\ \hline
+            \end{tabular}
+
+            {\bf Input parameters:} \\            
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                           & mode  & type   & \\
+            \hline \hline
+            {\bf loc}                  & immediate & str   & optional location \\ \hline
+            {\bf clkout0\_divide}      & immediate & int   & division ratio for output 0\\ \hline
+            {\bf clkout1\_divide}      & immediate & int   & division ratio for output 1\\ \hline
+            {\bf clkout2\_divide}      & immediate & int   & division ratio for output 2\\ \hline
+            {\bf clkout3\_divide}      & immediate & int   & division ratio for output 3\\ \hline
+            {\bf clkout4\_divide}      & immediate & int   & division ratio for output 4\\ \hline
+            {\bf clkout5\_divide}      & immediate & int   & division ratio for output 5\\ \hline
+            {\bf clkfbout\_mult}       & immediate & int   & multiplication factor for all outputs \\ \hline
+            {\bf clkfbout\_phase}      & immediate & int   & phase shift for feedback \\ \hline
+            {\bf divclk\_divide}       & immediate & int   & division ration for all outputs \\ \hline
+            {\bf compensation}         & immediate & str   &             \\ \hline
+            {\bf bandwidth}            & immediate & str   &             \\ \hline
+            {\bf clkout0\_phase}       & immediate & float & phase shift for output 0 \\ \hline
+            {\bf clkout1\_phase}       & immediate & float & phase shift for output 1 \\ \hline
+            {\bf clkout2\_phase}       & immediate & float & phase shift for output 2 \\ \hline
+            {\bf clkout3\_phase}       & immediate & float & phase shift for output 3 \\ \hline
+            {\bf clkout4\_phase}       & immediate & float & phase shift for output 4 \\ \hline
+            {\bf clkout5\_phase}       & immediate & float & phase shift for output 5 \\ \hline
+            {\bf clkout0\_duty\_cycle} & immediate & float & duty cycle for output 0 \\ \hline
+            {\bf clkout1\_duty\_cycle} & immediate & float & duty cycle for output 1 \\ \hline
+            {\bf clkout2\_duty\_cycle} & immediate & float & duty cycle for output 2 \\ \hline
+            {\bf clkout3\_duty\_cycle} & immediate & float & duty cycle for output 3 \\ \hline
+            {\bf clkout4\_duty\_cycle} & immediate & float & duty cycle for output 4 \\ \hline
+            {\bf clkout5\_duty\_cycle} & immediate & float & duty cycle for output 5 \\ \hline
+            {\bf ref\_jitter}          & immediate & float & reference clock jitter \\ \hline
+            {\bf clkin\_period}        & immediate & float & input clock period, ns\\ \hline
+            {\bf clkin}                & clock     &       & input clock \\ \hline
+            {\bf clkfbin}              & clock     &       & clock feedback \\ \hline
+            {\bf reset}                & value     & log   & reset \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Creates a Virtex5 PLL phase locked loop. See Xilinx documentation for
+            signal and attribute details. The first group of input parameters are
+            immediate mode and are attributes. The remaining input parameters are
+            input signals, clock mode for clocks and value mode for control signals.
+
+            The PLL is PLL\_BASE, i.e. only a single input is provided.
+            The dual switchable input PLL, PLL\_ADV, is not supported.
+
+            \heading{attributes}
+
+                {\bf loc} is an optional location string from the
+                following list - "DLL0P", "DLL1P", "DLL2P", "DLL3P", "DLL0S", "DLL1S",
+                "DLL2S", "DLL3S". These select from the four primary and four secondary
+                delay-locked loops. Ignored if "".
+
+                {\bf clkin\_period} is the input clock period. This must be
+                specified if the DFS is used.
+
+                {\bf compensation} specifies the PLL phase compensation. The values are
+                "system\_synchronous" (default) or "source\_synchronous".
+
+                {\bf bandwidth} specifies the PLL programming algorithm affecting jitter,
+                phase margin and other characteristics. Values are "high", "low" and
+                "optimised" (default).
+
+                {\bf clkout0\_divide} to {\bf clkout5\_divide} provides a PLL division ratio
+                for each clock output. The values range from 1 (default) to 128.
+
+                {\bf clkout0\_phase} to {\bf clkout5\_phase} specifies the PLL output phase
+                relationship (relative to what?). Values are in the range 0.01 to 360.0 but
+                the default is listed as 0.0.
+
+                {\bf clkout0\_duty\_cycle} to {\bf clkout5\_duty\_cycle} specifies the PLL
+                duty cycle of each clock output. Vales range from 0.01 to 0.99 with a
+                default of 0.5.
+
+                {\bf clkfbout\_mult} specifies a common frequency multiplier for all PLL
+                clock outputs. This works in combination with the individual frequency
+                divisors. The values range from 1 to 64 with a default of 1.
+
+                {\bf divclk\_divide} specifies a frequency division ration for all PLL clock
+                outputs. It is documented how this interacts with the individual divisors.
+                Range is 1 to 52 with a default of 1.
+
+                {\bf clkfbout\_phase} specifies a phase offset for the PLL clock feedback
+                output. Values range from 0.0 to 360.0 with a default of 0.0.
+
+                {\bf ref\_jitter} specifies the PLL reference clock jitter. This is documented
+                as ``specified interms of the UI which is a percentage of the reference
+                clock''. Allowed values are 0.000 to 0.999 with a default of 0.100.
+
+
+            \heading{input signals}
+
+            {\bf clkin} is the input clock.
+
+            {\bf clkfbin} is the feedback clock input, which is normally conected to
+            {\bf clkfbout} or a buffered version of an output clock.
+
+            {\bf reset} is the reset input.
+
+
+
+            \heading{output signals}
+
+                {\bf clkout0}, {\bf clkout1}, {\bf clkout2}, {\bf clkout3}, {\bf
+                clkout4} and {\bf clkout5} are separate clock outputs for a PLL. Each
+                of these has its own frequency divisor, phase and duty cycle.
+
+                {\bf clkfbout} is the clock feedback output.
+
+                {\bf locked} is high when the DLL and DFS are locked to the input
+                clock. This signal has a null clock domain.
+
+
+        \subsubsection{clockbufg - create a BUFG clock buffer}\label{sec:lpclockbufg}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clockbufg (clock(out) <- clock(in), str(loc), log(invert)) {
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the clock variable for the distributed clock.
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the internal clock variable for the buffer input
+            clock.\\
+            {\bf loc} is optional and is specified by a string of the form
+            "BUFGMUX2S". Generally the location argument may be omitted or "",
+            allowing the Xilinx software to select a clock buffer. \\
+            {\bf invert} specifies an optional inverter. Ignored if "".
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a BUFG clock buffer which is common to all
+            Xilinx FPGAs. The number of clock buffers
+            available depends on the particular FPGA.
+            
+            If {\bf invert} is true an inverter is inserted at the input.
+            
+            The frequency, minimum frequency, maximum frequency, period and duty
+            cycle of the output clock are derived from the input clock overriding
+            any previous values.
+
+
+
+        \subsubsection{clockbufio - a local clock buffer}\label{sec:lpclockbufio}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clockbufio (clock(out) <- clock(in), str(loc)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the clock variable for the distributed clock.
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the internal clock variable for the buffer input
+            clock.\\
+            {\bf loc} is optional and is specified by a string of the form
+            "BUFGMUX2S". Generally the location argument may be omitted or "",
+            allowing the Xilinx software to select a clock buffer. \\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a local clock buffer. The number of clock
+            buffers available depends on the particular FPGA.
+            
+            The frequency, period and duty cycle of the output clock are
+            derived from the input clock overriding any previous values.
+
+
+
+        \subsubsection{clockmuxbuffer - a clock mux/buffer}\label{sec:lpclockmuxbuffer}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clockmuxbuffer (clock(out) <- clock({in0, in1}), value(select, "log"), str(loc) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the clock variable for the distributed clock.
+
+            {\bf Input parameters:} \\            
+            {\bf in0} is the internal clock variable for the first buffer input
+            clock.\\
+            {\bf in1} is the internal clock variable for the second buffer input
+            clock.\\
+            {\bf select} is a logical value which selects the first clock
+            input if false and the second clock input if true.\\
+            {\bf loc} is optional and is specified by a string of the form
+            "BUFGMUX2S". Generally the location argument may be omitted,
+            allowing the Xilinx software to select a clock buffer.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a clock buffer with multiplexed input. The
+            number of multiplexed clock buffers available depends on the
+            particular FPGA.
+            
+            The frequency, period and duty cycle of the output clock are
+            derived from the input clock overriding any previous values.
+
+
+
+        \subsubsection{clockmuxbufferdisable - a clock mux/buffer with disable}\label{sec:lpclockmuxbufferdis}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clockmuxbufferdisable (clock(out) <- clock(in), value(disable, "log"), str(loc)) {
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the clock variable for the distributed clock.
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the internal clock variable for the first buffer input
+            clock.\\
+            {\bf disable} is a logical value which disables the clock
+            output if true.\\
+            {\bf loc} is optional and is specified by a string of the form
+            "BUFGMUX2S". Generally the location argument may be omitted or "",
+            allowing the Xilinx software to select a clock buffer.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a clock buffer with enabled output. If the
+            argument to parameter {\bf disable} goes true the clock output
+            is disabled low. The output clock is enabled and disabled without
+            glitches or shortened high half-periods.
+            
+            The frequency, period and duty cycle of the output clock are
+            derived from the input clock overriding any previous values.
+
+
+
+
+        \subsubsection{clock\_params - derive clock synthesis parameters}\label{sec:lpclockparams}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               clock_params (
+                   int({mul, div}),
+                   float(af)
+                   <-
+                   float({fin, freq}),
+                   int({mmin, mmax, dmin, dmax}),
+                   float(tol)
+               ) {}
+            \end{lstlisting}
+            
+            {\bf Output parameters:} \\
+            {\bf mul} is the synthesis multiplier \\
+            {\bf div} is the synthesis divisor \\
+            {\bf af} is the resulting frequency
+
+            {\bf Input parameters:} \\
+            {\bf fin} is the input frequency \\
+            {\bf freq} is the required frequency \\
+            {\bf mmin} is the minimum value of the multiplier \\
+            {\bf mmax} is the maximum value of the multiplier \\
+            {\bf dmin} is the minimum value of the divisor \\
+            {\bf dmax} is the maximum value of the divisor \\
+            {\bf tol} is an optional frequency tolerance to minimise the search
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure derives an integer multiplier and an integer divisor
+            for clock synthesis.
+
+            The procedure searches through combinations of multiplier and divisor
+            to find the nearest generated frequency that is not greater than the
+            requested frequency. The optional tolerance argument when supplied
+            greatly reduces the execution time. Frequencies may be in any units,
+            e.g. MHz, KHz, Hz, since only ratios are being examined, but hence the
+            units must be consistent. It is nevertheless preferable to use
+            frequencies in Hz to be consistent in all contexts.
+            
+            If the requested frequency cannot be generated within the
+            contraints of the arguments supplied the procedure returns
+            an error code.
+            
+            {\bf mul} and {\bf div} are the frequency synthesis parameters,
+            {\bf af} is the actual frequency achieved.
+            
+            A fatal error occurs if the frequency cannot be synthesised because the tolerance is too
+            small or the requested frequency is too low (the error message will specify which).
+            
+            To avoid the fatal error the related library function of the same name can be used
+            instead. The funstion returns a structure containing the result parameters along
+            with an error code.
+            
+            
+
+        \subsubsection{lowskew - request low skew secondary clock routing}\label{sec:lplowskew}
+            \index{constraint!timing}
+            \index{timing constraint}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               lowskew (clock(clk)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf clk} is a clock variable.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure places a low skew constraint on the routing
+            of a clock signal. This is required if the clock cannot be
+            distributed by a global clock net (from a global clock buffer).
+            There are only 4 global clock buffers.
+
+
+
+
+
+    \subsection{library functions}
+
+        \subsubsection{clock\_params - derive clock synthesis parameters}\label{sec:lfclockparams}
+            
+            {\bf Library: xilinx/clocks.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               clock_params (
+                   float({fin, freq}),
+                   int({mmin, mmax, dmin, dmax}),
+                   float(tol)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Input parameters:} \\            
+            {\bf fin} is the input frequency \\
+            {\bf freq} is the required frequency \\
+            {\bf mmin} is the minimum value of the multiplier \\
+            {\bf mmax} is the maximum value of the multiplier \\
+            {\bf dmin} is the minimum value of the divisor \\
+            {\bf dmax} is the maximum value of the divisor \\
+            {\bf tol} is an optional frequency tolerance to minimise the search
+
+            {\bf Return mode and type:} \\
+            immediate, struct
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This function derives an integer multiplier and an integer divisor
+            for clock synthesis.
+
+            The function searches through combinations of multiplier and divisor
+            to find the nearest generated frequency that is not greater than the
+            requested frequency. The optional tolerance argument when supplied
+            greatly reduces the execution time. Frequencies may be in any units,
+            e.g. MHz, KHz, Hz, since only ratios are being examined, but hence the
+            units must be consistent. It is nevertheless preferable to use
+            frequencies in Hz to be consistent in all contexts.
+            
+            
+            If the requested frequency cannot be generated within the
+            contraints of the arguments supplied the procedure returns
+            an error code.
+            
+            The return value has the following structure -
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(rv,
+                   {mul, div}, "int",
+                   af,         "float",
+                   exit,       "int"
+               );
+            \end{lstlisting}
+            where {\bf mul} and {\bf div} are the frequency synthesis parameters,
+            {\bf af} is the actual frequency achieved and {\bf exit} is an exit code
+            which is 0 for normal return, 1 for a frequency tolerance which is too
+            small and 2 for a requested frequency which is too low.
+            
+
+
+
+    \subsection{library classes}
+    
+        None.
+

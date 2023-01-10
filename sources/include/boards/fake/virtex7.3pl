@@ -1,0 +1,20 @@
+nosource
+
+// 3pl board support for a theoretical Virtex 7 board
+
+part("XC7V585TFFG1157-2");
+module "xilinx/xc7.3pl"
+
+// default IO is 1.8V
+str(stdio, "LVCMOS18");
+
+// clock oscillator
+iopins(c32_pin, "str", "AH9", frequency=32.0e6, ibufg=true, iostandard=stdio);
+
+// a LED pin
+iopins(global.led_pin, "str", "AG10", iostandard=stdio);
+
+// create 32MHz clock
+clock(c32_in, loc=c32_pin);
+simpleclock(global.c32, c32_in);
+useclock(c32);

@@ -1,0 +1,26 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf cmemory mode attributes} \\
+        \hline
+        init       & 3PL       &                      & initial value                    \\
+        domain     & 3PL       & clock                & force clock domain for all ports \\     
+        \hline
+        \btabularxend
+        
+        {\bf These attributes are case-insensitive.}
+        
+        {\bf init} sets an initial value for the memory. Any previous initial
+        value will be overwritten. The initial value must be a compound type and
+        the nested type must be an immediate type equivalent to the memory data
+        type, i.e. same type but without a width field. The initial value is not
+        used until completion of immediate execution when variables are
+        processed into target code and hence it can be changed at any time
+        during immediate execution.
+
+        {\bf domain} forces the clock domain (both input and output) for all
+        ports to the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the variable already has a clock domain as
+        a result of having been assigned or evaluated then that clock domain is
+        compared with the intended domain. If the assigned clock domain agrees
+        with that already in place then there is no further action, otherwise a
+        fatal error occurs.

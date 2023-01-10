@@ -1,0 +1,17 @@
+// Blink an external LED at 1Hz -- the FPGA "hello world"
+// 
+// Output argument should be type "log". It blinks at 1Hz, or the frequency
+// specified by the optional 'rate' argument.
+//
+// Typical usage:
+//	output(led, "log",, loc=led_pin);
+//	blink(led <- );
+
+global module blink(output(led, "log") <- float(rate, 1.0)) {
+    static(state, "log");
+    par {
+	state <- !state;
+	wait(0.5/rate);
+    }
+    led := state;
+}

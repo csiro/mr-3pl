@@ -1,0 +1,29 @@
+// Class instances and calls nested.
+// Class definitions nested.
+
+class(c1, s1());
+println("");
+c1.c2.c3.p1();
+c1.c2.c3.p2();
+println(c1.fred);
+
+class s1 () {
+    int(class.fred, 789);
+    class s2 () {
+        class s3 () {
+            procedure p1() {
+                println("p1 called");
+                p2();
+            }
+            
+            private procedure p2() {
+                println("p2 called");
+            }
+        }
+        var(c3, "class", s3());
+    }
+    
+    var(c2, "class", s2());
+}
+
+

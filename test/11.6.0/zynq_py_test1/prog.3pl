@@ -1,0 +1,47 @@
+module "boards/avnet/microzed_7010.3pl"
+
+static(r, "int:16", 0x1234);
+static(rr, "int:64", 0x135798642);
+
+class(cpu, cpu_api());
+
+cpu.read(r, "R");
+cpu.read(rr, "RR");
+cpu.write(r <- "W");
+cpu.write(rr <- "WW");
+
+// Event (interrupt)
+
+static(i, "log");
+cpu.write(i <- "IW");
+cpu.receive_event(waswritten(i), "I");
+
+// DMA write
+
+queue(wd, "bits:64"); attributes(wd, mindepth=8192); // buffer
+queue(wa, "uint:32");
+queue(wl, "uint:4");
+
+dma_write(0, wd, wa, wl);
+
+cpu.write(wa <- "WA");
+cpu.write(wl <- "WL");
+cpu.write(wd <- "WD");
+
+// DMA read
+
+queue(rd, "bits:64"); attributes(rd, mindepth=8192); // buffer
+queue(ra, "uint:32");
+queue(rl, "uint:4");
+
+dma_read(rd <- 1, ra, rl);
+
+cpu.write(ra <- "RA", freecount=true, ilevel=true);
+cpu.write(rl <- "RL");
+cpu.read(rd, "RD", wordcount=true, ilevel=true);
+
+static(big, "[5]uint:32");
+cpu.write(big <- "BIGW");
+cpu.read(big, "BIGR");
+
+cpu.write(i <- "IW2");

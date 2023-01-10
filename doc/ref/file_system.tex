@@ -1,0 +1,173 @@
+\pagebreak
+
+\chapter{File system}
+
+    
+    
+    \begin{tabbing}
+    \hspace*{2em}\=\hspace*{2em}\=\hspace*{2em}\=\hspace*{2em}\=\hspace*{2em}\=\hspace*{2em}\=\\
+    \>{\bf classes/}\\
+        \>\>{\bf 3pl.jar}\\
+            \>\>\>3PL Java archive file\\
+        \>\>{\bf threepl}\\
+            \>\>\>3PL Java class files compiled from sources/threepl below.\\
+
+    \>{\bf doc/}\\
+        \>\>{\bf api}\\
+            \>\>\>3PL Java API\\
+        \>\>{\bf impl}\\
+            \>\>\>Latex and fig sources for the 3PL implementation description\\
+
+        \>\>{\bf overview}\\
+            \>\>\>3PL overview\\
+
+        \>\>{\bf ref}\\
+            \>\>\>Latex and fig sources for the 3PL reference manual\\
+    \>{\bf sources/}\\
+        \>\>{\bf tools/}\\
+            \>\>\>\parbox[t]{12cm}{Miscellaneous scripts and programs for configuration file generation
+            or CPU to FPGA interfaces} - see \ref{ch:misctools}\\
+        \>\>\>{\bf bin2c/}\\
+            \>\>\>\>\parbox[t]{12cm}{Convert a binary compressed or uncompressed FPGA configuration
+                bit file to a C include file containing an initialised byte
+                array as C source code. By this means the configuration can be
+                included in the application program and can be loaded by the CPU
+                application code without the need to read an external file
+                during execution.}\\
+
+        \>\>\>{\bf bin2py/}\\
+            \>\>\>\>\parbox[t]{12cm}{Convert a binary compressed or
+                uncompressed FPGA configuration bit file to a Python3 source
+                file containing an initialised byte array as Python3 source
+                code. By this means the configuration can be included in the
+                application program and can be loaded by the CPU application
+                code without the need to read an external file during
+                execution.}\\
+
+        \>\>\>{\bf edif2bit/}\\
+            \>\>\>\>\parbox[t]{12cm}{Generate an FPGA configuration bit file
+                from the EDIF netlist file. This invokes Xilinx ISE or
+                Vivado tools as appropriate.}\\
+        \>\>\>{\bf info2c/}\\
+                \>\>\>\>\parbox[t]{10cm}{Generate CPU/FPGA interface
+                functions for C from the 3PL information file (design.info).
+                This is applicable to the Zynq AXI bus interface or to
+                platforms with a serial link from the CPU to the FPGA.
+                This generates a C include file {\bf {\em design}\_fpga.h}}\\
+
+        \>\>\>{\bf info2py/}\\
+            \>\>\>\>\parbox[t]{12cm}{Generate CPU/FPGA interface functions for
+                Python3 from the 3PL information file (design.info). This can
+                be executed as a main program and will generate a Python3
+                source file of CPU/FPGA interface functions that can be
+                imported into the CPU application program. Alternatively this
+                file can be imported into the application program in which
+                case it will create the interface functions internally and
+                will compile them into a module.
+                
+                info2py is a copy of into2py.py included so that it can be
+                invoked as a main program without the file name extension, e.g.
+                {\bf info2py prog} rather than python3 {\bf infotopy.py prog}.
+                
+                This source will import serial/cpu\_serial/cpu\_serial.py
+                for FPGA platforms which have a serial interface, or
+                zynq/fpga/fpga.py in the case of Zynq.}\\
+                
+        \>\>\>{\bf run\_ISE/}\\
+            \>\>\>\>\parbox[t]{12cm}{Generate an FPGA configuration bit file
+                from the EDIF netlist file using Xilinx ISE tools. This is
+                a very much more primitive and direct script than edif2bit
+                above.}\\
+
+        \>\>\>{\bf run\_vivado/}\\
+            \>\>\>\>\parbox[t]{12cm}{Generate an FPGA configuration bit
+                file from the EDIF netlist file using Xilinx Vivado
+                tools. This is a very much more primitive and direct
+                script than edif2bit above.}\\
+
+        \>\>\>{\bf serial/}\\
+            \>\>\>\>\parbox[t]{12cm}{This directory contains interface code
+                for FPGA platforms which use a serial interface to both
+                load the FPGA configuration and to transfer data between
+                the CPU and the FPGA. An example of this type of platform
+                is the Gadget Factory Papilio board.}\\
+                
+            \>\>\>\>{\bf cpu\_serial/}\\
+                    \>\>\>\>\>\parbox[t]{11cm}{Python3 low-level CPU/FPGA
+                    interface communications functions.}\\
+            \>\>\>\>{\bf uart\_cpu/}\\
+                    \>\>\>\>\>\parbox[t]{11cm}{C low-level CPU/FPGA interface
+                    communications functions.}\\
+        \>\>\>{\bf zynq/}\\
+            \>\>\>\>{\bf fpga/}\\
+                    \>\>\>\>\>{\bf fpga.c, fpga.h}\\
+                    \>\>\>\>\>\>\parbox[t]{10cm}{C low-level CPU/FPGA
+                    interface communications functions.}\\                
+                    \>\>\>\>\>{\bf fpga.py}\\
+                    \>\>\>\>\>\>\parbox[t]{10cm}{Python3 low-level CPU/FPGA
+                        interface communications. functions. This imports
+                        low-level communication functions from
+                        lib\_py\_ext/fpga\_read\_write.c which has been
+                        added to the Python3 library by
+                        lib\_py\_ext/setup.py below.}\\
+            \>\>\>\>{\bf lib\_py\_ext/}\\
+            \>\>\>\>\>{\bf fpga\_py\_extension.c}\\
+                \>\>\>\>\>\>\parbox[t]{10cm}{C extension functions for the zynq
+                        Python3 CPU/FPGA interface}\\
+            \>\>\>\>\>{\bf setup.py}\\
+                \>\>\>\>\>\>\parbox[t]{10cm}{A Python3 source file to add
+                        fpga\_read\_write.c above as a C extension to the
+                        Python3 library.}\\
+        \>\>{\bf include/}\\
+            \>\>\>\parbox[t]{12cm}{3PL library source files to be included in 3PL programs by
+            module "\ldots" or source "\ldots" statements. These are described in
+            \autorefph{ch:libraries}.}\\
+            
+        \>\>{\bf scripts/}\\
+            \>\>\>\parbox[t]{12cm}{Scripts used by the makefile when building
+            3PL.}\\
+            
+        \>\>{\bf threepl/}\\
+            \>\>\>\parbox[t]{12cm}{Source code for the 3PL compiler and
+            interpretter.}\\
+            
+        \>\>\>{\bf codegen/}\\
+            \>\>\>\>\parbox[t]{12cm}{Java classes used to construct the
+            intermediate code list.}\\
+                
+        \>\>\>{\bf exceptions/}\\
+            \>\>\>\>\parbox[t]{12cm}{Compiler and intermediate code
+            execution exceptions.}\\
+                
+        \>\>\>{\bf exec/}\\
+            \>\>\>\>\parbox[t]{12cm}{Java classes instantiated during
+                parsing and used during immediate execution.}\\
+                
+        \>\>\>{\bf funcs/}\\
+            \>\>\>\>\parbox[t]{12cm}{3PL inbuilt functions.}\\
+                
+        \>\>\>{\bf mods/}\\
+            \>\>\>\>\parbox[t]{12cm}{3PL inbuilt modules.}\\
+                
+        \>\>\>{\bf nodes/}\\
+            \>\>\>\>\parbox[t]{12cm}{Nodes in the code tree produced by the
+            3PL parser.
+                }\\
+        \>\>\>{\bf parser/}\\
+            \>\>\>\>\parbox[t]{12cm}{The 3PL parser.}\\
+                
+        \>\>\>{\bf procs/}\\
+            \>\>\>\>\parbox[t]{12cm}{3PL inbuilt procedures.}\\
+                
+        \>\>\>{\bf simulator/}\\
+            \>\>\>\>\parbox[t]{12cm}{A target code simulator that has
+                atrophied with time and neglect. It is unlikely to be still
+                functional and has not been included in 3PL for quite a few
+                years. It has not been deleted in case someone wants to try
+                to resurrect it. This would be difficult due to lack of
+                documentation!}\\
+            
+        \>\>\>{\bf ThreePL.java}\\
+            \>\>\>\>\parbox[t]{12cm}{The 3PL main program.}\\
+            
+    \end{tabbing}

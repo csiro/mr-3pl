@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<body>
+
+<p>These classes handle the FPGA-specific end of netlist generation.</p>
+
+<p>Classes in this directory generate EDIF netlist output for Xilinx FPGAs.</p>
+
+
+<pre>
+The class structure is -
+
+       TDECode           implementation of TDE modules - vendor independent
+          |
+     GenFunctions        general support methods - vendor independent
+          |                                                          --
+      XElements          Xilinx general unified elements              |
+          |                                                           |
+      XFunctions         Xilinx higher level functions                |
+          |                                                           |
+      XTDECode           Xilinx implementation of TDE modules         | this
+          |                                                           | package
+    ---------------------                                             |
+   /   /  |   \   \      \                                            |
+XC2S XCV XC3S XC2V XC2VP XC4V      Xilinx elements                    |
+                                                                     __
+</pre>
+
+<p>Class TDECode is an abstract class which is the super class.
+All the other classes are abstract until the leaf classes at the bottom.</p>
+
+<p>The two classes at the top of the diagramme are generic and are located
+in the directory/package to which this is a sub directory/package.</p>
+
+<p>All methods in the lowest subclasses override corresponding
+methods in class XElements which throw exceptions to pick up
+the use of special elements in FPGA families which do not
+have them.</p>
+
+<p>TDE code generation methods are invoked using the FPGA
+family as the object instance.</p>
+
+
+<!-- Put @see and @since tags down here. -->
+
+</body>

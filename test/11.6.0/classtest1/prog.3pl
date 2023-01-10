@@ -1,0 +1,64 @@
+module "dummy.3pl"
+
+int(j, 987);
+class(s);
+
+s = c1();
+
+class c1 () {
+    int(i, 57);
+    var(a, "[3]int", {77, 80, 94});
+    
+    println("call cf from within class " + a[2] + " (94)");
+    println(j + " (987)");
+    
+    function cf () {
+        return(a[0]);
+    }
+}
+println(s.i + "  (57)");
+println(s.cf() + "  (77)");
+
+var(vv, "[3]class");
+vv[1] = s;
+println(vv[1].a[2] + "  (94)");
+s.i = 99;
+println(s.i + "  (99)");
+s.i++;
+println(s.i + " (100)");
+var(ss, "class", s);
+println(ss.cf() + "  (77)");
+
+var(cc, "class", c2());
+
+class c2 () {
+    int(i, 57);
+    var(a, "[3]int", {43, 21, 17});
+    var(ccc, "class");
+    
+    function cf () {
+        return(a[0]);
+    }
+    
+    ccc = c3();
+    
+    class c3 () {
+        int(i, 941);
+        
+        println(i + " (941)");
+        println(j + " (987)");
+    }
+}
+
+class(sss, c3(14, 6.3));
+println(sss.k + " (14)");
+println(sss.f + " (6.3)");
+
+class(ssss, c3(k=27, f=2.71832828));
+println(ssss.k + " (27)");
+println(ssss.f + " (2.71832828)");
+println(sss.k + " (14)");
+println(sss.f + " (6.3)");
+
+class c3 (int(k), float(f)) {
+}

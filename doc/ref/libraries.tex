@@ -1,0 +1,276 @@
+\pagebreak
+
+\chapter{Libraries}\label{ch:libraries}
+
+    \index{library}
+    3PL libraries are source files containing modules, procedures,
+    functions and global structs and variables which can be accessed by
+    application code and other libraries. They are inserted in the
+    application source code via a {\bf module} statement or a {\bf source}
+    statement (see "file inclusion" \autorefph{sec:fileinclusion}). These
+    library files are searched for by the 3PL compiler in the order -
+    \blist
+    \item   current directory
+    \item   directories listed in -I options to the 3PL command line
+    \item   directories listed in environment variable {\bf THREEPL\_INCLUDE\_DIRS}
+    \blend
+    
+    3PL libraries may be -
+    \blist
+    \item   generic
+    \item   interfaces to hardware specific to FPGA families
+    \item   platform-specific
+    \blend
+    
+    Our libraries are arranged in the following directory structure -
+    \begin{verbatim}
+        boards/
+            avnet/
+                aes_sp3a_eval400.3pl
+                microzed_7010.3pl
+                microzed_7020.3pl
+            dangerous_prototypes
+                breakout_xc2c64a.3pl
+                breakout_xc9572xl.3pl
+            digilent
+                zybo.3pl
+            gadgetfactory
+                papilio_one_100.3pl
+                papilio_one_250.3pl
+                papilio_one_500.3pl
+                papilio_pro.3pl
+            memec/
+                v4fx12lc.3pl
+                v4fx12mm.3pl
+            xilinx/
+                ml505.3pl
+        capture.3pl
+        ctypes.3pl
+        divlib.3pl
+        DS2431.3pl
+        float.3pl
+        jsontype.3pl
+        multlib.3pl
+        qdr2_ram.3pl
+        spi.3pl
+        stdlib.3pl
+        uart.3pl
+        uarts.3pl
+        xilinx/
+            clocks.3pl
+            common.3pl
+            cpu.3pl
+            dsp48.3pl
+            gtp_dual.3pl
+            io.3pl
+            mgt.3pl
+            postprocess.3pl
+            ppc405lib.3pl
+            ppclib.3pl
+            ps7.3pl
+            uart_cpu.3pl
+            xc2s.3pl
+            xc2v.3pl
+            xc2vp.3pl
+            xc3s.3pl
+            xc4v.3pl
+            xc5v.3pl
+            xc6s.3pl
+            xc6v.3pl
+            xc7.3pl
+            xcv.3pl
+            zynq_axi.3pl
+        zbt_ram.3pl
+    \end{verbatim}
+    
+    The following are generic libraries -
+    \blist
+    \item   capture.3pl - capture a data stream
+    \item   ctypes.3pl - generate C types from 3PL structs and enums
+    \item   divlib.3pl - pipelined integer divider
+    \item   float.3pl - pipelined floating point modules
+    \item   jsontype.3pl - conversion of a 3PL type to a JSON string
+    \item   multlib.3pl - pipelined integer multiplier
+    \item   qdr2\_ram.3pl - external quad data rate synchronous static RAM interface
+    \item   stdlib.3pl - useful elements such as pulse generators, pulse
+            stretchers, adder/subtractors, incrementer/decrementers.
+    \item   uart.3pl - generalised UART modules
+    \item   uarts.3pl - simple UART modules
+    \item   spi.3pl - SPI interface
+    \item   zbt\_ram.3pl - external zero bus turnaround synchronous static RAM interface
+    \blend
+    
+    DS2431.3pl provides a module to read and write the DS2431 single wire
+    EPROM chip.
+    
+    The libraries in directory {\bf xilinx} contain elements specific to
+    FPGA families. The same elements may be contained in several libraries
+    with perhaps detail differences in implementation. These libraries are -
+    \blist
+    \item   clocks.3pl - clock managers and clock buffers
+    \item   common.3pl - low-level elements and functions common to all FPGA
+            families
+    \item   cpu.3pl - interface between the FPGA and a CPU
+    \item   dsp48.3pl - Virtex4 and later DSP blocks
+    \item   gtp\_dual.3pl - a GTP dual multi-gigabit transceiver tile
+    \item   io.3pl - input/output functions for Virtex5 and later
+    \item   mgt.3pl - an MGT transceiver
+    \item   postprocess.3pl - a module to generate the configuration file from
+            the EDIF file using ISE or VIVADO
+    \item   ppc405lib.3pl - an embedded PowerPC instance with instruction and data RAMs
+    \item   ppclib.3pl - interface for an embedded PowerPC
+    \item   uart\_cpu.3pl - low level UART CPU interface 
+    \item   xc2s.3pl - Spartan 2 elements
+    \item   xc3s.3pl - Spartan 3 elements
+    \item   xc6s.3pl - Spartan 6 elements
+    \item   xcv.3pl - Virtex and Virtex-E elements
+    \item   xc2v.3pl - Virtex2 elements
+    \item   xc2vp.3pl - Virtex2Pro elements
+    \item   xc4v.3pl - Virtex 4 elements
+    \item   xc5v.3pl - Virtex 5 elements
+    \item   xc6v.3pl - Virtex 6 elements
+    \item   xc7.3pl - Artix 7, Kintex 7, Virtex 7 and Zynq 7000 elements
+    \item   zynq\_axi.3pl - Zynq PL instance and AXI interface to CPU
+    \blend
+
+    Directory {\bf boards} contains header files for a variety of FPGA
+    boards. Some of these are (or were) commercially available and the
+    others were developed in-house by our CSIRO group or by our collaborators.
+    These non-commercial boards are included for two reasons - firstly
+    we use this documentation ourselves for reference and secondly these files
+    illustrate 3PL coding techniques that will be applicable to other FPGA
+    platforms.
+    
+    The {\bf boards} directory contains header files for commercial
+    Xilinx boards. There are four subdirectories, avnet, xilinx, memec and
+    gadgetfactory.
+    
+    The {\bf avnet} directory contains header files for Xilinx boards supplied
+    by AVNET. At the moment there are four -
+    \blist
+    \item   aes\_sp3a\_eval400.3pl - Avnet Xilinx Spartan3A evaluation kit
+    \item   microzed\_7010.3pl - Avnet Xilinx xc7010 microzed Zynq evaluation kit
+    \item   microzed\_7020.3pl - Avnet Xilinx xc7020 microzed Zynq evaluation kit
+    \blend
+
+    The {\bf digilent} directory contains one header file for the Digilent zybo
+    Zynq evaluation board.
+    \blist
+    \item   zybo.3pl - Digilent Zybo Zynq evaluation kit
+    \blend
+    
+    The {\bf xilinx} directory contains header files for Xilinx boards supplied
+    from Xilinx. At the moment there is one -
+    \blist
+    \item   ml505.3pl - Xilinx Virtex-5 evaluation board
+    \blend
+    This file does not support all features of the board.
+    
+    The {\bf memec} directory contains header files for Xilinx boards supplied
+    from Memec. At the moment there are two -
+    
+    \blist
+    \item   v4fx12lc.3pl - Xilinx Virtex4 demonstration board
+    \item   v4fx12mm.3pl - Xilinx Virtex4 mini module board
+    \blend
+    These files so far are only the equivalent of "hello world" and provide
+    only the main clock, an optional divided clock and a few pin definitions.
+
+    The {\bf gadgetfactory} directory contains header files for papilio boards
+    supplied by the Gadget Factory. At the moment there are four -
+    
+    \blist
+    \item   papilio\_one\_100.3pl - Papilio board with XC3S100E Spartan 3E
+    \item   papilio\_one\_250.3pl - Papilio board with XC3S250E Spartan 3E
+    \item   papilio\_one\_500.3pl - Papilio board with Xc3S500E Spartan 3E
+    \item   papilio\_pro.3pl - Papilio board with XC6SLX9 Spartan
+    \blend
+
+    Note that these library files are often also refered to as "header" files
+    since they define FPGA pinouts and establish clocks as well as defining
+    modules, procedures and functions.
+
+    For an embedded Virtex2 PRO FPGA the program must begin as
+    follows -
+    \begin{lstlisting}[gobble=8, language=threepl]
+       part("XC2VP4FG456-6");      // for example Virtex2 Pro               
+    \end{lstlisting}
+    but this is usually inclyded in the header file for the device, e.g.
+    \begin{lstlisting}[gobble=8, language=threepl]
+       module "xilinx/xc2vp.3pl"   // Virtex2 PRO 3PL library
+    \end{lstlisting}
+    There are matching files for each platform, e.g. xc2s.3pl, xc3s.3pl,
+    xcv.3pl, xc7a.3pl etc. It is then useful to inlude the libraries -
+    \begin{lstlisting}[gobble=8, language=threepl]
+       module "xilinx/common.3pl"  // common Xilinx 3PL library
+       module "stdlib.3pl"         // standard 3PL library
+    \end{lstlisting}
+    Other libraries to be included may be - \\
+    xilinx/mgt.3pl\\
+    xilinx/gtp\_dual.3pl\\
+    xilinx/ppclib.3pl\\
+    ctypes.3pl\\
+    mutex.3pl\\
+    and others.
+
+    The program must include code for establishing clocks and applying
+    timing constraints appropriate to those clocks.
+    
+    
+\input{platform_module_files}
+
+\input{xilinx_clocks}
+
+\input{xilinx_common}
+
+\input{xilinx_dsp}
+
+\input{xilinx_gtp_dual}
+
+\input{xilinx_io}
+
+\input{xilinx_mgt}
+
+\input{xilinx_postprocess}
+
+\input{xilinx_ppc405}
+
+\input{xilinx_ppclib}
+
+\input{xilinx_axi}
+
+\input{cpu}
+
+\input{UART_CPU}
+
+\input{stdlib}
+
+\input{capture}
+
+\input{ctypes}
+
+\input{float}
+
+\input{jsontype}
+
+\input{uart}
+
+\input{uarts}
+
+\input{qdr2_ram}
+
+\input{zbt_ram}
+
+\input{spi}
+
+\input{boards_avnet_sp3a}
+
+\input{boards_microzed}
+
+\input{boards_zybo}
+
+\input{boards_ml505}
+
+\input{boards_v4fx}
+
+\input{boards_papilio}

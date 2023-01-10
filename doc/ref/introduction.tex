@@ -1,0 +1,264 @@
+
+
+\chapter{Introduction}
+    
+    The use of Field Programmable Gate Arrays (FPGAs) as real-time data
+    processors is attracting growing interest. The
+    Xilinx Virtex FPGA series is aimed directly at the DSP market
+    and promises spectacular performance in comparison to a conventional
+    CPU.
+    
+    However, the programming of FPGAs still presents considerable
+    difficulties, and digital circuit design is still the predominant
+    method. Parallel languages for FPGAs have emerged in recent years, but
+    they have arisen largely from computer science departments where the
+    focus has been on a wide range of general parallel algorithms. The
+    environment of parallel CPUs which prompted early work, the very
+    generality of these parallel languages, and their evolution from serial
+    languages has resulted in compilers that arguably do not use FPGAs very
+    efficiently. In particular these parallel programming languages do
+    not support pipelining very well.
+
+    Pipeline processing seems a natural way to implement machine vision
+    (and other) algorithms which work on real-time data streams. Even
+    where data is stored in memory, in many cases it can be traversed
+    to generate a data stream. Even where an algorithm is sequential,
+    pipelining results in some parallel execution - the parallelism
+    is effectively the length of the pipeline.
+    
+    \section{The 3PL language}
+
+        This document describes a {\em dataflow}\footnote{Dataflow was a name
+        given to data-driven computing architectures explored at Manchester
+        University by Ian Watson and John Gurd in the late 1970s.} parallel
+        programming language for FPGAs which has been explicitly designed to
+        support pipelining. The name {\bf 3PL} stands for "Parallel Pipeline
+        Programming Language" (the name was suggested by Alen Yokhanis).
+
+        In principle we would like our pipeline to have the following
+        characteristics -
+        \begin{enumerate}
+        \item    Each pipeline module should process input data when -
+                \begin{enumerate}
+                \item    its internal state is appropriate
+                \item    required input data are available
+                \item    required output can take place
+                \end{enumerate}
+        \item   Movement of data through the pipeline should depend only
+                on the behaviour of individual modules and their
+                interaction.
+        \end{enumerate}
+
+        Data will flow through the pipeline as rapidly as possible, retarded
+        only when modules or groups of modules are not in a state to accept
+        them.
+
+        Data cannot be assumed to be contiguous in a pipeline.
+
+        {\bf 3PL} supports pipelined data, and modules are inherently
+        parallel. While the pipeline/module model works well for real-time
+        data streams, there are some sequential algorithms for which pipeline
+        processing is clumsy and laborious. While non-pipelined sequential
+        operations are inefficient in an FPGA (a modest conventional CPU will
+        be significantly faster), occasions arise where the sequential code is
+        but a small part of a larger, predominantly parallel, algorithm. For
+        this reason {\bf 3PL} supports the usual conventional sequential
+        constructs as well.
+
+        Sequential constructs can also be used in code which is executed at
+        compile time, rather than in the target architecture. This {\em
+        immediate} code is used to control target code generation, for example
+        to generate a network topology from an algorithm or to systematically
+        initialise a table.
+
+        The 3PL compiler is not specific to any particular FPGA, but the code
+        generator supports only Xilinx FPGAs and CPLDs at the moment.        
+        Currently these platforms are Spartan2, Spartan3, Spartan6, Virtex,
+        Virtex-E, Virtex2, Virtex2-Pro, Virtex4, Virtex5, Virtex6 and series 7
+        FPGAs (Artix, Kintex, Virtex7 and Zynq). It also supports Coolrunner
+        and XC95 CPLDs though only a much restricted range of 3PL features can
+        be used for these devices.
+
+    \section{Current version}
+    
+        The current version of 3PL is {\bf 11.6}. It requires Java 1.6 or
+        later. A list of compiler versions appears as an appendix.
+
+    \section{Known deficiencies}
+    
+        \subsection{enumerated types where ordinal 0 is not used}
+        
+            When a queue variable whose type is non-primitive is assigned, any
+            words in the type that are not assigned in that clock cycle are by
+            default assigned a value corresponding to all bits low. For numeric
+            types that is zero and for logical that is false. This is a useful
+            convention that can be employed to simplify source code. For an enum
+            that default will be the value which has ordinal 0. If an enum is
+            created using inbuilt procedure enumv() then ordinal 0 may not be
+            used. In that case the above scenario would result in an invalid
+            enum value. This problem can be easily avoided by either using
+            ordinal 0 or else always explicitly assigning that field, so it
+            is unlikely that this will be fixed.
+
+        \subsection{++ and -- operators limited}
+        
+            The increment and decrement operators work on integer primitives,
+            including members of arrays and structs. They do not parse if
+            applied to an expression and hence cannot be used on an indirect
+            reference via the \verb'->' operator.
+    
+        \subsection{cannot have arrays of queues, clocks, memories etc}
+        
+            Arrays and structs are part of a type specification. Clock mode
+            variables do not have a type and hence there cannot be an array of
+            clocks. The two memory modes do not have types, though their address
+            and data types must be supplied, and so again there cannot be an
+            array of these. Priority mode variables have a type which is "[]log"
+            but again there cannot be an array of priority variables. Queue mode
+            variables can have an array type, but the entire variable is read
+            and written as a unit. You can have a queue whose type is an array
+            but you cannot have an array of queues.
+
+            Immediate, value, selectvalue and static mode variables can be
+            assigned or evaluated in part or whole and hence do not present a
+            problem in this respect.
+
+            This inconvenience is a result of the language semantics and is not
+            simply an implementation deficiency.
+
+            Arrays of any mode of variable can be created and accessed by means
+            of pointers. An array of pointers is created and then initialised to
+            point to created variables. This can be done in a function so that
+            the created variables are hidden and the pointer array is returned
+            as the value of the function. There is an example in library
+            stdlib.3pl, {\bf queuearray()}, which creates a number of queue mode
+            variables and returns an array of pointers to the queues.
+    
+        \subsection{petrinets transitions do not wait on code blocks}
+        
+            When a petrinet transition occurs an associated code block may wait
+            on queue availability. Transitions should wait for completion of
+            associated code blocks. To implement this the transition would have
+            to occur simultaneously with the last execution cycle of the code
+            block. At present there is no easy way to do this. This will be
+            further considered since this problem limits the applicability of
+            petrinets.
+
+
+
+
+
+
+    \section{Future development}
+
+        \subsection{static multiply-assignment operator}
+
+            The \verb'*<-' assignment may be implemented later.
+
+        \subsection{extension to round function}
+        
+            The round function takes both immediate and target mode arguments.
+            For the latter it rounds a fixed to int or ufixed to uint. It may
+            be extended in the future to allow rounding of fixed, ufixed, int
+            or uint at any bit position, producing an appropriate result type,
+            but so far no particular need for this has been felt.
+
+        \subsection{target code pointers}
+        
+            Immediate-mode pointers are available in 3PL. In immediate code,
+            pointers to immediate or target mode variables can be created,
+            assigned and dereferenced. There is no equivalent in target code.
+            Pointer variables which could be assigned and dereferenced in target
+            code could be implemented, but the resulting decoder logic would be
+            extensive and slow except in the case of very limited usage, hence
+            this is probably not worth considering.      
+
+        \subsection{module and procedure call syntax}
+
+            Currently the syntax for calling a module is identical to that for a
+            procedure. It would enhance readability if these calls had
+            distinctive syntaxes. This would help emphasise the difference
+            between a module and a procedure. In particular the fact that a
+            called module is a completely separate (new) environment from that
+            of the call. I am considering changing module calls to the following
+            syntax -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               [modname(arg, arg, ....)]
+            \end{lstlisting}
+            using the brackets to suggest a box as for inline modules.
+            Note that an inline module containing a procedure call is
+            distinguished by the ";" terminating the call -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               [procname(arg, arg, ....);]
+            \end{lstlisting}
+            The proposed change has not met with enthusiasm from other users
+            so it may never be done.
+        
+        \subsection{debugging facilities}
+
+            Six debugging tools have been envisaged -
+            \blist
+            \item   an immediate execution interactive debugger
+            \item   a target code simulator
+            \item   a timing constraint error report analyser which will
+                    determine which parts of the source are responsible for
+                    failure to meet place-and-route timing constraints
+            \item   a target run-time exception mechanism which can report
+                    exceptions or freeze execution when they occur
+            \item   a single step facility, at least for single clock
+                    applications
+            \item   a configuration read-back utility which would relate
+                    variable and memory contents back to the source code
+            \blend
+
+            The second, a target simulator, has been included as part of the
+            compiler/interpreter. As 3PL evolved the simulator atrophied
+            and hence it has been disabled, though the source code is still
+            included to allow later re-enabling if required.
+
+            Provision of the other five facilities has not yet been started. The
+            third tool listed is the most urgent because failure to meet timing
+            constraints will be a major problem for users of the language, but
+            it has not yet been tackled.
+
+        \subsection{variable types}
+
+            Thus far bit, integer, unsigned integer, fixed point, floating point
+            (limited), enumerated and logical types have been implemented for
+            target variables. The string type can be used for immediate
+            variables but there is no plan to extend it to target variables.
+
+        \subsection{linkage to precompiled 3PL code}
+
+            No mechanism for this has been designed or implemented.
+            Currently all 3PL libraries are in 3PL source code and are
+            compiled along with the application program.
+
+
+
+    \section{Acknowledgements}
+
+        This work was done within what was the Machine Vision group in CSIRO
+        Manufacturing and Infrastructure Technology, Preston laboratory,
+        Melbourne. The group is now called High Speed Instrumentation and is in
+        CSIRO Mineral Resources, Clayton, Melbourne.
+
+        Paul Dunn conceived the language and Paul and Andrew Bainbridge-Smith
+        developed the original (incomplete) compiler. Andrew did all the
+        groundwork finding java tools and set up the make file, the directory
+        structure and the javadoc framework and wrote the original parser. Paul
+        wrote the code generator.
+
+        The first version of the compiler was a good learning exercise but soon
+        proved to have serious shortcomings and was never completed. Paul Dunn
+        redesigned the language and re-implemented the compiler from scratch.
+        This benefited greatly from the experience of the first attempt.
+
+        Andrew Tulloh has worked through both compiler versions developing the
+        target simulator (currently disabled as it has not kept up with 3PL
+        evolution).
+        
+        Robin Kirkham has been an invaluable critic and expert user of 3PL
+        throughout and has contributed considerable 3PL library code.
+
+

@@ -1,0 +1,2816 @@
+\pagebreak
+
+\section{The Standard Library - stdlib.3pl}
+
+    \index{library!stdlib.3pl}
+    This library contains modules, procedures and functions common
+    to all platforms.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "stdlib.3pl"
+    \end{lstlisting}
+    
+    This library includes {\bf multlib.3pl} and {\bf divlib.3pl}. These are
+    not documented separately.
+
+    \subsection{global structs}
+        
+%        Global struct {\em bram} is created for use with block RAM
+%        extended access procedures {\em rwrite2()} and {\em rread2()} and
+%        function {\em rmemoryout2()}.
+%
+%        \begin{lstlisting}[gobble=8, language=threepl]
+%           struct(bram,
+%               bwidth, "int",  // block data width (in 1st only)
+%               twidth, "int",  // total data width (in 1st only)
+%               block,  "->",   // memory block
+%               next,   "->"    // next bram struct in linked list
+%           );
+%        \end{lstlisting}
+%        
+%        Global struct {\em mem\_ad} is created for use with external memory
+%        access.
+%
+%        \begin{lstlisting}[gobble=8, language=threepl]
+%           struct (mem\_ad,
+%               address,    "uint:20",
+%               data,       "bits:18"
+%           );
+%        \end{lstlisting}
+%        
+%        It is used by the modules {\bf extramread} and {\bf extramwrite}.
+        
+        Global structs {\bf ds16}, {\bf ds16e} and {\bf ds32} are
+        used for block protocols and for high speed serial channel data.
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(global.ds16,
+               data,   "bits:16",  // data word
+               k,      "log"       // data word contains K-character in MS byte
+           );
+        \end{lstlisting}
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(global.ds16e,
+               data,   "bits:16",  // data word
+               k,      "log",      // data word contains K-character in MS byte
+               error,  "log"       // data word is erroneous
+           );
+        \end{lstlisting}
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(global.ds32,
+               data,   "uint:32",  // data word
+               k,      "log"       // data word contains K-character in MS byte
+           );
+        \end{lstlisting}
+
+
+    \subsection{library modules}
+    
+        \subsubsection{array\_to\_queue - serialise an array to a
+                                                    queue}\label{sec:lmarraytoqueue}
+
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               array_to_queue (
+                   queue(pout),
+                   value(busy, "log")
+                   <-
+                   value(in),
+                   value(enable),
+                   value(go, "log")
+               );
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf pout} is the output queue variable\\
+            {\bf busy} is true when the module cannot accept another input
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input array.\\
+            {\bf enable} is an optional argument controlling the number of
+            items in {\bf in} to process.\\
+            {\bf go} is asserted to trigger the serialisation.
+
+            {\bf description:} \\
+            Parameter {\bf in} is an array. It may be value, static, queue,
+            selectvalue or priority mode.
+            
+            Parameter {\bf enable} is a one dimensional array of "log" and may
+            be value, static, or selectvalue mode. It must have the same
+            dimension as the first or only dimension of parameter {\bf in}.            
+            
+            When {\bf go} is true the input array is copied to an internal
+            structure which is then shifted out to the output queue {\bf pout}.
+            The {\bf enable} array indicates which members of array {\bf in} are
+            to be copied and shifted, the lowest index false member of {\bf
+            enable} indicating that all members of array {\bf in} from that
+            index up are ignored. Thus array {\bf enable} must have a number of
+            contiguous entries which are true, starting at index 0, and that
+            selects the number of contiguous entries in array {\bf in} which
+            will be copied and shifter to the output queues, again starting with
+            index 0. {\bf go} may contain queue reads.
+            
+            The second input argument, for parameter {\bf enable}, may be
+            omitted in which case all members of {\bf in} will be shifted and
+            copied to the output queue.
+            
+            The output queue must be the same type as the input
+            array members. While the serialisation is in progress output value
+            {\bf busy} is true. If input {\bf go} is true when {\bf busy} returns to
+            false another conversion will take place. If the input {\bf in} is a queue
+            then {\bf go} may be held true.
+            
+            The serialisation takes a number of clock cycles equal to the number
+            of entries in the input array that are enabled plus one and hence
+            the input data rate is limited to $\frac{1}{n+1}$ where $n$ is the
+            number of enabled entries in the input array.
+
+
+
+    
+        \subsubsection{crc\_8\_16 - 16 bit CRC from 8 bit data}\label{sec:lmcrc816}
+
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               crc_8_16 (
+                   static(out, "uint:16")
+                   <-
+                   queue(in, "uint:8"),
+                   str(poly, "CRC16")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output static variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue.\\
+            {\bf poly} is an optional string argument to select the polynomial
+            used.
+
+            {\bf description:} \\
+            This module accumulate a 16 bit CRC from 8 bit data. Parameter {\bf
+            in} is the data input queue, type "uint:8". The CRC is updated as
+            each input datum is read. The optional parameter {\bf poly} selects
+            one of two polynomials to use. "CRC16" (default) selects $x^{16} +
+            x^{15} + x^{13} + 1$. "CCITT" selects $x^{16} + x^{12} + x^5 + 1$. parameter
+            {\bf out} is a "uint:16" static variable in which the CRC value is
+            accumulated Input data can be read at clock rate.
+
+
+
+    
+        \subsubsection{crc\_16\_16 - 16 bit CRC from 8 bit data}\label{sec:lmcrc1616}
+
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               crc_16_16 (
+                   static(out, "uint:16")
+                   <-
+                   queue(in, "uint:16"),
+                   str(poly, "CRC16")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output static variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue.\\
+            {\bf poly} is an optional string argument to select the polynomial
+            used.
+
+            {\bf description:} \\
+            This module accumulate a 16 bit CRC from 16 bit data. Parameter {\bf
+            in} is the data input queue, type "uint:16". The CRC is updated as
+            each input datum is read. The CRC is computed successively from each
+            8-bit half of each input datum but in one clock cycle. The optional
+            parameter {\bf poly} selects one of two polynomials to use. "CRC16"
+            (default) selects $x^{16} + x^{15} + x^{13} + 1$. "CCITT" selects
+            $x^{16} + x^{12} + x^5 + 1$. parameter {\bf out} is a "uint:16"
+            static variable in which the CRC value is accumulated Input data can
+            be read at clock rate.
+
+
+
+
+
+
+
+
+    
+        \subsubsection{crcblock - block 32 bit data with a CRC}\label{sec:lmcrcblock}
+
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               crcblock (
+                   queue(out, ds16)
+                   <-
+                   queue(in, ds32),
+                   int(max_blk_len, 20),
+                   int({sob, eob}),
+                   log(fixed)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue, type ds16.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue, type ds32.\\
+            {\bf max\_blk\_len} is the maximum variable block size or the fixed
+                    block size.\\
+            {\bf sob} is the start-of-block K-character to be used.\\
+            {\bf eob} is the end-of-block K-character to be used.\\
+            {\bf fixed} is an optional logical argument to select fixed
+                    length blocks.
+
+            {\bf description:} \\
+            This module encloses data in a block containing a cyclic reduncancy
+            check word. The 16 bit CRC polynomial is $x^{16} + x^{15} + x^{13} +
+            1$. Blocks can be fixed or variable length.
+
+            When input data become available the start-of-block word is written
+            to the output queue. The start-of-block word has the most significant
+            byte set to the start-of-block K character, the least significant
+            byte to zero and the K flag is true. If 'fixed' is false (default),
+            incoming data is read until either unavailable or max\_block\_len
+            items have been read and the block is then terminated. If 'fixed' is
+            true, incoming data is read until max\_block\_len items have been
+            read and the block is then terminated. each 32 bit word is written
+            to the output as a pair of 16 bit words. A 16 bit CRC is accumulated
+            from each 16 bit data word. When the block is terminated the 16 bit
+            CRC is written to the output followed by an end-of-block word. The
+            end-of-block word has the most significant byte set to the
+            end-of-block K character, the least significant byte to zero and the
+            K flag is true.
+
+            \begin{tabular}{| c | c | c | l}
+            \cline{1-3}
+            K & upper & lower & \\
+            flag & byte & byte & \\
+            \cline{1-3}
+            \cline{1-3}
+            1 & sob &  0  & start-of-block \\ \cline{1-3}
+            0 & \multicolumn{2}{| c |}{data word 1} & first data word \\ \cline{1-3}
+            0 & \multicolumn{2}{| c |}{data word 2} & second data word \\ \cline{1-3}
+            . & \multicolumn{2}{| c |}{.} &  \\
+            . & \multicolumn{2}{| c |}{.} &  \\ \cline{1-3}
+            0 & \multicolumn{2}{| c |}{data word n} & last data word \\ \cline{1-3}
+            0 & \multicolumn{2}{| c |}{CRC} & CRC \\ \cline{1-3}
+            1 & eob &  0  & end-of-block \\ \cline{1-3}
+            \end{tabular}
+
+
+
+
+
+
+
+
+    
+        \subsubsection{crcunblock - unblock 32 bit data with a CRC}\label{sec:lmcrcunblock}
+
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               crcunblock (
+                   queue(dout, ds32),
+                   static(eout)
+                   <-
+                   queue(in, ds16),
+                   int(max_blk_len, 20),
+                   int({sob, eob})
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue, type ds32.\\
+            {\bf eout} is an optional error counter static variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue, type ds16.\\
+            {\bf max\_blk\_len} is the maximum variable block size or the fixed
+                    block size.\\
+            {\bf sob} is the start-of-block K-character to be used.\\
+            {\bf eob} is the end-of-block K-character to be used.
+
+            {\bf description:} \\
+            This module unwraps data from a block containing a cyclic reduncancy
+            check word. The 16 bit CRC polynomial is $x^{16} + x^{15} + x^{13} +
+            1$. Blocks can be fixed or variable length. The start-of-block word,
+            CRC word and end-of-block word are stripped off the input stream and
+            data words are packed into 32 bit words (ds32 struct). A CRC is
+            computed from the block data including the transmitted CRC word. If
+            the resulting CRC is zero the block is written to the output queue.
+            If the CRC is not zero the block is discarded.
+            
+            When a block CRC error is encountered if the output parameter 'eout'
+            has an argument the data length of the discarded block is added to
+            the value of that variable. Any words received that do not match the
+            block format cause 'eout' to be incremented. The size of the 'eout'
+            counter is determined by the argument passed in the call to
+            crcunblock().
+
+            If the block length exceeds the maximum block length the block is
+            terminated and discarded and if the optional error counter output
+            parameter is used, the block length is added to the error count.
+
+            Unpacked data is written to a dual-port circular buffer so that
+            completed correct data words can be copied to the output data queue
+            in parallel with unpacking of incoming blocks. If the output queue
+            becomes unavailable for writing, data words will be discarded.
+
+
+    
+  
+        \subsubsection{cread - read combinatorial output memory to a
+                                                        queue}\label{sec:lmcread}
+
+            {\bf Library: stdlib.3pl}
+
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               cread (queue(data) <- rmemory(m), int(port), queue(addr)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf data} is the queue variable to be written to from the memory
+            read. It takes its type from the argument.
+
+            {\bf Input parameters:} \\
+            {\bf m} is the memory.\\
+            {\bf port} is the memory port.\\
+            {\bf addr} is the memory address.
+
+            {\bf description:} \\
+            Read the combinatorial output memory when the input and output
+            queues are available. The program logic must ensure that this
+            memory port access is mutually exclusive to all other accesses
+            to that port.
+            
+            This module is just a wrapper around a single statement. The source
+            is
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               cread (queue(data) <- rmemory(m), int(port), queue(addr)) {
+                   data <<- cast(cmemoryread(m, port, addr), type(data));
+               }
+            \end{lstlisting}
+                        
+            It is provided to complete the set {\bf cread()}, {\bf cwrite()},
+            {\bf rread()} and {\bf rwrite()} where only rread() contains
+            significant code.
+            
+            See also - \\
+            {\bf cwrite()} \autorefph{sec:lmcwrite}, \\
+            {\bf rread()} \autorefph{sec:lmrread}, \\
+            {\bf rwrite()} \autorefph{sec:lmrwrite}.
+
+    
+        \subsubsection{cwrite - write combinatorial output memory from a
+                                                    queue}\label{sec:lmcwrite}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               cwrite (rmemory(m), int(port), queue({addr, data})) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\ 
+            {\bf m} is the memory.\\
+            {\bf port} is the memory port.\\
+            {\bf addr} is the memory address.\\            
+            {\bf data} is the data to be written.
+
+            {\bf description:} \\
+            Write to the combinatorial output memory when the input queues are
+            available. The program logic must ensure that this memory port
+            access is mutually exclusive to all other accesses to that port.
+            
+            This module is just a wrapper around a single statement. The source
+            is
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               cwrite (rmemory(m), int(port), queue(addr), queue(data)) {
+                   cmemorywrite(m, port, addr, data);
+               }
+            \end{lstlisting}
+                        
+            It is provided to complete the set {\bf cread()}, {\bf cwrite()},
+            {\bf rread()} and {\bf rwrite()} where only rread() contains
+            significant code.
+            
+            See also - \\
+            {\bf cread()} \autorefph{sec:lmcread}, \\
+            {\bf rread()} \autorefph{sec:lmrread}, \\
+            {\bf rwrite()} \autorefph{sec:lmrwrite}.
+
+
+
+
+
+        \subsubsection{demultiplex - demultiplex a source\\
+                    demultiplex\_l - demultiplex a source using port bit\\
+                    demultiplex\_e - demultiplex a source using port number}\label{sec:lmdemultiplex}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               demultiplex.... (varargs <- queue(in)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf varargs} any number of output sinks, an array of pointers
+            to sinks or a list of sinks.
+
+            {\bf Input parameters:} \\
+            {\bf in} is a single input queue.
+
+            {\bf description:} \\
+            These modules are intended to demultiplex a single input queue to a
+            number of output queues. Outputs need not be the same type but they must
+            be assignable from the input type (or {\bf body} field of the input -
+            see below). The input need not contain queue reads in which case it will
+            be read on every clock cycle.
+
+            These modules may also be called with a single output argument which
+            is an array of pointers to queues. In this case they behave as though
+            called with the queues as separate arguments. Similarly the single
+            output argument may be of type "list", the list containing pointers
+            to queues.
+
+            The output types must be a type assignable from the input data
+            type. By 'assignable' is meant that the types need not be identical,
+            e.g. the number of bits may differ in which case truncation or
+            padding will occur or a "uint" may be assigned to an "int".
+
+            For {\bf demultiplex()} the input can be any type. The input is
+            copied to the outputs in turn. If an output is not available the
+            next available output in cyclic order is selected. If no outputs
+            are available the module waits until any output is available and
+            this is written to.
+
+            For {\bf demultiplex\_l()} the input type is a wrapper struct
+            containing the datum and an output port identifier. That identifier
+            is an array of type "log" in which one member is {\bf true} to
+            identify the output port. The struct can be created by calling the
+            library global function {\bf multiplex\_struct\_l()}
+            \autorefph{sec:lfmultiplexstruct}.
+
+            For {\bf demultiplex\_e()} the input type is a wrapper struct
+            containing the datum and an output port identifier. That identifier
+            is  a "uint" containing the port number (starting at 0). The struct
+            can be created by calling the library global function {\bf
+            multiplex\_struct\_e()} \autorefph{sec:lfmultiplexstruct}.
+
+            If the selected output queue is an unmatched parameter then the input is
+            still read but the data is discarded. For {\bf demultiplex\_l()} and
+            {\bf demultiplex\_e()} the directive "demultiplex\_skip\_null\_outputs"
+            can be set to true to ignore any unmatched output parameters, but note
+            that if an input is directed to that output port the input will not be
+            read.
+
+            These modules read and write in the current clock domain.
+            Input and output queues may be asynchronous.
+            
+            The module {\bf demultiplex()} operates by means of a token placed
+            on one output. When the input becomes available the first available
+            output downstream of the token is written and the token is moved to
+            the output following the one written. There are no clock cycles
+            lost, as in a traditional token ring, in waiting for the token to
+            move around the ring to an available output, thus the module is
+            capable of forwarding an input datum on every clock cycle. The
+            implementation uses the Xilinx carry chain to minimise the delay
+            through the logic cascade of the token ring. If the carry chain were
+            not used the logic delays would severely limit the clock rate at
+            which this module could be used. Modules {\bf demultiplex\_l()} and
+            {\bf demultiplex\_e()} do not need the token ring as the required
+            output is explicitly specified by the input.
+
+            
+            See also - \\
+            {\bf multiplex()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_struct\_l()} \autorefph{sec:lfmultiplexstruct} \\
+            {\bf multiplex\_struct\_e()} \autorefph{sec:lfmultiplexstruct}.
+
+
+
+        \subsubsection{divide - pipeline divide}\label{sec:lmdivide}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               divide (queue(quot), queue(rem) <- value(num), value(denom)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf quot} is the quotient.\\
+            {\bf rem} is the remainder.
+
+            {\bf Input parameters:} \\
+            {\bf num} is the dividend.\\
+            {\bf denom} is the divisor.
+            
+            This module is in divlib.3pl which is included in stdlib.3pl.
+
+            {\bf description:} \\
+            This module is a pipeline divider. The numerator and denominator
+            arguments may be int, uint, int:, uint:, fixed: or ufixed: where the
+            trailing ":" indicates target types. For integer types the quotient
+            and remainder outputs are integer, signed if either input is signed,
+            and either or both the quotient and remainder outputs may be used.
+            For one or both inputs fixed point the quotient output will be fixed
+            point, signed if either input is signed, and the remainder output
+            is not used.
+            
+            If neither input is a queue or an expression containing a queue the
+            divider will accept input on every clock cycle. Either input may be
+            immediate mode but both inputs must not be immediate mode. The
+            quotient and remainder will become available at the outputs after a
+            latency which is determined by the numerator width. Data in transit
+            through the module will continue to the outputs regardless of the
+            availability of further input data.
+
+            The remainder queue output argument should be at least as wide as the
+            denominator argument otherwise the resulting truncation may lose
+            data (if the range is known to be constrained then this is
+            acceptable).
+
+            For unsigned integer divide (both numerator and denominator
+            arguments unsigned target types or non-negative immediate) the
+            result width is the width of the numerator argument.
+
+            For signed integer divide (either or both numerator or denominator
+            arguments int target types or negative immediate) the result width
+            will be one bit wider than for unsigned divide. The extra bit is
+            only required for the single case where both numerator and
+            denominator are the maximum negative values (e.g. -8 / -1 gives +8,
+            but -8 has a width of 4 bits and +8 as a signed int has a width of 5
+            bits). If this case is known not to arise a narrower output queue may
+            be used.
+            
+            For fixed point divide the result width is the sum of the numerator
+            and denominator widths and the result binary point offset is
+            the numerator offset + denominator width - denominator offset.
+
+            The number of pipeline stages is equal to the number of bits in the
+            numerator plus one.
+
+            Divide by zero is not detected and gives an undefined result.
+
+
+
+
+
+        \subsubsection{fifo - a fifo with static interface}\label{sec:lmfifo}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fifo (
+                   value(out), value({emptyout, fullout}, "log")
+                   <-
+                   value(in), value({read, write}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the data output for a fifo read.\\
+            {\bf emptyout} is true if the fifo is empty.\\
+            {\bf fullout} is true if the fifo is full.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the data input for a fifo write.\\
+            {\bf read} causes a fifo read on a clock cycle when high.\\
+            {\bf write} causes a fifo write on a clock cycle when high.
+
+            {\bf description:} \\
+            Read or write a fifo. On each clock cycle {\bf emptyout} and {\bf
+            fullout} indicate when reads and writes respectively cannot be
+            executed. The program must ensure that these conditions are
+            checked as the module does not do so! If {\bf read} or {\bf
+            write} are high in a clock cycle then a read or write will be
+            performed. These can be done on the same clock cycle.
+
+
+
+
+
+        \subsubsection{multiplex - multiplex sources\\
+                    multiplex\_l - multiplex sources giving port bit\\
+                    multiplex\_e - multiplex sources giving port number\\
+                    multiplexp - multiplex queues with priority\\
+                    multiplexp\_l - multiplex queues with priority giving port bit\\
+                    multiplexp\_e - multiplex queues with priority giving port number\\
+                    multiplext - multiplex queues via a tree\\
+                    multiplext\_l - multiplex queues via a tree giving port bit\\
+                    multiplext\_e - multiplex queues via a tree giving port number}\label{sec:lmmultiplex}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               multiplex.... (queue(out) <- varargs) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is a single output queue.
+
+            {\bf Input parameters:} \\
+            {\bf varargs} any number of input sources, an array of pointers
+            to sources or a list of sources.
+
+            {\bf description:} \\
+            These modules are intended to multiplex a number of input queues to a
+            single output queue. Inputs need not be the same type but they must
+            be assignable to the output type (or {\bf body} field of the output
+            queue - see below). By 'assignable' is meant that the types need not
+            be identical, e.g. the number of bits may differ in which case
+            truncation or padding will occur or a "uint" may be assigned to an
+            "int".          
+            
+            When inputs become available simultaneously modules {\bf
+            multiplex()}, {\bf multiplex\_l()} and {\bf multiplex\_e()} use a
+            pseudo-token ring to give equal treatment to all inputs. Note that
+            although these modules were written to multiplex queues (or more
+            correctly expressions containing queue reads), the input arguments
+            could be other modes, say value or static. Where no queue reads are
+            involved an expression is always available. In that case the inputs
+            would be sampled and copied to the output queue continuously in a
+            cyclic order. In principle the inputs could be a mixture of modes in
+            which case they would be read cyclically but a queue would be skipped
+            if not available for reading.
+
+            Modules {\bf multiplexp()}, {\bf multiplexp\_l()} and {\bf
+            multiplexp\_e()} handle simultaneous inputs by choosing the
+            left-most available queue in the argument list. For these modules the
+            inputs must contain queue reads.
+
+            Modules {\bf multiplext()}, {\bf multiplext\_l()} and {\bf
+            multiplext\_e()} handle simultaneous inputs by means of a balanced tree
+            structure.
+            
+            All nine modules may also be called with a single input argument
+            which is an array of pointers to sources. In this case they behave
+            as though called with the sources as separate arguments. Similarly
+            the single input argument may be of type "list", the list containing
+            pointers to sources.
+            
+            In many applications it is necessary to be able to identify the
+            origin of an output datum, i.e. the input argument to the module
+            from which the datum was read. To facilitate this the module output
+            queue type may be a struct which is a wrapper containing the output
+            datum and an input port identifier. The output type for {\bf
+            multiplex()} and {\bf multiplexp()} do not use a wrapper type, the
+            output type being directly compatible with the input type(s).
+            
+            The output type for {\bf multiplex\_l()}, {\bf multiplexp\_l()} and
+            {\bf multiplext\_l()} is a wrapper with two field, {\bf body}
+            containing the datum and {\bf port}  which is an array of type "log"
+            in which one member is {\bf true} to identify the input port. The
+            struct can be created by calling the library global function {\bf
+            multiplex\_struct\_l()} \autorefph{sec:lfmultiplexstruct}.
+            
+            The output type for {\bf multiplex\_e()}, {\bf multiplexp\_e()} and
+            {\bf multiplext\_e()} is a wrapper with two fields, {\bf body}
+            containing the datum and {\bf port}  which is a "uint" containing
+            the port number (starting at 0). The struct can be created by
+            calling the library global function {\bf multiplex\_struct\_e()}
+            \autorefph{sec:lfmultiplexstruct}.
+            
+            In the case of {\bf multiplex()}, {\bf multiplexp()} and {\bf
+            multiplext()} the inputs are copied to the output queue when
+            available. For {\bf multiplex\_l()}, {\bf multiplexp\_l()} and {\bf
+            multiplext\_l()} the selected input is copied to the {\bf body}
+            field output queue when available and the associated port field has
+            the member of the array indexed by the port number assigned true.
+            For {\bf multiplex\_e()}, {\bf multiplexp\_e()} and {\bf
+            multiplext\_e()} the same applies except that the port number is
+            assigned to the "uint" {\bf port} field.
+            
+            The modules read and write in the current clock domain. Input
+            and output queues may be asynchronous.
+            
+            The modules {\bf multiplex()}, {\bf multiplex\_l()} and {\bf
+            multiplex\_e()} operate by means of a token placed on one input.
+            When one or more inputs become available the first input downstream
+            of the token is read and the token is moved to the input following
+            the one read. There are no clock cycles lost, as in a traditional
+            token ring, in waiting for the token to move around the ring to an
+            available input, thus the module is capable of forwarding an input
+            datum on every clock cycle. The implementation uses the Xilinx carry
+            chain to minimise the delay through the logic cascade of the token
+            ring. Unfortunately the carry chain must be circular and the link
+            back from the top of a linear carry chain to the bottom introduces
+            a significant delay. The propagation time around the token ring
+            is large enough to severely lower the clock rate that can be used
+            as the number of inputs increases.
+            
+            The modules {\bf multiplexp()}, {\bf multiplexp\_l()} and {\bf
+            multiplexp\_e()} use a priority mode variable to select which input
+            to read. For FPGAs priority mode variables are implemented using the
+            Xilinx carry chain if the number of inputs exceeds the maximum
+            number of LUT inputs. This is to minimise the delay through cascaded
+            logic.
+            
+            The modules {\bf multiplext()}, {\bf multiplext\_l()} and {\bf
+            multiplext\_e()} use a balanced tree with nodes of degree 2 to
+            converge the inputs to the output. Each tree node arbitrates between
+            its two inputs based on the number of leaves converging on each
+            branch. The disadvantage of this scheme is that arbitration is
+            based on the fixed configuration, not on the traffic through
+            each branch. For example a four input multiplexer where
+            input 4 is idle will arbitrate among the other three unfairly
+            giving input 3 half the clock cycles, inputs 1 and 2 sharing the
+            other half. The advantage of this multiplexer is that it will
+            operate at a high clock rate since the arbitration is local to
+            the nodes.
+                        
+            See also - \\
+            {\bf demultiplex()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_l()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_e()} \autorefph{sec:lmdemultiplex} \\
+            {\bf multiplex\_struct\_l()} \autorefph{sec:lfmultiplexstruct} \\
+            {\bf multiplex\_struct\_e()} \autorefph{sec:lfmultiplexstruct}.
+        
+
+
+
+
+        \subsubsection{multiply - pipelined multiply}\label{sec:lmmultiply}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               multiply (queue(prod) <- value(m1), value(m2)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf prod} is the product.
+
+            {\bf Input parameters:} \\
+            {\bf m1} is the multiplicand.\\
+            {\bf m2} is the multiplier.
+            
+            This module is in multlib.3pl which is included in stdlib.3pl.
+
+            {\bf description:} \\
+            This module is a pipeline multiplier for signed or unsigned
+            integers. The module is useful for Virtex, Virtex E and Spartan 2
+            FPGAs which do not contain hardware multipliers. Later Virtex and
+            Spartan3 FPGAs containing hardware multipliers offer no reason to
+            use this module.
+            
+            If neither input is a queue or an expression containing a queue the
+            multiplier will accept input on every clock cycle unless the output
+            queue becomes unavailable. Either input may be a constant but both
+            inputs must not be constant. If either input is signed (a target int
+            or a -ve constant) the output queue must be signed (an int, not a
+            uint).
+
+            The product will become available at the output after a latency
+            which is determined by the input widths. Data in transit through the
+            module will continue to the output regardless of the availability of
+            further input data. The number of pipeline stages depends on the
+            size and types of input arguments as follows -
+
+            \begin{tabular}{ l l l }
+            unsigned  & expr x expr     & bits in smallest expr \\
+            signed    & expr x expr     & bits in smallest expr + 1 \\
+            unsigned  & expr x constant & 1-bits in constant \\
+            signed    & expr x constant & 1-bits in constant + 1 \\
+            \end{tabular}
+            
+            where signed means that either input argument is signed. {\bf
+            expr} means a target variable or expression, possibly containing
+            queues. {\bf constant} means an immediate constant, variable or
+            expression. Either input argument may be the constant.
+            
+            The width of the output queue argument should be at least the sum
+            of the widths of the two input arguments. If narrower the result
+            will be truncated at the most significant end. If the range of
+            the product is known to be constrained then truncation of the
+            product is acceptable.
+            
+            
+
+
+        \subsubsection{pfifo - a prewrite fifo with static interface}\label{sec:lmpfifo}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               pfifo (
+                   value(out),
+                   value({emptyout, fullout}, "log")
+                   <-
+                   value(in),
+                   value({read, prewrite, write}, "log"),
+                   value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the data output for a fifo read.\\
+            {\bf emptyout} is true if the fifo is empty.\\
+            {\bf fullout} is true if the fifo is full.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the data input for a fifo write.\\
+            {\bf read} causes a fifo read on a clock cycle when high.\\
+            {\bf prewrite} notifies the fifo that a write will be done
+            in the future, reserving a place. When no free places remain the
+            full condition will be come true.\\
+            {\bf write} causes a fifo write on a clock cycle when high. The
+            empty condition takes account of data actually written, not
+            notified writes (prewrites).\\
+            {\bf reset} is an optional reset to clear the fifo.
+
+            {\bf description:} \\
+            This fifo is intended to be used where data is to be passed
+            through a fifo but there is a delay between execution of the
+            data-producing operation and availability of that data. An
+            example of this is external memory reads where the data only
+            becomes available a number of cycles after the read command has
+            been sent. The resulting data are then to be buffered in this
+            fifo. To ensure that the memory reads can be pipelined it is
+            necessary to notify the fifo that a write will occur later so
+            that its test for space can take that into account. Once the
+            memory read has been signaled it cannot be stopped so the fifo
+            must have space available for the resulting datum some cycles
+            later.
+            
+            On each clock cycle {\bf emptyout} and {\bf fullout} indicate
+            when reads and writes respectively cannot be executed. The
+            program must ensure that these conditions are checked as the
+            module does not do so! If {\bf read}, {\bf prewrite} or {\bf
+            write} are high in a clock cycle then a read, prewrite or write
+            will be performed. Any combination of these can all occur on
+            one clock cycle.
+
+
+        \subsubsection{pdelay - delay pipeline data}\label{sec:lmpdelay}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               pdelay (
+                   queue(out)
+                   <-
+                   queue(in),
+                   int(delay),
+                   value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the data output.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the data input.\\
+            {\bf delay} is the numnber of data to be delayed.\\
+            {\bf reset} is an optional reset.
+
+            {\bf description:} \\
+            This module delays data by the number specified by argument
+            {\bf delay}. The module will only operate when both input
+            and output queues are available. Initially {\em delay} input data
+            will be consumed while outputing default values (0, false etc.).
+            Following this the output datum will be that input {\em delay}
+            data cycles ago. The optional reset can be used to return the
+            module to its initial condition.
+
+
+        \subsubsection{rread - read registered output memory to a
+                                                    queue}\label{sec:lmrread}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               rread (queue(data) <- rmemory(m), int(port), queue(addr)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf data} is the queue variable to be written to from the memory
+            read. It takes its type from the argument.
+
+            {\bf Input parameters:} \\
+            {\bf m} is the memory.\\
+            {\bf port} is the memory port.\\
+            {\bf addr} is the memory address.
+
+            {\bf description:} \\
+            Read the registered output memory when the input and output
+            queues are available. There is a latency of 2 cycles between input
+            and output.
+            
+            The program logic must ensure that this
+            memory port access is mutually exclusive to all other accesses
+            to that port.
+            
+            See also - \\
+            {\bf cread()} \autorefph{sec:lmcread}, \\
+            {\bf cwrite()} \autorefph{sec:lmcwrite}, \\
+            {\bf rwrite()} \autorefph{sec:lmrwrite}.
+
+
+        \subsubsection{rwrite - write registered output memory from a
+                                                    queue}\label{sec:lmrwrite}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               rwrite (rram(m), int(port), queue({addr, data})) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\
+            {\bf m} is the memory.\\
+            {\bf port} is the memory port.\\
+            {\bf addr} is the memory address.\\            
+            {\bf data} is the data to be written.
+
+            {\bf description:} \\
+            Write to the registered output memory when the input queues are
+            available. The program logic must ensure that this memory port
+            access is mutually exclusive to all other accesses to that port.
+
+            The registered output of the port is also changed to the written
+            value.
+            
+            This module is just a wrapper around a single statement. The source
+            is
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               rwrite (rmemory(m), int(port), value(addr), value(data)) {
+                   rmemorywrite(m, port, addr, data);
+               }
+            \end{lstlisting}
+                        
+            It is provided to complete the set {\bf cread()}, {\bf cwrite()},
+            {\bf rread()} and {\bf rwrite()} where only rread() contains
+            significant code.
+            
+            See also - \\
+            {\bf cread()} \autorefph{sec:lmcread}, \\
+            {\bf cwrite()} \autorefph{sec:lmcwrite}, \\
+            {\bf rread()} \autorefph{sec:lmrread}.
+
+
+        \subsubsection{sort - generate a parallel Batcher sort network}\label{sec:lmsort}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               sort (queue(out) <- queue(in)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue.
+
+            {\bf description:} \\
+            This module generates a parallel sort network. The input and output
+            arguments are queues which are 1-dimensional arrays of type uint or
+            int. The output ordering depends on the The input and output array
+            dimensions and types must be the same. The number of pipeline
+            stages in this module depends on the dimensions of the queues. The
+            sort network is generated using Batcher's algorithm. Note that the
+            amount of logic used grows rapidly with the dimensionality of the
+            queues!
+
+
+
+        \subsubsection{sqrt - target fixed point square root}\label{sec:lmsqrt}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               sqrt (queue(out) <- queue(in)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue.
+
+            {\bf description:} \\
+            This module performs a bitwise iterative square root on an unsigned
+            integer or unsigned fixed point value. The input and output
+            arguments must be queue mode variables. The input and output types
+            must be both "uint:" or both "ufixed:". The integer or fractional
+            widths of input and output need not match. For integers the output
+            width will usually be half the input width. For fixed point the
+            output type would usually have the point moved left with respect to
+            the input. If a result value exceeds the integer or fractional width
+            of the output type, left or right truncation will occur.
+
+            Where the operand is not an exact square the result is truncated at
+            the least significant end, i.e. the result is the largest value
+            whose square is not larger than the operand.
+            
+            The module does not process data at clock rate; it processes an
+            operand in a fixed time of n/2+2 clock cycles where 'n' is the width
+            of the (internal) operand.
+            
+            For an integer square root 'n' is the width of the input, plus 1
+            if the width is odd.
+            
+            For a fixed point square root 'n' is calculated as follows -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(n, size(in));       // total operand width - initially that of input
+               int(ifb, offset(in));   // input fraction part width
+               int(iib, n - ifb);      // input integer part width
+               int(ioffset);           // input left offset to form internal integer
+               int(ofb, offset(out));  // output fraction part width
+               int(xoffset);           // extra offset for more fractional precision
+
+               if ((ifb % 2) != 0) {   // if input fractional part width odd --
+                   n++;                // increment n to make even
+                   ioffset = 1;        // input must now be offset by 1 bit
+               }
+               xoffset = (2 * ofb) - (ifb + ioffset); // extra precision for output fractional part
+               if (xoffset > 0) {      // if extra width for output fractional precision --
+                   n += xoffset;       // add to n
+                   ioffset += xoffset; // add to input offset
+               }
+               if ((n % 2) != 0)   // if total width odd --
+                   n++;            // increment n to make even
+            \end{lstlisting}
+            This increments n for either integer or fraction part of odd width
+            and also widens the the internal operand to account for extra
+            precision in the output fractional part compared to the input.
+            
+            
+
+
+
+        \subsubsection{stretch - generate a long pulse from a transition}\label{sec:lmstretch}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               stretch (static(out, "log") <- value(in, "log"), int(n)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output static variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input value.\\
+            {\bf n} is the required length of the output pulse.
+
+            {\bf description:} \\
+            When input argument {\bf in} goes from false to true generate an
+            output {\bf out} which is true for the number of cycles specified
+            by argument {\bf n}.
+
+
+        \subsubsection{timebase - generate decadic pulses}\label{sec:lmtimebase}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               timebase(
+                   static({tb_1us, tb_10us, tb_100us, tb_1ms, tb_10ms, tb_100ms, tb_1s}, "log")
+                   <-
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf tb\_1us} is a $1\mu S$ interval pulse stream. \\
+            {\bf tb\_10us} is  a $10\mu S$ interval pulse stream. \\
+            {\bf tb\_100us} is  a $100\mu S$ interval pulse stream. \\
+            {\bf tb\_1ms} is  a $1mS$ interval pulse stream. \\
+            {\bf tb\_10ms} is  a $10mS$ interval pulse stream. \\
+            {\bf tb\_100ms} is  a $100mS$ interval pulse stream. \\
+            {\bf tb\_1s} is  a $1S$ interval pulse stream. 
+
+            {\bf Input parameters:} \\
+            None.
+
+            {\bf description:} \\
+            This module generates pulse streams at decade intervals of $1\mu S$
+            up to $1S$. Each pulse is one cycle in the current clock domain.
+            Each output pulse is aligned with the pulses from higher frequency
+            outputs. The current clock frequency must be $\ge$ 2MHz.
+            
+            The $1\mu S$ pulses are derived from the current clock by integer
+            division and hence if the current clock is not an integer
+            multiple of 1MHz the interval will differ from $1\mu S$. Each of
+            the other outputs is derived from the next higher frequency
+            output by division by 10.
+
+
+        \subsubsection{to\_pulse - generate a pulse from a
+                                                    transition}\label{sec:lmtopulse}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               to_pulse (static(out, "log") <- value(in, "log")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output static variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input value.
+
+            {\bf description:} \\
+            Generate a pulse on {\bf out} when the input argument {\bf in}
+            changes from false to true.
+
+
+
+        \subsubsection{tws\_recv - two wire serial receiver}\label{sec:lmtwsrecv}
+
+            {\bf Library: stdlib.3pl}
+
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               tws_recv(
+                   queue(out)
+                   <-
+                   value(sck, "log"), value(sdo, "log"), varargs
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf sck} is the input serial clock. \\
+            {\bf sdo} is the input serial data. \\
+            {\bf varargs} matches two optional arguments, {\bf silence} and
+            {\bf settle}.
+
+            {\bf description:} \\
+            This module receives a two-wire serial stream and produces
+            a parallel output on a queue. Input {\bf sck} is the input clock
+            and input {\bf sdo} is the serial data. The data is captured
+            on the positive edges of the clock. The clock is low between
+            words.
+            
+            Optional argument {\bf silence} (first argument matched by varags)
+            specifies the minimum time between serial words. If {\bf sck}
+            goes high before the specified interval has elapsed since the end
+            of the current word, the current word will be discarded. The
+            argument may be an immediate integer, in which case it specifies
+            the number of clock cycles in the current clock domain, or it
+            may be immediate floating point, which will be interpreted as
+            a time in second. If the argument is missing or is zero no
+            minimum time period between words will be enforced.
+            
+            Optional argument {\bf settle} (second argument matched by varags)
+            specifies the minimum time {\bf sck} or {\bf sdo} must remain
+            unchanged following a transition for that transition to be
+            recognised, i.e. it is a deglitch time period. The argument may be
+            an immediate integer, in which case it specifies the number of clock
+            cycles in the current clock domain, or it may be immediate floating
+            point, which will be interpreted as a time in second. If the argument
+            is missing or is zero no deglitching will be applied. Note that
+            deglitching will introduce a data output latency.
+            
+            The clock domain within which this module is called must be
+            of a frequency high enough to properly sample {\bf sck} and
+            {\bf sdo}, i.e. at least twice the frequency of {\bf sck}.
+
+            See also library module {\bf tws\_send()} \autorefph{sec:lmtwssend}.
+
+
+
+        \subsubsection{tws\_send - two wire serial transmitter}\label{sec:lmtwssend}
+
+            {\bf Library: stdlib.3pl}
+
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               tws_send(
+                   static(sck, "log"), static(sdo, "log")
+                   <-
+                   queue(in), varargs
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf sck} is the output serial clock. \\
+            {\bf sdo} is the output serial data.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue variable. \\
+            {\bf varargs} matches two required arguments, {\bf timebase} and
+            {\bf silence}.
+
+            {\bf description:} \\
+            This module transmits a two-wire serial stream from
+            a parallel input on a queue. Output {\bf sck} is the serial clock
+            and output {\bf sdo} is the serial data. The data changes
+            on the negative edges of the clock.{\bf sck} is low between
+            words.
+
+            Argument {\bf timebase} (first argument matched by varags)
+            may be immediate, value or static mode.
+            
+            If {\bf timebase} is immediate mode it must be type "float", "int"
+            or "uint". If type "float" it specifies the period of the output
+            clock {\bf sck} in second. If it is type "int" or "uint" it gives
+            the period of {\bf sck} as a multiple of the period of the
+            current clock.
+            
+            If {\bf timebase} is value or static mode it must be a stream
+            of pulses in the current clock domain, each pulse initiating
+            the next sck transition during serial transmission. If
+            {\bf timebase} is continuously high then {\bf sck} will be at
+            half the current clock rate.
+            
+            Argument {\bf silence} specifies the minimum gap between transmitted
+            words. The argument may be an immediate integer, in which case it
+            specifies the number of clock cycles in the current clock domain, or
+            it may be immediate floating point, which will be interpreted as a
+            time in second. If the argument is zero no gap between successive words
+            will be inserted.
+            
+            The clock domain within which this module is called must be
+            at least twice the frequency of {\bf sck}.
+
+            See also library module {\bf tws\_recv()} \autorefph{sec:lmtwsrecv}.
+
+
+    \subsection{library procedures}
+            
+
+
+
+
+
+        \subsubsection{assign - generalised assignment}\label{sec:lpassign}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               assign (var(out) <- varargs) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the variable to be assigned.
+
+            {\bf Input parameters:} \\            
+            {\bf varargs} expects a single argument which is the input value.
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure is provided for cases where assignment is to be
+            made to a variable whose mode is not known or which varies from
+            instance to instance.
+            
+            The output variable may be of mode immediate, value, priority,
+            clock, static, queue or selectvalue. The input may be any expression,
+            immediate or target mode and in the latter case may contain queue
+            reads.
+
+
+
+
+
+        \subsubsection{cinclude - convert a C include file}\label{sec:lpcinclude}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cinclude(str(filename)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf filename} is the C include file name.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure reads a C include file and defines variables
+            corresponding to each \#define entry that it finds. This enables
+            a C include file to be shared between a CPU C program and
+            an associated 3PL FPGA program where there is a CPU/FPGA interface
+            and constants such as bus or register addresses must be the same.
+            
+            {\bf cinclude()} processes integer, string and floating point
+            definitions. It also handles a \#define with no value, creating
+            a {\bf log} type initialised to {\bf true}.
+            
+            {\bf cinclude()} ignores C style comments (which must not extend
+            beyond one line), C++ style comments and empty lines.
+            
+            Lines beginning with \#define must contain an identifier and an
+            optional associated constant. Integer constants may be decimal,
+            hexadecimal (0x\dots or 0X\dots), octal (0\dots) or binary (0b\dots or
+            0B\dots). String constants must be enclosed quotes -  "\dots".
+            
+            \#defines cannot be nested.
+            
+            Each definition produces a corresponding global immediate {\bf int},
+            {\bf str}, {\bf float} or {\bf log} as appropriate whose initial value
+            is the associated value from the definition. If there is no value a
+            {\bf log} type is created initialised to {\bf true}.
+            
+            For a C include file def.h as follows -
+            \begin{lstlisting}[gobble=12, language=C]
+                   /* Include file */
+                   /* has only single line C style comments */
+
+                   #define VARA    3   // also ignores c++ style comments
+                   #define VARB    0xf /* second */
+                   #define VARC    "name"
+                   #define VARD    5.67
+                   #define ENABLE
+            \end{lstlisting}
+
+            The 3PL source
+            \begin{lstlisting}[gobble=12, language=threepl]
+               cinclude("def.h");
+            \end{lstlisting}
+            will read the file def.h and effectively execute the following
+            in the global module -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(VARA, 3);
+               int(VARB, 0xf);
+               str(VARC, "name");
+               float(VARD, 5.67);
+               log(ENABLE, true);
+            \end{lstlisting}
+
+
+        \subsubsection{netlistcommentfromdirs - directives to nelist comment}\label{sec:lpncfromd}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               netlistcommentfromdirs () {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none.
+
+            {\bf Input parameters:} \\            
+            none.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure copies a listing of the current identifiers and values
+            of all directives to the directive "netlistcomment". Directive
+            "netlistcomment" if defined is copied as comments to the output netlist
+            and constraint files. If this procedure is called at the beginning
+            of source code only directives defined by -D command line options
+            and the directive "sourceversion" will be listed. If called at the end
+            of execution then directives "part" and "family" will be listed
+            along with the optinal "author" directive and any other directives
+            defined by the program.
+
+
+        \subsubsection{queuearray - construct an array of queues}\label{sec:lpqueuearray}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               queuearray(var(ptr) <- type(type)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf ptr} is an array of pointers to queues. Each
+            queue has the type given by the input parameter.
+
+            {\bf Input parameters:} \\            
+            {\bf type} is the type of the queues.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            Create an array of queues. Since 'queue' is a mode, not a type,
+            there cannot be an array of them, hence an array of pointers to
+            queues must be used instead (the queue type itself can be an
+            array, but that is not what is wanted in this case).
+            
+            The pointers to created queues are assigned to the output
+            argument which must be a pointer or pointer array. The array may
+            have more than one dimension. The queue type is given by the input
+            argument which may be a type or a string equivalent. The created
+            queues have the default depth of 2. If the output argument is a
+            single pointer then a single new queue will be assigned to that
+            pointer.
+
+
+
+        \subsubsection{prelementIntPropertys - print a list of variable attributes}\label{sec:lpprintattrs}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               prelementIntPropertys (str(lv, "[](key, str, mode, str, value, str)")) {
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            A call to listattributes().
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure prints a list of attributes for a variable. Each line
+            list in order -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               key mode value
+            \end{lstlisting}
+            the fields being separated by horizontal tabs. The format is
+            not very sophisticated.
+        
+            The argument must be a call to inbuilt function
+            {\bf listattributes()} \autorefph{sec:iflistattrs} which itself
+            has one argument, the variable identifier.
+
+
+
+        \subsubsection{printdirs - print a list of directives}\label{sec:lpprintdirs}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               printdirs () {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            none.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure prints a list of directives. Each line list
+            in order -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               identifier type value
+            \end{lstlisting}
+            the fields being separated by horizontal tabs. The format is
+            not very sophisticated.
+
+
+
+
+        \subsubsection{printvars - print a list of variables}\label{sec:lpprintvars}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               printvars (var(lv, "[](scope, str, ident, str, var, ->)")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            A call to listvars().
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure prints a list of variables. Each line list
+            in order -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               scope identifier mode type
+            \end{lstlisting}
+            the fields being separated by horizontal tabs. The format is
+            not very sophisticated.
+
+            The argument must be a call to inbuilt function
+            {\bf listvars()} \autorefph{sec:iflistvars} which itself
+            has an optional argument.
+
+            Argument "global" causes only global variables to be printed.
+
+            Argument "file" causes only file scope variables to be printed.
+
+            Argument "files" causes variables in all file scopes to be printed.
+
+            Argument "local" causes only local variables to be printed, i.e. only
+            those declared within the current module, procedure or function, and
+            not variables in nested control structures.
+
+            Argument "" selects the default, i.e. all block and local variables,
+            the file scope variables and global scope variables will be printed.
+
+            See also inbuilt function {\bf listvars()} \autorefph{sec:iflistvars}.
+
+%
+%        \subsubsection{rread2 - read from an extended dual-port registered
+%                                            output memory}\label{sec:lprread2}
+%
+%            {\bf Library: stdlib.3pl}
+%
+%            {\bf Prototype:} \\
+%            \vsp
+%            \begin{lstlisting}[gobble=12, language=threepl]
+%               global procedure
+%               rread2 (var(m, "->"), int(port), value(addr)) {}
+%            \end{lstlisting}
+%
+%            {\bf Output parameters:} \\
+%            none
+%
+%            {\bf Input parameters:} \\            
+%            {\bf m} is a pointer to the registered output memory struct.\\
+%            {\bf port} is the port.\\
+%            {\bf addr} is the read address.
+%        
+%            {\bf In-line target execution:} \\
+%            yes
+%
+%            {\bf description:} \\
+%            This procedure reads from an extended registered output memory that
+%            has been created by the function {\em bram2()} \autorefph{sec:lfbram2}. The
+%            read is not arbitrated and the application code must ensure that
+%            reads and writes are mutually exclusive. There may be any number of
+%            calls to this procedure and the associated write procedure {\em
+%            rwrite2()} \autorefph{sec:lprwrite2} for the same port of the same memory as
+%            long as their target execution is mutually exclusive.
+%
+%            The address expression must match the type given by the address type
+%            argument to {\em bram2()} \autorefph{sec:lfbram2} and may be immediate, value,
+%            selectvalue, static or queue mode. (for primitive types the bit width
+%            may differ).
+%            
+%            The value resulting from the read will be available from the
+%            following clock cycle at the output of the memory. This value can
+%            be accessed via the library function {\em rramout2} \autorefph{sec:lfrramout2}.
+%
+%
+%        \subsubsection{rwrite2 - write to an extended dual-port registered
+%                                            output memory}\label{sec:lprwrite2}
+%
+%            {\bf Library: stdlib.3pl}
+%
+%            {\bf Prototype:} \\
+%            \vsp
+%            \begin{lstlisting}[gobble=12, language=threepl]
+%               global procedure
+%               rwrite2 (var(m, "->"), int(port), value(addr), value(data)) {}
+%            \end{lstlisting}
+%
+%            {\bf Output parameters:} \\
+%            none
+%
+%            {\bf Input parameters:} \\            
+%            {\bf m} is a pointer to the registered output memory struct.\\
+%            {\bf port} is the port.\\
+%            {\bf addr} is the write address.\\
+%            {\bf data} is the data to be written.
+%        
+%            {\bf In-line target execution:} \\
+%            yes
+%
+%            {\bf description:} \\
+%            This procedure writes to an extended registered output memory that
+%            has been created by the function {\em bram2()} \autorefph{sec:lfbram2}. The
+%            write is not arbitrated and the application code must ensure that
+%            reads and writes are mutually exclusive. There may be any number of
+%            calls to this procedure and the associated read procedure {\em
+%            rread2()} \autorefph{sec:lprread2} for the same port of the same memory as
+%            long as their target execution is mutually exclusive.
+%            
+%            The registered output of the port is also changed to the written
+%            value.
+%
+%            The address and data expressions must match the types given by
+%            the arguments to {\em bram2()} \autorefph{sec:lfbram2} and may be
+%            immediate, value, selectvalue, static or queue mode (for primitive
+%            types the bit width may differ).
+%
+
+        \subsubsection{wait - wait for a time period}\label{sec:lpwait}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               wait (var(t)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf t} is the delay in cycles or second.
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure waits until a time has elapsed. The input
+            argument may be immediate, value or static mode. If immediate
+            the wait period is determined on immediate execution. If
+            a target mode the wait period is given by the value of the
+            argument at the time the procedure is executed in the FPGA.
+            
+            If the input argument is immediate mode, it must be type {\bf
+            uint}, {\bf int} or {\bf float}. If the argument is type {\bf
+            float} it is the number of second to wait. The delay will be
+            rounded to the nearest integer number of clock cycles of the
+            current clock. If the argument is an integer it is the number of
+            clock cycles to wait.
+
+            If the input argument is value or static mode it must be type {\bf
+            uint} or {\bf int} and is the number of clock cycles to wait. The
+            value must not be zero - this will generate the longest wait
+            consistent with the width of the argument variable.
+           
+
+
+        \subsubsection{wait\_until - wait on a logical value}\label{sec:lpwaituntil}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               wait_until (value(v, "log")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf v} is the input value to wait on.
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure waits until the logical input argument 'v' is
+            true.
+
+
+        \subsubsection{wait\_while - wait on a logical value}\label{sec:lpwaitwhile}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               wait_while (value(v, "log")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf v} is the input value to wait on.
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure waits while the logical input argument 'v' is
+            true.
+
+
+
+
+
+    \subsection{library functions}
+
+
+
+
+        \subsubsection{argstomap - create a map from key=value arguments}\label{sec:lfargstomap}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               argstomap (varargs) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, map
+
+            {\bf Input parameters:} \\            
+            See description.
+
+            {\bf description:} \\
+            This function takes a number of key=value arguments and from them
+            builds a map.
+
+
+
+ 
+            
+
+
+        \subsubsection{asyncqueuespaces - space count for asynchronous queue}\label{sec:lfasyncqueuespaces}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               asyncqueuespaces (queue(p)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, "uint:"
+
+            {\bf Input parameters:} \\            
+            {\bf p} is an asynchronous queue variable.
+
+            {\bf description:} \\
+            This function returns a target value which gives a guaranteed
+            minimum number of free spaces in the asynchronous queue, rather than
+            a precise count. The count is determined from status bits derived
+            from the most significant two bits of the of the read and write gray
+            coded addresses  (see inbuilt function {\bf queuewritestatus(})
+            (\autorefph{sec:ifqueuewritestatus}). This uses much less logic than
+            an exact determination of the word count.
+            
+            This function is intended for an external interface to the FPGA
+            which writes a queue. The count can be used to avoid the extra
+            transfers which would be required to determine non-full status
+            prior to every write.
+            
+            This must be called in the write clock domain.
+             
+
+
+        \subsubsection{asyncqueuewords - word count for asynchronous queue}\label{sec:lfasyncqueuewords}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               asyncqueuewords (queue(p)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, "uint:"
+
+            {\bf Input parameters:} \\            
+            {\bf p} is an asynchronous queue variable.
+
+            {\bf description:} \\
+            This function returns a target value which gives a guaranteed
+            minimum number of words in the asynchronous queue, rather than a
+            precise count. The count is determined from status bits derived from
+            the most significant two bits of the of the read and write gray
+            coded addresses (see inbuilt function {\bf queuereadstatus(}
+            (\autorefph{sec:ifqueuereadstatus})). This uses much less logic than
+            an exact determination of the word count.
+            
+            This function is intended for an external interface to the FPGA
+            which reads a queue. The count can be used to avoid the extra
+            transfers which would be required to determine non-empty status
+            prior to every read.
+            
+            This must be called in the read clock domain.
+           
+
+
+        \subsubsection{bin\_to\_gray - convert binary count to gray count}\label{sec:lfbintogray}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               bin_to_gray (value(b)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, \verb'->'
+
+            {\bf Input parameters:} \\            
+            {\bf b} is the input binary count value.
+
+            {\bf description:} \\
+            This function converts an input weighted binary value to
+
+
+
+
+        \subsubsection{bitset - test if a bit is set}\label{sec:lfbitset}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               bitset (value(in), int(bit)) {}
+            \end{lstlisting}
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the input value. It may be any target type.\\
+            {\bf bit} is the index of the required bit.
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            log
+
+            {\bf Description:} \\
+            Returns true if a selected bit from the first (target) argument is
+            set. The second argument is an immediate integer giving the bit
+            index, 0 selecting the LSB. The first argument type need not be
+            primitive, but it is better coding practice to select a bit from an
+            array member or struct field rather than from the compound type.
+            
+            See also {\bf getbit()} \autorefph{sec:lfgetbit} which does the same
+            but returns as type "bits:1".
+            
+
+
+
+
+
+        \subsubsection{deglitch - deglitch an input signal}\label{sec:lfdeglitch}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               deglitch (value(in), varargs) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, same type as input
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the input signal. \\
+            {\bf varargs} expects a single argument (at most) giving the
+            deglitch time constant.
+            
+            The output of this function follows the input value, however
+            the output will not follow an input change until the input
+            has maintained its new value for a time specified by the
+            second argument.
+            
+            The first argument is the input signal or value. It may be any
+            target type. It would normally be input mode or an expression
+            containing an input mode variable.
+            
+            Other modes are allowed for the input (except cmemory, rmemory or
+            clock mode) and it may contain queue reads, but there would not seem
+            to be any reason to use any of these.
+            
+            The second argument may be missing, in which case the output is just
+            connected to the input and there is no deglitching performed. The
+            second argument may be immediate mode of type "int", "uint" or
+            "float", or static mode of type "int:" or "uint:". If integer it
+            specifies the deglitching time in terms of clock cycles of the
+            current clock. If it is floating point the argument specifies an
+            explicit time in second and the delay will be of the minimum
+            number of clock cycles which encompass the delay time. The second
+            argument will be ignored if it is immediate and the number of clock
+            cycles specified, or the number derived from the floating point
+            time, is 1 or 0 (or -ve). In that case the output is again simply
+            connected to the input.
+
+
+
+
+        \subsubsection{delay - fixed delay}\label{sec:lfdelay}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               delay (value(in), int(len), value(step, "log"), log(ram)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, same type as input
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the input signal. \\
+            {\bf len} is the length of the delay line.\\
+            {\bf step} is an optional step control.\\
+            {\bf ram} is an optional switch to force usage of RAM
+
+            This has up to 4 input arguments. Input argument {\bf len} is
+            immediate mode. {\bf step} may be immediate or target mode as
+            described below. The data input argument {\bf in} must not be modes
+            {\bf immediate}, {\bf queue}, {\bf memory} or {\bf clock} and value
+            mode arguments must not contain queue reads.
+            
+            The output of this function follows the input value delayed by {\bf
+            del} clock cycles.
+            
+            The argument to {\bf step} must be type "log" and may be as follows -
+            \blist
+            \item   no argument - the delay will advance on each clock cycle
+            \item   an immediate mode value (or constant value mode) which is
+                    {\bf true} - the delay will advance on each clock cycle
+            \item   an immediate mode value (or constant value mode) which is
+                    {\bf false} - the delay will advance on clock cycles in
+                    which the function is evaluated in the target code, e.g.
+                    on used in assignment
+            \item   a static, selectvalue or value mode value - the delay will
+                    advance on clock cycles when {\bf step} is true.
+            \blend
+            For example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                when (l)
+                    a <- delay(b, 10, false);
+            \end{lstlisting}
+            will shift the current value of {\bf b} into the delay line every
+            time the assignment to {\bf a} is made ({\bf l} is true), the
+            assigned value being popped off the end.
+           
+            {\bf step} false can only be used where {\bf delay()} is evaluated
+            in a statement executing within an execution thread. For example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                output(,, delay(b, 10, false), loc=A_pins[0]);
+            \end{lstlisting}
+            would give an error (function used() called in illegal context).
+            
+            Whereas -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                when (l)
+                    a <- delay(b, 10);
+            \end{lstlisting}
+            will shift {\bf b} into the delay line every clock cycle, popping
+            off the vaue at the other end. When {\bf l} is true the value popped
+            off will also be assigned to {\bf a}.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                when (l)
+                    a <- delay(b, 10, true);
+            \end{lstlisting}
+            will behave the same way.
+
+            Where {\bf step} is variable during target execution the shifting
+            is controlled solely by step while the assignment, controlled by
+            {\bf l}, assigns the end value of the delay line to {\bf a}
+            regardless of whether a shift has occured or not.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                when (l)
+                    a <- delay(b, 10, step);
+            \end{lstlisting}
+            
+            The data width is not limited. This function can operate as a
+            sequence generator if the output is connected back to the input.
+            
+            For the first {\bf del} steps the output will be 0, false etc.
+            
+            {\bf in} may be any type. It must not contain queue reads (fatal
+            error).
+            
+            The return value is the same type as {\bf in} and is the delayed
+            input.
+            
+            If the delay is small enough (see table below) this will call
+            inbuilt module {\bf del()} \autorefph{sec:imdel} to implement the
+            delay using CLB shift registers, otherwise rmemory (block RAM) will
+            be used. In the latter case the length {\bf len} is limited to the
+            maximum allowed memory depth for the FPGA family -
+            
+            \begin{tabular}{| l | l | l |} \hline
+                                     &  CLB SR maximum length & maximum RAM depth             \\ \hline \hline
+            Spartan-II, Spartan IIE,
+            Virtex, Virtex-E         &   16 & 4096 \\ \hline
+            Spartan-3, Virtex-II,
+            Virtex-II Pro,
+            Virtex 4,                &  16 & 16384 \\ \hline
+            Spartan 6, Virtex 5,
+            Virtex 6, series 7, Zynq &  32 & 32768 \\ \hline
+            \end{tabular}
+
+            If parameter {\bf ram} is true block RAM will be used for the
+            delay despite a small delay being specified.
+
+
+            See also library function {\bf del()} \autorefph{sec:lfdel} in
+            library xilinx/common which allows a variable-length delay line but
+            does not offer the option of using block RAM rather than shift
+            registers. That section also ilustrates a way of using a queue input,
+            getting around the no-queue limitation described above.
+
+
+        \subsubsection{forcecast - force a prohibited cast}\label{sec:lfforcecast}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               forcecast (value(v), type(t)) {}
+             \end{lstlisting}
+
+            {\bf Input parameters:} \\            
+            {\bf v} is the input value. It may be any target type.\\
+            {\bf t} is the target type to which the input value is to be cast.
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            given by 2nd argument
+
+            {\bf Description:} \\
+            Returns the target first argument value cast to the target type
+            given by the second argument.
+            
+            This function can be used to perform an otherwise prohibited
+            cast operation. It does this by casting in two steps via an
+            intermediate "bits:" type. This should be used with caution!
+
+
+
+
+        \subsubsection{getbit - get a bit}\label{sec:lfgetbit}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               getbit (value(in), int(bit)) {}
+            \end{lstlisting}
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the input value. It may be any target type.\\
+            {\bf bit} is the index of the required bit.
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            bits:1
+
+            {\bf Description:} \\
+            Returns a selected bit from the first (target) argument. The second
+            argument is an immediate integer giving the bit index, 0 selecting
+            the LSB. The first argument type need not be primitive, but
+            it is better coding practice to select a bit from an array member
+            or struct field rather than from the compound type.
+            
+            See also {\bf bitset()} \autorefph{sec:lfbitset} which does the same
+            but returns as type "log".
+    
+
+
+
+        \subsubsection{incrdecr - dynamically increment or decrement}\label{sec:lfincrdecr}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               incrdecr (value(in), value(incr, "log")) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, type(in)
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the input value to increment or decrement. It may be
+            types int or uint.\\
+            {\bf incr} selects incrementing (true) or decrementing (false).
+
+            {\bf description:} \\
+            Increment or decrement a value according to a logical input.
+
+
+
+        \subsubsection{isclear - verify a run of clear bits}\label{sec:lfisclear}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               isclear (value(in), int(bit), int(len, 1)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, log
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the value to be tested. \\
+            {\bf bit} is the bit index from the least significant end. \\
+            {\bf len} is the number of bits.
+
+            {\bf description:} \\
+            This target function returns true if {\bf len} bits starting at
+            bit {\bf bit} are all clear.
+
+
+
+        \subsubsection{isset - verify a run of set bits}\label{sec:lfisset}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               isset (value(in), int(bit), int(len, 1)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, log
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the value to be tested. \\
+            {\bf bit} is the bit index from the least significant end. \\
+            {\bf len} is the number of bits.
+
+            {\bf description:} \\
+            This target function returns true if {\bf len} bits starting at
+            bit {\bf bit} are all set.
+
+
+
+        \subsubsection{lfsr - linear feedback shift register}\label{sec:lfsr}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               lfsr (var(t), value(step, "log", true), int(init)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, uint
+
+            {\bf Input parameters:} \\            
+            {\bf t} is the result type. \\
+            {\bf step} is an optional control input to advance the output. \\
+            {\bf init} is an optional initial value.
+
+            {\bf description:} \\
+            This target function returns a pseudo-random number. The first
+            argument specifies the type of the function value. It may be
+            a type "str" or type "type". If the former it must be a valid
+            type specification string. Any output type may be specified though
+            it is difficult to imagine occasions where a compound type would
+            be appropriate. The size of the type must be in the range 3 to 32
+            bits.
+            
+            If the second argument is provided it controls the advance of the
+            pseudo-random sequence from one to the next. If absent the sequence
+            will advance on every clock cycle.
+            
+            If the last parameter has an argument it provides an initial
+            value for the register. This may have any value. If the value
+            is larger than can be accommodated in the register it will be
+            truncated at the most significant end. If the last parameter
+            has no argument then the initial value of the register will
+            be a random number derived from calls to inbuilt function
+            random() for each bit.
+            
+            For an output type of size n bits all $2^n$ values are produced (there
+            is no lock-up state, or rather the 'lock-up' state is explicitly forced
+            and exited.
+
+
+
+        \subsubsection{lszeros - count least significant zero bits}\label{sec:lflszeros}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               lszeros (value(in, "uint:")) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, uint
+
+            {\bf Input parameters:} \\            
+            {\bf in} is the operand.
+
+            {\bf description:} \\
+            This target function returns the number of least significant zero
+            bits in a non-zero unsigned integer. If the argument is zero the
+            result is also zero. This function was written for use in floating
+            point number normalisation (the mantissa is the argument) but may
+            find other uses.
+
+
+
+
+        \subsubsection{maxval - target maximum value}\label{sec:lfmaxval}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               maxval (varargs) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            immediate or value
+
+            {\bf return type:} \\
+            type of arguments
+
+            {\bf Description:} \\
+            Returns the maximum value of any number of immediate or target
+            variables or expressions. The arguments must be type int or uint and
+            must all be the same type. A mixture of immediate and target
+            arguments is allowed, but in that case only a single immediate
+            argument should be used as the function will not optimise the
+            immediate arguments to a single immediate value.            
+
+
+        \subsubsection{minval - target maximum value}\label{sec:lfminval}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               minval (varargs) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            immediate or value
+
+            {\bf return type:} \\
+            type of arguments
+
+            {\bf Description:} \\
+            Returns the minimum value of any number of immediate or target
+            variables or expressions. The arguments must be type int or uint and
+            must all be the same type. A mixture of immediate and target
+            arguments is allowed, but in that case only a single immediate
+            argument should be used as the function will not optimise the
+            immediate arguments to a single immediate value.            
+
+
+
+        \subsubsection{multiplex\_struct\_l - multiplex output type with log array\\
+                    multiplex\_struct\_e - multiplex output type with uint}\label{sec:lfmultiplexstruct}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               multiplex_struct_l (type(intype), int(n)) {}
+
+               multiplex_struct_p (type(intype), int(n)) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            immediate
+
+            {\bf return type:} \\
+            a struct type
+
+            {\bf Description:} \\
+            These functions are used in conjunction with library modules
+            {\bf multiplex()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf demultiplex()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_l()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_e()} \autorefph{sec:lmdemultiplex}
+            They return a struct which is a
+            wrapper for the output data type. The wrapper allows for an
+            associated identifier for the source port of a datum. The struct has
+            two fields. Field {\bf body} is the same type as the multiplexer
+            inputs and contains a multiplexed datum. Field {\bf port} contains
+            an identifier for the source port from which the datum originated.
+
+            The first argument is the type of the inputs to module {\bf
+            multiplex()} or {\bf multiplexp()} or the outputs of {\bf
+            demultiplex()}.
+
+            The second argument is the number of inputs to module {\bf
+            multiplex()} or {\bf multiplexp()} or outputs to {\bf
+            demultiplex()}.
+
+            In the case of {\bf multiplex\_struct\_l()} field {\bf port} will be
+            an array of type log whose dimension is equal to the number of
+            inputs to the associated multiplexer or the outputs of the
+            associated demultiplexer. This field has one member of the array
+            true to identify the associated datum source port.
+
+            In the case of {\bf multiplex\_struct\_e()} field {\bf port} will be
+            a "uint" large enough to contain the port number (starting at 0).
+
+            See also - \\
+            {\bf multiplex()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplex\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplexp\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_l()} \autorefph{sec:lmmultiplex} \\
+            {\bf multiplext\_e()} \autorefph{sec:lmmultiplex} \\
+            {\bf demultiplex()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_l()} \autorefph{sec:lmdemultiplex} \\
+            {\bf demultiplex\_e()} \autorefph{sec:lmdemultiplex}
+
+
+        \subsubsection{mux - multiplex inputs}\label{sec:lfmux}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               mux (value(s), varargs) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            type of data argument
+
+            {\bf Description:} \\
+            Returns one of the data inputs. The first argument must be
+            target mode of type {\bf uint} and selects which of the following
+            input arguments is to be returned as the value of the function.
+            The remaining arguments are the data inputs.
+
+            If the data input expressions are primitive they must be the same
+            type but their numeric widths may differ. The function value will be
+            the width of the widest data input. If the data inputs are not
+            primitive then they must all be exactly the same type, including
+            primitive component widths.
+
+        \subsubsection{ptr2expr - a pointer to an expression}\label{sec:lfptr2expr}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               ptr2expr (varargs) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            type of argument
+
+            {\bf Description:} \\
+            Returns a pointer to a value mode variable which has been
+            assigned the target expression passed as the argument. The
+            argument may also be a variable or constant. The argument
+            cannot be mode clock or mode memory.
+
+
+        \subsubsection{resync - resynchronise a pulse or level to another clock}\label{sec:lfresync}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               resync (value(in, "log")) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            log
+
+            {\bf Description:} \\
+            {\bf in} is an expression or a value, selectvalue, static or
+            priority variable of type log. The argument must not contain queues.
+        
+            When the input is clocked true in its clock domain the function
+            returned value will go true at the next positive edge of the
+            current clock and will then go false at the following edge. This
+            process cannot repeat until the input has returned to false for at
+            least one clock cycle in its clock domain after the output has
+            gone false.
+            
+            This function is used to produce a single cycle pulse in the
+            current clock domain from a pulse or level in another clock
+            domain.
+            
+
+%
+%        \subsubsection{rramout2 - get the value of an extended dual-port
+%                                registered output memory}\label{sec:lfrramout2}
+%
+%            {\bf Library: stdlib.3pl}
+%
+%            {\bf Prototype:} \\
+%            \vsp
+%            \begin{lstlisting}[gobble=12, language=threepl]
+%               global function
+%               rramout2 (var(m, "->"), int(port)) {}
+%            \end{lstlisting}
+%
+%            {\bf Return mode and type:} \\
+%            value, data type
+%
+%            {\bf Input parameters:} \\            
+%            {\bf m} is a pointer to the registered output memory struct.\\
+%            {\bf port} is the port.
+%
+%            {\bf description:} \\
+%            This function returns a value which is the output register
+%            of the memory port. The type returned is the data type passed
+%            to {\em bram2()} \autorefph{sec:lfbram2} when creating the memory structure.
+%
+
+
+
+
+
+        \subsection{select - a combinatorial selector}\label{sec:lfselect}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               select(s1, d1, s2, d2,...) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            value
+
+            {\bf return type:} \\
+            type of data inputs
+
+            {\bf Description:} \\
+            An inbuilt selector function using gate logic.
+            This has any number of argument pairs.
+
+            The 1st input argument of each pair is a logical expression which
+            selects the following data input expression if true.
+
+            The 2nd input argument of each pair is a data input signal. If the
+            data input expressions are primitive they must be the same type but
+            their numeric widths may differ. The function value will be the
+            width of the widest data input. If the data inputs are not
+            primitive then they must all be exactly the same type, including
+            primitive component widths.
+
+            The function has a defined value when at most one select input
+            is available and true and the associated data input is available,
+            the value reflecting the selected data input. If more than one
+            input is selected the value is undefined. If no inputs are
+            selected, the value is zero or false depending on data type(s).
+
+            If none of the function inputs contain queues, the function value is
+            always available. If any function inputs contain queues the function
+            value is available when an input selector and its associated data
+            input are available and the selector is true. Note that if some
+            inputs contain queues but one input selector and its associated data
+            do not, the function will be available when that selector is true.
+            Note that the use of this function as a gate with a clear value
+            when no selectors are true is only possible if the inputs contain
+            no queues since any queues in any inputs will render the function
+            value unavailable when no input is selected.
+            
+            See also inbuilt function {\bf selecta()} \autorefph{sec:ifselecta}
+            where the select and data inputs are arrays of values or pointers.
+
+
+
+
+        \subsubsection{sprintf - format a string from variables}\label{sec:lfsprintf}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               sprintf (fmt, v1, v2, ...) {}
+            \end{lstlisting}
+
+            {\bf return mode:} \\
+            immediate
+
+            {\bf return type:} \\
+            str
+
+            {\bf Description:} \\
+            This function is a wrapper for the inbuilt procedure
+            {\bf sprintf()} \autorefph{sec:ipsprintf}. It returns the formatted string.
+        
+            The format argument may be followed by a single argument which is an array of
+            pointers, for example {\bf inargs} in the calling module, procedure or function.
+            In that case the pointers are resolved and provide the input variable list to be
+            printed.
+
+
+
+
+
+
+
+        \subsubsection{svn\_version - get the current subversion version number}\label{sec:lfsvnversion}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               svn_version () {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, "str"
+
+            {\bf Input parameters:} \\            
+            None.
+
+            {\bf description:} \\
+            This function returns the current subversion version number as a
+            string. It does this by running the command "svnversion" in a shell in
+            the current directory and returning the resulting string from the shell
+            standard output with the trailing newline removed.
+
+
+        \subsubsection{to\_pulse - generate a pulse from a transition}\label{sec:lftopulse}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               to_pulse (value(in, "log")) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, "log"
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input value.
+
+            {\bf description:} \\
+            Generate a pulse out when the input argument {\bf in}
+            changes from false to true.
+
+
+        \subsubsection{truthtable - an expression from a truth table}\label{sec:lftruthtable}
+
+            {\bf Library: stdlib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               truthtable (
+                   var(table, "[64][6]str"),
+                   value({i1, i2, i3, i4, i5, i6}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            value, "log"
+
+            {\bf Input parameters:} \\
+            {\bf table} is the input value.
+            {\bf i1} to {\bf i6} are the input values.
+
+            {\bf description:} \\
+            The first argument is the truth table as a 2-dimensional
+            array of strings. This argument would usually be a 2-dimensional
+            compound value, in which case its dimensions need not match the
+            parameter dimensions as long as they do not exceed them. If the
+            argument is a string array its dimensions must match those of the
+            parameter, but the array would normally be initialised from
+            a 2-dimensional compound value which again may have smaller
+            dimensions. The string array dimensions are such as to allow
+            a maximum of all 64 combinations of 6 variables.
+            
+            Truth table entries must be "0" or "1" for explicit entries
+            or "", "x" or "X" for 'don`t care' entries. Compound values
+            for string arrays may contain constant values of other types
+            in which case these will be converted to strings. Thus a
+            true entry may be given as {\bf "1"}, {\bf 1} or {\bf true},
+            a false entry as {\bf "0"}, {\bf 0} or {\bf false} and a 'don`t
+            care' entry may be simply omitted.
+            
+            The 2nd and following arguments are the input variables to the
+            function described by the truth table. One to six of these
+            arguments may be provided, trailing arguments being omitted.
+            The arguments provided must be contiguous from {\bf i1}, i.e.
+            there must be no omitted arguments except for trailing arguments.
+            The number of arguments is used to determine how many columns of the
+            truth table to process but no checks are made, e.g. extra columns
+            are ignored and omitted columns will be treated as 'don`t care'
+            entries.
+            
+            Example 1 - 4 input variables, compound value argument -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               value({i, j, k, l, v}, "log");
+               v := truthtable(
+                       {  {1,  , 0, 1},
+                          {0, 0, 1,  }  },
+                           i, j, k, l
+                    );
+            \end{lstlisting}
+            Note that the simplest and neatest truth table scheme is to
+            use integers 0 and 1 for explicit entries (these will be converted
+            to strings "0" and "1") and omit 'don`t care' entries. Note also
+            that the input variables occur in the same order as the truth table
+            columns and hence readability is aided by positioning them under
+            the truth table when formatting the source code.
+            
+            Example 2 - 3 input variables, string array argument -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               value({i, j, k, v}, "log");
+               var(tt, "[64][6]str", {  {1,  , 0},
+                                        {0, 0, 1}  });
+               v := truthtable(tt, i, j, k);
+            \end{lstlisting}
+            Here a string array of the correct dimensions has been supplied
+            as the truth table argument but the array initialisation is the
+            same compound value as before. Of course the truth table string
+            array could be generated by an algorithm if that were required.
+            
+            Example 3 - truth table function as a value variable initialiser -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               value({i, j, k, l}, "log");
+               value({v, "log", truthtable( {  {1,  , 0, 1},
+                                               {0, 0, 1,  }  },
+                                                i, j, k, l         );
+            \end{lstlisting}
+
+
+
+    \subsection{library classes}
+    
+        None.

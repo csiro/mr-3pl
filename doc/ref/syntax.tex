@@ -1,0 +1,356 @@
+\pagebreak
+
+\chapter{Syntax}
+
+    This syntax is a little out-of-date. Classes have been introduced since
+    this was written. It will be updated when time permits.
+    
+    Tokens are enclosed in angle brackets - {\bf \verb'<' \dots \verb'>'}.
+    Optional elements are indicated by {\bf \verb'?'} and {\bf \verb'|'}
+    separates alternatives.
+
+    \begin{verbatim}
+    File module
+        Filemodule := <FMODSTART> ( ( Statement ) | Filemodule )* ( <FMODFINISH> | <EOF> )
+
+    Procedure call or module call
+        ProcModCall := DereferencedVar <LPAREN> ArgList <RPAREN>
+
+    Function call
+        FuncCall := DereferencedVar <LPAREN> ArgList <RPAREN>
+
+    A module, procedure or function call argument list
+        ArgList := ( ( Keymatch | Expr | CompVal ) )?
+        ( ( <COMMA> | <LPOINT> ) ( ( Keymatch | Expr | CompVal ) )? )*
+        Keymatch := <IDENTIFIER> <EQ> ( Expr | CompVal )
+
+    Module definition
+        ModDef := ( <GLOBAL> )? <MODULE> <IDENTIFIER> <LPAREN> ParamList <RPAREN> Block
+
+    Procedure definition
+        ProcDef := ( <GLOBAL> )? <PROCEDURE> <IDENTIFIER> <LPAREN> ParamList <RPAREN> Block
+
+    Function definition
+        FuncDef := ( <GLOBAL> )? <FUNCTION> <IDENTIFIER> <LPAREN> ParamList <RPAREN> Block
+
+    Module, procedure or function output or input parameters
+        ParamList := (
+                       ( ProcModCall | <VARARGS> )
+                       ( ( <COMMA> | <LPOINT> ) ( ProcModCall | <VARARGS> )? )*
+                     )?
+
+    General code block
+        Block := <LBRACE> ( Statement )* <RBRACE>
+
+    Statement
+        Statement := (
+                            ModDef |
+                            ProcDef |
+                            FuncDef |
+                            ProcModCall <SEMICOL> |
+                            InlineModBlock |
+                            ImAssignStat <SEMICOL> |
+                            TargAssignStat <SEMICOL> |
+                            NullQueueAssignStat <SEMICOL> |
+                            SeqWhileStat |
+                            SeqDoWhileStat |
+                            SeqBlock |
+                            ParWhileStat |
+                            ParDoWhileStat |
+                            ParBlock |
+                            SyncWhileStat |
+                            SyncDoWhileStat |
+                            SyncBlock |
+                            WhenStat |
+                            IncrDecrStat <SEMICOL> |
+                            ReturnStat |
+                            BreakStat |
+                            ContinStat |
+                            IfStat |
+                            WhileStat |
+                            DoWhileStat |
+                            ForStat |
+                            SwitchStat |
+                            CaseStat |
+                            DefaultStat |
+                            PetriNetStat |
+                            <SEMICOL>
+                       )
+
+    Immediate assignment (=)
+        ImAssignStat := DereferencedVar <EQ> ( Expr | CompVal )
+
+    Target assignment (:=, |-, <- or <<-)
+        TargAssignStat := DereferencedVar
+                          ( <COLEQ> | <BUSPOINT> | <LPOINT> | <LLPOINT> )
+                          ( Expr | CompVal )
+
+    A null queue assignment (pop a queue)
+        NullQueueAssignStat := <NULL> <LLPOINT> DereferencedVar
+
+    An exception
+        unless  := <UNLESS> <LPAREN> Expr <RPAREN> ( ( Statement | Block ) )?
+
+    Par block
+        ParBlock := <PAR> <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Seq block
+        SeqBlock := <SEQ> <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Sync block
+        SyncBlock := <SYNC> <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Inline module block
+        InlineModBlock := <LBRACK> ( Statement )* <RBRACK>
+
+    Variable increment or decrement statement (e.g. v++;)
+        IncrDecrStat := FlaggedVar
+
+    Function or procedure return statement
+        ReturnStat := <RETURN> ( <LPAREN> Expr <RPAREN> )? <SEMICOL>
+
+    Break statement
+        BreakStat := <BREAK> <SEMICOL>
+
+    Continue statement
+        ContinStat := <CONTINUE> <SEMICOL>
+
+    If statement
+        IfStat := <IF> <LPAREN> Expr <RPAREN> ( Statement | Block )
+                  ( <ELSE> ( Statement | Block ) )?
+
+    While statement
+        WhileStat := <WHILE> <LPAREN> Expr <RPAREN> ( Statement | Block )
+
+    Do while statement
+        DoWhileStat := <DO> Block <WHILE> <LPAREN> Expr <RPAREN> <SEMICOL>
+
+    For statement
+        ForStat := <FOR> <LPAREN> ( ProcModCall | ImAssignStat )? <SEMICOL>
+                    ( Expr )? <SEMICOL>
+                    ( ImAssignStat | IncrDecrStat )? <RPAREN>
+                    ( Statement | Block )
+
+    Switch statement
+        SwitchStat := <SWITCH> <LPAREN> Expr <RPAREN> Block
+
+    Case statement
+        CaseStat := <CASE> ( Expr | CompVal ) <COLON>
+
+    Default statement
+        DefaultStat := <DEF> <COLON>
+
+    Petri net
+        PetriNetStat := <PETRINET> ( <LPAREN> Expr <RPAREN> )?
+                        <LBRACE> <IDENTIFIER> IdentList <SEMICOL>
+                        ( IdentList ( <RPOINT> | <RRPOINT> ) IdentList
+                        ( <WHEN> <LPAREN> Expr <RPAREN> )? ( Block )? <SEMICOL> )+
+                        <RBRACE>
+
+    Non-empty identifier list
+        IdentList := <IDENTIFIER> ( <COMMA> <IDENTIFIER> )*
+
+    When statement
+        WhenStat := <WHEN> <LPAREN> Expr <RPAREN> ( Statement | Block )
+                    ( <ELSE> ( Statement | Block ) )? ( unless )?
+
+    Seq while statement
+        SeqWhileStat := <SEQ> <WHILE> <LPAREN> Expr <RPAREN>
+                        <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Par while statement
+        ParWhileStat := <PAR> <WHILE> <LPAREN> Expr <RPAREN>
+                        <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Sync while statement
+        SyncWhileStat := <SYNC> <WHILE> <LPAREN> Expr <RPAREN>
+                         <LBRACE> ( Statement )* <RBRACE> ( unless )?
+
+    Seq do while statement
+        SeqDoWhileStat := <SEQ> <DO> <LBRACE> ( Statement )* <RBRACE>
+                          <WHILE> <LPAREN> Expr <RPAREN> ( unless )?
+
+    Par do while statement
+        ParDoWhileStat := <PAR> <DO> <LBRACE> ( Statement )* <RBRACE>
+                          <WHILE> <LPAREN> Expr <RPAREN> ( unless )?
+
+    Sync do while statement
+        SyncDoWhileStat := <SYNC> <DO> <LBRACE> ( Statement )* <RBRACE>
+                           <WHILE> <LPAREN> Expr <RPAREN> ( unless )?
+
+    Expression (operator ? : )
+        Expr := Expr1 ( <QUEST> Expr1 <COLON> Expr1 )?
+
+    Expression (operator ||)
+        Expr1 := Expr2 ( <OROR> Expr2 )*
+
+    Expression (operator ^^)
+        Expr2 := Expr3 ( <UPUP> Expr3 )*
+
+    Expression (operator &amp&amp)
+        Expr3 := Expr4 ( <ANDAND> Expr4 )*
+
+    Expression (operator |)
+        Expr4 := Expr5 ( <OR> Expr5 )*
+
+    Expression (operator ^)
+        Expr5 := Expr6 ( <UP> Expr6 )*
+
+    Expression (operator &amp)
+        Expr6 := Expr8 ( <AND> Expr8 )*
+
+    Expression (operators == != &lt &gt &lt= &gt=)
+        Expr8 := Expr9 ( ( <EQEQ> | <NE> | <LANGLE> | <RANGLE> | <LE> | <GE> ) Expr9 )*
+
+    Expression (operators &lt&lt &gt&gt)
+        Expr9 := Expr10 ( ( <LS> | <RS> ) Expr10 )*
+
+    Expression (operators + -)
+        Expr10 := Expr11 ( ( <PLUS> | <MINUS> ) Expr11 )*
+
+    Expression (operators * / %)
+        Expr11 := Expr12 ( ( <STAR> | <SLASH> | <PERCENT> ) Expr12 )*
+
+    Expression (unary operators ~ ! -)
+        Expr12 := ( <TILDE> Expr13 | <EXCL> Expr13 | <MINUS> Expr13 | Expr13 )
+
+    Expression (unary operators ? <)
+        Expr13 := ( <QUEST> Expr14 | <LANGLE> Expr14 | Expr14 )
+
+    Expression (constants, function call, parenthesised expression)
+   
+        Expr14 := (
+                    <INTEGER_LITERAL> |
+                    <FLOATING_POINT_LITERAL> |
+                    <STRING_LITERAL> |
+                    <LOG_LITERAL> |
+                    <NULL> |
+                    FuncCall |
+                    Expr15 |
+                    <LPAREN> Expr <RPAREN>
+                  )
+
+    Expression (unary operator >) grammar production
+        Expr15 := ( <RANGLE> DereferencedVar | DereferencedVar )
+
+    Compound value
+        CompVal := <LBRACE>
+                   ( ( Expr | CompVal ) )? ( <COMMA> ( ( Expr | CompVal ) )? )*
+                   <RBRACE>
+        DereferencedVar := FlaggedVar ( ( <RPOINT> | <RRPOINT> ) ( Subscript | Field )* )*
+
+    Pre or post increment or decrement or indirect variable.
+    ++, --, * and & are not handled as normal operator nodes.
+    The VarNode to which they apply has flags set
+    to indicate ++v, --v, v++, v-- , *v or &v .
+    These are handled when the variable is accessed.
+        FlaggedVar := ( <INCR> | <DECR> | <AND> )? Variable ( <INCR> | <DECR> )?
+
+    A variable (possibly with subscripts or field names)
+        Variable := ( <GLOBALDOT> | <FILEDOT> | <CALLINGDOT> | <LOCALDOT> )?
+                      <IDENTIFIER> ( Subscript | Field )*
+
+    Subscript(s)
+        Subscript := <LBRACK> ( ( Expr ( <DOTDOT> Expr )? )? ) <RBRACK>
+
+    Struct field (on a variable)
+        Field := <DOT> <IDENTIFIER>
+    \end{verbatim}
+    Tokens are -
+    \begin{verbatim}
+    <BREAK>           "break"
+    <CALLINGDOT>      "calling."
+    <CASE>            "case"
+    <CONTINUE>        "continue"
+    <DEF>             "default"
+    <DO>              "do"
+    <UNLESS>          "unless"
+    <FILEDOT>         "file."
+    <ELSE>            "else"
+    <FOR>             "for"
+    <FUNCTION>        "function"
+    <GLOBAL>          "global"
+    <GLOBALDOT>       "global."
+    <IF>              "if"
+    <LOCALDOT>        "local."
+    <MODULE>          "module"
+    <NULL>            "null"
+    <PAR>             "par"
+    <PETRINET>        "petrinet"
+    <PROCEDURE>       "procedure"
+    <RETURN>          "return"
+    <SEQ>             "seq"
+    <SWITCH>          "switch"
+    <SYNC>            "sync"
+    <VARARGS>         "varargs"
+    <WHEN>            "when"
+    <WHILE>           "while"
+    <EQ>              "="
+    <RRPOINT>         "->>"
+    <RPOINT>          "->"
+    <COLEQ>           ":="
+    <BUSPOINT>        "|-"
+    <LLPOINT>         "<<-"
+    <LPOINT>          "<-"
+    <EQEQ>            "=="
+    <NE>              "!="
+    <LE>              "<="
+    <GE>              ">="
+    <PLUS>            "+"
+    <MINUS>           "-"
+    <STAR>            "*"
+    <SLASH>           "/"
+    <PERCENT>         "%"
+    <OROR>            "||"
+    <UPUP>            "^^"
+    <ANDAND>          "&&"
+    <OR>              "|"
+    <UP>              "^"
+    <AND>             "&"
+    <EXCL>            "!"
+    <TILDE>           "~"
+    <QUEST>           "?"
+    <LS>              "<<"
+    <RS>              ">>"
+    <INCR>            "++"
+    <DECR>            "--"
+    <DOTDOT>          ".."
+    <LBRACE>          "{"
+    <RBRACE>          "}"
+    <LBRACK>          "["
+    <RBRACK>          "]"
+    <LPAREN>          "("
+    <RPAREN>          ")"
+    <LANGLE>          "<"
+    <RANGLE>          ">"
+    <COMMA>           ","
+    <SEMICOL>         ";"
+    <COLON>           ":"
+    <DOT>             "."
+
+    <INTEGER_LITERAL>  <DECIMAL_LITERAL> | <HEX_LITERAL> | <BIN_LITERAL> | <OCTAL_LITERAL>
+    <DECIMAL_LITERAL>  ["1"-"9"] (["0"-"9"])*
+    <HEX_LITERAL>      "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+
+    <BIN_LITERAL>      "0" ["b","B"] (["0"-"9","a"-"f","A"-"F"])+
+    <OCTAL_LITERAL>    "0" (["0"-"7"])*>
+    <FLOATING_POINT_LITERAL> 
+                          (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)? 
+                        | "." (["0"-"9"])+ (<EXPONENT>)?
+                        | (["0"-"9"])+ "." <EXPONENT>
+                        | (["0"-"9"])+ (<EXPONENT>)?>
+    <EXPONENT>          ["e","E"] (["+","-"])? (["0"-"9"])+
+    <STRING_LITERAL>    "\"" (~["\"","\\","\n","\r"] 
+                        | "\\" (["n","t","b","r","f","\\","\'","\""] 
+                        | ["0"-"7"] (["0"-"7"])? 
+                        | ["0"-"3"] ["0"-"7"] ["0"-"7"]))* "\""
+    <LOG_LITERAL>       "true" | "false"
+
+    <IDENTIFIER:       <LETTER> (<LETTER> | <DIGIT>)*
+    <LETTER>           ["A"-"Z","a"-"z","_"]
+    <DIGIT>            ["0"-"9"]
+
+    <FMODSTART>        a token inserted by the file reader at the start of each
+                       source file
+    <FMODFINISH>       a token inserted by the file reader at the end of each
+                       source file
+    \end{verbatim}

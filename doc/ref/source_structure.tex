@@ -1,0 +1,2668 @@
+\pagebreak
+
+\chapter{Program Source Structure}\label{chap:progsrcstruct}
+    
+    Module, procedure, function and class definitions are processed during
+    parsing, not during immediate execution.
+
+    All statements are executed by the 3PL interpreter. Statements which when
+    executed produce logic for the FPGA are called {\bf target} statements. All
+    other statements are called {\bf immediate} statements.
+
+    Statements are refered to as {\bf top level} if they are
+    not enclosed in a control structure (if(), for(), while() etc.).
+
+    Top level immediate statements are executed in the order in which they are
+    encountered. Top level statements may of course be control structures,
+    inline modules or module or procedure calls in which case nested
+    statements will be executed.
+    
+    Module, procedure and function definitions may be distributed amongst
+    top-level statements (but not at a deeper level of nesting) since they have
+    been removed by the parser. Code is probably more readable though if
+    definitions are not followed by statements.
+    
+
+    \section{scope}
+
+        \index{scope}
+        \index{variable!scope}
+        The {\bf 3PL} compiler is given a source file name via the command line.
+        The file is treated as a {\bf file module}, by which is meant that when
+        code from that file is executed it is treated as though a module had
+        been called, the module name being the file name. A file module has the
+        property that it provides a static scope which is accessible to any code
+        within the file, including within any inline modules or within
+        procedures, functions or modules defined in the file module. That scope
+        is called the {\bf file scope}.
+
+        If a 3PL source file inserts another file by means of a {\bf source}
+        statement then that inserted file is expanded in place.
+
+        If a 3PL source file inserts another file by means of a {\bf module}
+        statement then that file is also expanded in place but it is treated
+        as a file module, that is it behaves as though it has been called as a
+        module at that point in the code, in this case a file module.
+
+        Nesting of {\bf source} and {\bf module} statements can be to any
+        depth (but note that a given file can only be inserted once via a
+        source or module statement (if source code is required in more than one
+        place it should be in a named module or procedure).
+
+        File scope has the property that it is accessible to any code within
+        the file (including code inserted by {\bf source} statements but
+        not to nested file module statements). Every statement has an associated
+        static file scope which is that of the file module within which it is
+        contained.
+        
+        If a class is created then its code body has a class scope and a common
+        class scope. These are accessible within the class body and any modules,
+        procedures and functions defined in that block. It is not accessible to
+        any nested class blocks.
+
+        Finally there is a global scope and variables can be explicitly created
+        in that global scope. Declared modules, procedures and functions can
+        also be explicitly placed in global scope. Directives are only placed
+        in global scope.
+
+        Scopes can be one of the following -
+        \blist
+        \item   global - accessible anywhere
+        \item   file - the scope of a module created by inserting a file, the
+                main source file or a file imported via a module statement,
+                and accessible anywhere within it (including within any
+                defined modules, procedures or functions, but not within
+                deeper nested file modules).
+        \item   class - the scope of the current class block if applicable
+        \item   local - the scope of a procedure, function or module.
+        \item   block - the scope of a code block in a control structure.
+        \item   calling - the scope of the calling module, procedure or
+                function.
+        \blend
+        
+        File scope is the scope of a file module, a module associated with the
+        main source file or imported by a module statement as described
+        previously. This is a static scope that can be accessed by any code
+        within the file module, including code within modules, procedures or
+        functions defined within that file module regardless of from where they
+        are called.
+        
+        Where file modules are nested, code within a nested scope can only
+        access the nested file module scope, not that of enclosing file modules.
+        
+        Global scope, file scope are static scopes, i.e. they are
+        established during compilation and are not necessarily on the call stack.
+        
+        Class scopes are created when class instances are created and are
+        accessible during execution of a class code body or when a class
+        variable or class module, procedure or function is called.
+
+        When a variable is referenced or evaluated the identifier is searched
+        for through scopes in the following order (where they exist) -
+        \blist
+        \item   nested block scopes back up to the local scope
+        \item   local scope (module, procedure or function) - the local scope
+                will be the file scope if we are in a file module
+        \item   the current class scope if applicable
+        \item   the current file scope
+        \item   global scope
+        \blend
+        The search completes when the first instance of the variable
+        identifier is encountered.
+        
+        In some cases the local scope will be the file scope. In-line statements
+        in a file module will have a file module scope which is the same as
+        the local scope for the module.
+
+        Note that inline modules are an exception to this rule. The scope
+        search continues past the local scope of the module back to the scope
+        of the containing named module, procedure or function. This gives
+        in-line module statements access to the enclosing scope.
+
+        When a variable is created, by default it is created in the current
+        scope. If within a code block in braces, the variables will be created
+        in the scope of that block. Thus to conditionally create variables
+        in the LOCAL scope they must be in separate conditional statements, e.g. -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            if (l)
+                int(i);
+            if (l)
+                str(s);
+        \end{lstlisting}
+        or alternatively the calling scope can be specified -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            if (l) {
+                int(calling.i);
+                str(calling.s);
+            }
+        \end{lstlisting}
+        Note that if "class" is specified as the scope this only accesses the
+        class instance scope, not the class common scope.
+
+        The previous example shows that variables can be created in a
+        specified scope by prepending a scope specifier as follows -
+        \blist
+        \item   local. - use the scope of the current module, procedure or
+                function. (this may be file scope)
+        \item   calling. - use the scope of the calling module, procedure or
+                function.
+        \item   class. - use the current class scope if applicable.
+        \item   file. - use the current static file module scope.
+        \item   global. - use the static global scope.
+        \blend
+
+        Similarly when evaluating variables the scope can be explicitly
+        specified (for example to disambiguate variables with the same
+        identifier but in different scopes, or in the case of calling scope to
+        access variables not normally accessible).
+
+        As an example the source file s1.3pl contains -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           int(s);
+           int(global.g1);
+           module "s2.3pl"
+
+           p();
+           [
+               int(j);
+           ]
+
+           procedure p () {
+               int(l);
+               if (true) {
+                   int(b);
+               }
+           }
+
+           global procedure q() {
+               .
+               .
+           }
+        \end{lstlisting}
+        and source file s2.3pl -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           int(s);
+           int(global.g2);
+        \end{lstlisting}
+        Execution begins in s1.3pl. It creates an integer {\bf s} which is in
+        the file module s1 scope, then an integer {\bf g1} which is explicitly
+        placed in global scope. Execution now enters source file s2.3pl which is
+        a new file module. An integer {\bf s} which is in file module s2 scope
+        and an integer {\bf g2} which is in global scope are created. Integers
+        {\bf g1} and {\bf g2} can be accessed in either s1.3pl or s2.3pl as they
+        are global, but each file module scope now contains a unique variable
+        {\bf s} which can only be accessed from within that file module.
+
+        We have reached the end of s2.3pl and now continue execution in s1.3pl.
+        Integer {\bf s} in file module s2 is now no longer accessible. Procedure
+        {\bf p} is called. This procedure is declared within the s1 file module
+        so could only be called from within that file module, but note that
+        procedure {\bf q} could be called from anywhere as it has been declared
+        global. Within procedure {\bf p} integer {\bf l} is created and that is
+        in local scope, then integer {\bf b} is created in the scope of the {\em
+        if} block. Within the {\em if} block variables {\bf g1}, {\bf g2}, {\bf
+        l} and {\bf b} are accessible and variable {\bf s} in file module s1 is
+        also accessible. On leaving the {\em if} block variable {\bf b} would no
+        longer be accessible (though we could still use it if we had a pointer
+        to it). After returning from procedure {\bf p} we enter an inline module
+        in which  integer {\bf j} is created. {\bf j} is local to the inline
+        module and at this point {\bf g1} and {\bf g2} can still be accessed, as
+        can integer {\bf s} in file module s1.
+
+        The use of {\bf source} and {\bf module} statements and scope specifiers
+        such as {\bf global.} and {\bf file.} provide a mechanism to achieve
+        similar scope control to that provided by {\bf static} and {\bf extern}
+        in {\bf C}. The need for a different mechanism arises from the fact that
+        variables in 3PL are created during immediate execution, not declared
+        during parsing. For the same reason we cannot simply have a list of
+        source files as in {\bf C} but must use {\bf source} and {\bf module}
+        statements to link source files together in such a way that variable
+        creation occurs in the correct order.
+        
+        File scope is intended to be used to hide variables such as I/O pins and
+        signals or intermediate clock interconnections. All I/O pin locations
+        strings, clocks, external memory interfaces and external bus interfaces can
+        be coded in a source file included using a module statement. File scope
+        variables within that file will only be accessible from code within the
+        file. Any variables that need to be accessible from elsewhere can be made
+        global. The interface and other services provided by code within the file
+        can be made available through module, procedure and function calls which
+        are declared global.
+        
+        Note that block scope only applies to control structures which have
+        code blocks enclosed within braces ({\em \{\dots\}}.
+        Conditional variable creation can be implemented by the use
+        of an {\em if} containing a single statement, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           if (condition)
+               int(i);
+        \end{lstlisting}
+        which will create the integer variable {\em i} in the scope
+        containing the {\em if} if logical variable {\em condition} is true.
+        As shown in an earlier example it would be a mistake to write
+        \begin{lstlisting}[gobble=8, language=threepl]
+           if (condition) {
+               int(i);
+           }
+        \end{lstlisting}
+        as the variable would be created in the scope within the {\em if} and
+        would vanish when the {\em if} completed. This should be written -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           if (condition) {
+               int(local.i);
+           }
+        \end{lstlisting}
+        for the scope of the enclosing module, procedure or function or
+        \begin{lstlisting}[gobble=8, language=threepl]
+           if (condition) {
+               int(calling.i);
+           }
+        \end{lstlisting}
+        for the scope immediately enclosing the {\bf if()}. Clearly this is
+        the way to conditionally create a group of variables where more than
+        one variable creation call is needed. 
+        
+        If a procedure is to be written to create a variable in the current scope
+        then the variable must be created in the calling scope, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+               procedure
+               my_var (str(name)) {
+                   name = "calling."+name;
+                   int(name->);
+               }
+        \end{lstlisting}
+        Here to make the example non-trivial we have passed the identifier of an
+        integer we wish to create in the current (i.e. calling) scope. The
+        procedure prepends the variable name string with keyword "calling." and
+        then creates an integer using the indirect operator on the string (an
+        indirect operator is normally used on a pointer variable but it can also
+        be used on a string variable). Note that the procedure parameter is
+        immediate mode so the argument will be passed by value, i.e. copied to
+        variable {\em name} which is in effect a local variable. Thus we can
+        change the value of the parameter within the procedure body.
+
+        \index{nested declarations}
+        Procedures, functions and named modules can be declared within any
+        module, procedure or function. By default they can only be called within
+        the same module, procedure or function or from within any module,
+        procedure or function called from the current scope. A procedure,
+        function or named module declared within a file module can be made
+        globally accessible by preceding the {\bf module}, {\bf procedure} or
+        {\bf function} keyword by the keyword {\bf global}. This cannot be done
+        when they are declared at a deeper level.
+
+        Variables in various scopes can be printed by library procedure {\bf
+        printvars()} \autorefph{sec:lpprintvars} in {\bf stdlib.3pl}. Among other
+        parameters this lists the scopes in which variables occur. The scopes can
+        be selected by an argument to the procedure.
+
+        Directives can be printed by library procedure {\bf printdirs()}
+        \autorefph{sec:lpprintdirs} in {\bf stdlib.3pl}.
+
+
+        
+    \section{immediate execution}
+    
+        3PL is parsed to produce a code tree for immediate execution.
+        Any {\bf source} statements encountered are expanded in place.
+        Any {\bf module} statements encountered are also expanded in place
+        but as a form of in-line module called a {\bf file module} where the
+        file contents form the body of the module.
+        
+        During parsing no variables are defined but module, procedure and
+        function definitions are processed and entered into maps in the
+        enclosing scopes in which the definitions are encountered.
+        
+        During immediate execution statements are executed starting at the
+        beginning of the main source file. {\bf source} statements are no
+        longer recognised as they have been expanded in place and are executed
+        as though part of the enclosing source code. {\bf module} statements
+        and in-line modules are executed as though called at the point in
+        the source code at which they occur. These implicit calls are without
+        any parameters or arguments.
+        
+        All variables are created during immediate execution.
+    
+        \index{execution!immediate}
+        Immediate execution begins with execution of the initial file module.
+        Files included using {\bf source} or {\bf module} statements are
+        executed at the point of inclusion.
+
+        During immediate execution modules, procedures and functions may be
+        called. For immediate execution there is no distinction between
+        modules and procedures, the calling syntax and semantics being the
+        same. Both follow the same scope rules. The only distinction between
+        modules and procedures is that modules initiate target code execution
+        streams and control the way multiple readers of a queue are handled.
+
+        At the end of application code execution it is usual to have many
+        housekeeping tasks to complete. For example a resource such as RAM or
+        an external interface may have to be shared amongst multiple accesses.
+        The logic to implement this can usually only be generated at the end
+        of the application code. Similarly there are often variables created
+        in different included files which ideally should be created very early
+        in execution rather than when encountered during sequential immediate
+        execution. The above can be achieved by declaring module definitions
+        using keywords {\bf leadermodule} or {\bf trailermodule} (see
+        \autorefph{sec:mpfcdecl}). The declaration includes a mandatory comment
+        string and an optional ordering integer. Modules thus declared do not
+        have an identifier or parameters as they are not called by name and
+        cannot be called directly from source code. More than one leadermodule
+        or trailermodule can be defined and they are placed in a list when
+        encountered during parsing. When immediate execution begins the leader
+        modules are executed in the order determined by the ordering integer
+        or in which they were queued for the same ordering integer, the source
+        code is then executed in sequential order, and finally the trailer
+        modules are executed in the same way. Leader and trailer modules may
+        call other modules, procedures or functions as usual. The leader or
+        trailer module comment strings are printed to the report file when
+        these modules are executed and this aids verification that they are
+        executed in the desired order.
+
+        It is usual for an application program to first include a header file
+        module which will define a trailer module. Housekeeping variables can
+        thus be hidden in the scope of the header file module to be used later
+        by the trailer module. The header file module usually defines FPGA
+        part number and package pins and sets up clocks. Thus an application
+        program is usually of the form
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module "header.3pl"
+           .
+           .
+           .
+        \end{lstlisting}
+        where header.3pl sets up the environment for the application code
+        and defines a trailer module to be called automatically at the
+        completion of execution of the application code to tie up loose ends.
+
+    \section{Target code execution}
+    
+        \index{execution!target}
+        3PL is designed to process continuous data streams and the target
+        execution control mechanism has been designed with this in mind. In
+        particular it is convenient to be able to write assignment statements
+        so that they are data driven. If we have a number of queue variables
+        q1, q2 etc. it would be convenient to be able to write statements of
+        the form
+        \begin{lstlisting}[gobble=8, language=threepl]
+               q1 <<- q2 + 5;
+               q4 <<- q1 - q3;
+        \end{lstlisting}
+        and have these execute on every datum that comes down each queue,
+        rather than have to explicitly enclose each in an infinite loop
+        \begin{lstlisting}[gobble=8, language=threepl]
+           par {
+               seq while (true) {
+                   q1 <<- q2 + 5;
+               }
+               seq while (true) {
+                   q4 <<- q1 - q3;
+               }
+           }
+        \end{lstlisting}
+        
+        \subsection{the role of the module}
+
+            \index{module}
+            Modules have two prime characteristics relevant to the target -   
+
+            \blist
+            \item   they constitute single sinks for queues
+            \item   they initiate repeated execution of target code streams
+            \blend
+            
+            The second of these is discussed in the next section.
+            
+            Queues are allowed multiple readers. A queue datum cannot be popped
+            from the queue until all readers have read. However, we may wish
+            to have queue reads in several places, some of them conditional.
+            
+            To simplify the rules for queue reading the module has been
+            devised as a sink for queues.
+            
+            A module may contain any number of places at which a queue is read.
+            Any queue read within a module receives an acknowledgement of the
+            read from that module. If a module executes two or more reads of a
+            queue simultaneously the queue still receives only one acknowledgement
+            and all reads extract the same datum. Queue reads within a module
+            which are not simultaneous extract different data.
+
+            Where a queue is read in more than one module, each module must
+            execute a read of a particular datum before it is popped and the
+            next datum (if any) becomes available. Thus if the read within one
+            module is delayed, other modules which have read the datum will now
+            see that the queue is not available. When all modules have read the
+            queue it may once again appear available to all modules. This ensures
+            that all modules that contain a read operation for a queue get each
+            datum regardless of when they execute the read. Note however that as
+            described in the previous paragraph multiple reads of a queue within
+            a module are not constrained in this way.
+            
+            The behaviour described above for reads within multiple modules can
+            be disabled by the {\bf ignoremodules} queue variable attribute. If
+            this is set to {\bf true} then all reads of the queue will be treated
+            as though within a single module. The purpose of this option is to
+            allow code within multiple modules to read queues while looking after
+            exclusive access where necessary by means of explicit user code.
+            This can also be done also by ensuring that all the queue reads are
+            contained within one module but this restriction can be inconvenient
+            and may result in more obscure code.
+            
+            
+            A module is recognised as a reader for a queue if that module
+            contains one or more value references for that queue. There are three
+            cases which should be recognised as exceptions -
+            \index{queue!availability}
+            \blist
+            \item   queue examines via the {\em ?} operator
+            \item   queue availability tests using the {\em \verb'<'}
+                    or {\em \verb'>'} operators
+            \item   passing a queue to a module as an argument
+            \blend
+            none of these make the associated module a queue sink.
+            
+            A queue value reference is simply the appearance of a queue variable
+            in any expression that is evaluated to read a queue datum. This might
+            be the RHS of an assignment statement, a variable target array
+            subscript or part of an expression tested for conditional execution.
+
+            A queue is written by a queue assignment statement, the queue
+            identifier appearing on the LHS. Each assignment to a queue
+            inserts one datum into its queue. If the datum is compound (an
+            array or struct) then the whole type will be written when any
+            assignment is made. Multiple array members or struct fields can
+            be written by separate assignment statements as long as these are
+            executed simultaneously. If two assignments to the same array
+            member or field are made simultaneously that is an execution
+            error\footnote{at the moment target execution errors are not
+            detected, but this facility may be added as a compiler option
+            later}.
+
+            Queue reads and writes from multiple parallel statements can be
+            synchronised by the use of a {\bf sync \{\dots\}} block described
+            in section \autorefph{sec:sync}.
+            
+            Unsynchronised queue writes may be arbitrated by using the {\bf
+            waitpri ()} control structure, section \autorefph{sec:waitpri}
+    
+        \subsection{target execution streams}
+
+            \index{execution!target!streams}
+            \index{procedure}
+            Procedures do not exist as far as the target is concerned.
+            Procedure calls are done during immediate execution and leave no
+            trace in the target code. We can conceptually eliminate the
+            influence of procedure calls on target code by regarding
+            procedure definitions as being expanded in place of the call with
+            parameters replaced by call arguments.
+
+            The same applies to function calls. These are again done during
+            immediate execution and any resulting target code generated is
+            substituted in an expression in place of the call (a function
+            can also create an independent module which drives a value
+            returned by the function).
+
+            It was mentioned above that modules -
+            \blist
+            \item   constitute single sources and sinks for queues
+            \item   initiate repeated execution of target code streams
+            \blend
+
+            The second of these characteristics is of interest here. We can
+            ignore procedure calls as discussed above and consider any target
+            code within a procedure as substituted for the call.
+
+            \index{execution!target!implicit infinite loop}
+            Any top level target statement in a module (remembering
+            that we have conceptually eliminated procedures) is effectively
+            inside its own infinite loop, that is it executes repeatedly
+            forever. This applies regardless of the statement type be it a
+            static or queue assignment (value, selectvalue, pointer and
+            priority assignments are immediate) a seq, sync or par block, a
+            when etc.
+
+            Note that execution of each statement within its own infinite loop is
+            not the same as repeated execution of a parallel block containing those
+            statements. In a parallel block each statement in the block is executed
+            once, but the next repetition cannot take place until every statement
+            in the block has executed. For example one of the statements in the par
+            block might be quite a long seq block, or an assignment statement might
+            wait quite a long time for queue availability \index{queue!availability}.
+            With statements each in their own infinite loop they each repeat at
+            their own maximum rates.
+
+            Thus each top level statement within a module executes repeatedly
+            forever and does so independently of other top level statements.
+
+            If a 3PL target code stream is to execute only once in the way
+            conventional programming languages dictate then a stream can be
+            simply terminated with a call to inbuilt procedure {\bf stop()}.
+
+            An execution stream can proceed through a number of control
+            structures. A {\bf when} conditionally selects one of two code
+            blocks according to the value of a logical expression. There are
+            also target {\bf while} and {\bf do while} loops. Statements can
+            be enclosed in a {\bf seq} block to execute them sequentially or
+            in a {\bf par} or {\bf sync} block to execute them in parallel.
+            All of the above may of course be nested in any way. Sequential
+            execution causes the execution stream to pass from statement to
+            statement in order. Parallel execution causes the execution
+            stream to diverge into multiple streams, the block waiting until
+            all streams have completed before it completes.
+            
+            \index{execution!target!exception termination}
+            \index{unless construct}
+            Execution streams can be prematurely terminated by means of the {\bf
+            unless} construct. This can be used with {\bf when}, {\bf branch}, {\bf
+            seq}, {\bf par}, {\bf sync}, {\bf seq while}, {\bf par while}, {\bf sync
+            while}, {\bf seq do while}, {\bf par do while} and {\bf sync do while}
+            contructs.
+
+            \index{execution!target!availability}
+            \index{queue!availability}
+            As well as an execution stream or streams there is an
+            orthogonal control mechanism - queue availability. An assignment
+            statement will only execute when
+            \blist
+            \item   execution control reaches it in its stream
+            \item   all queues that it reads or writes are available
+            \blend
+            If any referenced queues are not available execution of that
+            stream is suspended until they are. Note that this is different
+            to a target conditional statement such as a {\bf when} which will
+            simply choose a true or false branch of the stream but will
+            not pause of its own volition (it may wait if its test expression
+            contains queue reads).
+        
+        
+        \subsection{starting target execution streams}
+        
+
+            \index{target!execution!start}
+            Execution threads start in an implied infinite loop initiated within
+            a module. If no special provision is made every execution thread will
+            start as soon as GWE is asserted after the configuration has been
+            loaded. Every clock domain has its own start pulse initiating every
+            thread in that clock domain. These start pulses are initiated at the
+            same time.
+            
+            The start of execution threads may be delayed in the
+            following ways -
+            \blist
+            \item   after a specified number of clock pulses
+            \item   after a specified time
+            \item   when a target expression is true
+            \blend
+            In the last case the target expression must only contain signals
+            that are external inputs or are derived from FPGA elements such
+            as DCM lock signals since all 3PL target variables of any mode
+            with state are still frozen in their initial conditions.
+            
+            Specification of the start condition is done using inbuilt
+            procedure start() \autorefph{sec:ipstart}).
+            
+            The start conditions are specified relative to one clock domain and
+            the start pulse in that clock domain is resynchronised into all other
+            clock domains to start them.            
+
+
+    \section{Clocks}
+
+        \index{clock}
+        3PL generates synchronous logic and supports any number of separate
+        clocks. There are two aspects of clocks with which a program must
+        deal -
+        \blist
+        \item   selection of the clock currently in force
+        \item   generation of clock signals
+        \blend
+
+        \subsection{selecting a clock}
+
+            \index{clock!creation}
+            A clock variable is created by
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(cv, ...attributes...);
+            \end{lstlisting}
+            The attributes arguments are optional, but if clock frequency or
+            period attributes have not been set by the end of immediate execution no
+            timing constraints will be generated for logic using this clock.
+            \index{timing constraint}
+            \index{constraint!timing}
+            Only one of frequency or period attributes should be given, the other
+            being derived automatically. If the duty cycle attribute is omitted 50\% will
+            be assumed. In the case of an external clock signal there are
+            additional attributes.
+            
+            The clock attributes are usually omitted when -
+            \blist
+            \item   the clock variable is a module, procedure or function
+                    parameter, in which case it will reference the argument
+            \item   the clock variable is to be assigned from another clock
+                    variable using \verb':=' assignment (see below)
+            \item   the clock variable is to be an argument to a library
+                    module or procedure which will set the attributes
+            \blend
+            
+            A clock variable may be assigned another clock variable following
+            which it becomes an indirect reference to that variable, for example
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(cv);
+               cv := c;
+            \end{lstlisting}
+            where {\bf cv} is now a reference to {\bf c} (note: this does not
+            require the use of the pointer operator). Since this is an indirect
+            reference {\bf cv} can now be used in place of {\bf c}, including
+            operands to equality comparisons.           
+            
+            The clock signal currently in force is changed by calling the
+            {\bf useclock()} procedure. For example
+            \begin{lstlisting}[gobble=12, language=threepl]
+               useclock(c100);
+            \end{lstlisting}
+            would select {\bf c100} as the current clock, pushing the
+            previous current clock onto a stack. The call
+            \begin{lstlisting}[gobble=12, language=threepl]
+               useclock();
+            \end{lstlisting}
+            pops the previous clock off the stack, i.e restores the previous
+            current clock. If there are no previous clocks the current
+            clock becomes null. Clocks can be pushed on the stack to any depth.
+            
+            The clock signal currently in force can only be changed at the
+            top level in a module. This precludes a clock change within the
+            infinite loops enclosing execution streams. An execution stream
+            must have a single clock controlling all statements within it.
+            Changing the clock in a module between one top level statement
+            and the next poses no problem.
+        
+        \subsection{clock domains of variables}\label{subsec:clockdoms}
+
+            \index{clock domain}
+            Variables do not have established clock domains when created. The
+            clock domain of a variable can be established in one of three ways -
+            \blist
+            \item   when a variable is assigned its domain is set to the current
+                    clock domain, but some modes are exceptions - see below
+            \item   when a variable is finally evaluated for use in an execution
+                    thread its clock domain is set to the current
+                    clock domain
+            \item   the clock domain of a variable may be explicitly established
+                    by calling inbuilt procedure {\bf attributes()} or by specifying
+                    the attribute in the variable creation procedure call
+                    section \autorefph{sec:ipattributes}
+            \blend
+
+            Where the clock domain of a variable is already established the
+            above three cases check the clock domain instead, causing a fatal
+            error if the check fails.
+            
+            A value variable itself has no clock domain, but the values it
+            contains may have clock domains. When used as part of an evaluated
+            expression the clock domains of the values assigned to the variable are
+            used. If at that time they have no clock domains their clock domains are
+            set to the current clock domain. Where a value variable is of compound
+            type different elements may be assigned expressions with different clock
+            domains. The following code illustrates this behaviour -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               value(v, "[2]log");
+               static({s1, s2, s3, s4}, "log");
+               v[0] := s1;
+               v[1] := s2;
+
+               useclock(c100);
+               s3 <- v[0];
+
+               useclock(c50);
+               s4 <- v[1];
+            \end{lstlisting}
+            The assignments to value variable {\bf v} do not establish the clock
+            domains of s1 or s2. Variable {\bf v}, being value mode, does not itself
+            have a clock domain. When the assignment {\bf \verb's3 <- v[0]'} is
+            encountered during immediate execution the current clock domain ({\bf
+            c100}) will be established for s3 (by assignment) and s1 (by evaluation
+            of the expression containing v[0]). Similarly the assignment {\bf
+            \verb's4 <- v[1]'} will set {\bf s4} and {\bf s2} to clock domain {\bf
+            c50}. The purpose of this example is to explain that assignment of
+            expressions to a value variable does not establish the clock domain
+            of variables in that expression.
+            
+            If an expression assigned to a value variable contains variables
+            whose clock domains are already established then when the value
+            variable is evaluated in a clocked context the clocks will be
+            checked for identity with the current clock.
+            
+            A value variable which is evaluated prior to its assignment is given a
+            value that has the current clock domain. Later assignment to the
+            variable must be in the same clock domain.
+
+            Selectvalue, static and priority mode variables have a single clock
+            domain in which both assignment and value reference are done. These
+            variables have no clock domain when created and the clock domain is
+            established from the current clock domain when the variable is first
+            assigned or its value is used in a clocked context, e.g. an assignment
+            value. All subsequent assignments or value references must be done in
+            the same (current) clock domain.
+            
+            Input mode variables have only an output (read) clock domain since they
+            can be evaluated but can not be assigned. Input mode variables have no
+            clock domain when created and the clock domain is established from the
+            current clock domain when the value of the variable is first used. All
+            subsequent value references must be done in the same clock domain.
+            
+            Output mode variables have only an input (write) clock domain since they
+            cannot be evaluated, only assigned. Output mode variables have no clock
+            domain when created and the clock domain is established from the current
+            clock domain when the value of the variable is first assigned. All
+            subsequent assignments must be done in the same clock domain.        
+            Note that if an output mode variable is assigned an expression
+            containing value mode variables which have not been assigned values yet,
+            the interim values will be set to the current clock domain. When
+            ultimately these value variables are assigned values the values must
+            have the same clock domain.
+ 
+            Queue mode variables have separate read and write clocks. Again queue
+            variables have no clock domains when created. The write clock
+            domain is set from the current clock domain on the first write
+            (assignment) to the queue after which all future writes must be in
+            the same clock domain. Similarly the read clock domain is set from
+            the current clock domain on the first queue read or examine and all
+            further reads or examines must be done in that clock domain. Evaluation
+            of expressions containing queue availability operators in a clocked
+            context (i.e. but not when assigned to a value mode variable) will
+            also establish or check the associated queue clock domain (read or write).
+            
+            The clock domain(s) of a variable can be forced by setting
+            attributes {\bf domain}, {\bf readdomain} or {\bf writedomain}
+            (see \autorefph{sec:attributes}) as appropriate. This pre-empts
+            clock domain assignment resulting from variable assignments or
+            evaluations. Once a variable clock domain has been established
+            it cannot be changed and all further accesses to that variable
+            must adhere to the established clock domain(s).
+            
+            For selectvalue, static, queue and priority mode variables the value
+            to be assigned must either be the same clock domain as the current
+            clock domain or must have no clock domain (external inputs with no
+            clock domain or constants). The clock domain of the assigned
+            variable (write clock in the case of queues) must not differ from
+            the current clock domain - if it has no clock domain the
+            assignment will set it to the current domain.
+            
+            Note that where variables, or expressions containing variables, of
+            mode selectvalue, static, queue or priority are assigned to value
+            variables, the output clock domain of the RHS variables is not
+            resolved until the value variable is actually directly used. The
+            same consideration applies to arguments passed to module, procedure
+            or function parameters. Clock domain resolution of variables is
+            delayed as late as possible until they are actually assigned to or
+            their values are finally required. Their clock domains remain
+            unresolved through assignment to value variables or argument
+            passing.
+            
+            Where an assigned value violates the clock domain it may be converted
+            by the inbuilt function {\bf sample()} section \autorefph{sec:ifsample}
+            or acceptance may be forced by the inbuilt function {\bf accept()}
+            \autorefph{sec:ifaccept}. {\bf accept()} simply makes its argument
+            appear to be in the current clock domain (or another clock domain or no
+            clock domain) but otherwise has no effect. {\bf sample()} resamples its
+            argument into the current clock domain. The use of {\bf accept()} may
+            result in data corruption unless it is known that the clocks are
+            suitably related in phase and frequency. The arguments to {\bf
+            accept()} and {\bf sample()} must not contain queue reads.
+
+            A queue which has identical read and write clock domains is termed
+            a {\bf synchronous queue}. If it has different read and write
+            clock domains it is called an {\bf asynchronous queue}.
+
+            For a queue variable the clock domain for writing is established by -
+            \index{queue!availability}
+            \blist
+            \item   the first write (assignment) to the queue variable (or
+                    component of the variable if the type is compound)
+            \item   the use of the write availability operator \verb'>' on the queue
+            \item   a call to {\bf queuewritestatus()} on the queue
+            \item   a call to {\bf reset()} on the queue
+            \blend
+            If the write clock domain is not yet established in any of these
+            situations then it will be set to the current clock domain,
+            otherwise it must be the same as the current clock domain.
+
+            The clock domain for queue reading is established by -
+            \blist
+            \item   the first read or examine of the variable (or component of
+                    the variable if the type is compound)
+            \item   the use of the read availability operator \verb'<' on the queue
+            \item   a call to {\bf queuereadstatus()} on the queue
+            \blend
+            If the read clock domain is not yet established in any of these
+            situations then it will be set to the current clock domain,
+            otherwise it must be the same as the current clock domain.
+        
+            The inbuilt procedure {\bf domain()} may be used to explicitly set
+            the clock domain of a selectvalue, static, queue or priority variable
+            or a value variable which is an external input. On calling {\bf
+            domain()} the clock domain of the variable must be null (in which
+            case it is set) or else must already have that clock domain. In the
+            case of a queue variable the input and output clock domains will both
+            be set, i.e. it will be a synchronous queue.
+            
+            The inbuilt procedure {\bf readdomain()} may be used to explicitly
+            set the output (read) clock domain of a queue variable (for other
+            modes it functions the same way as {\bf domain()}).
+            
+            The inbuilt procedure {\bf writedomain()} may be used to explicitly
+            set the input (write) clock domain of a queue variable.
+
+            Memory variables have a clock associated with each access port.
+            The clock associated with a port is determined by the clock that
+            is current when the first read or write procedure or function
+            call for that port is made during immediate execution. All
+            subsequent calls to read or write procedures or functions for
+            that port must be in the same clock domain.
+                      
+            A clock variable may be used effectively as a logical variable,
+            but this can only be done by assigning it to a value mode
+            variable of type log and then that value variable can be used
+            in the normal way. The assignment may be explicit, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(clk, ....);
+               value(v, "log");
+               v := clk;
+            \end{lstlisting}
+            or it may be done via initialisation
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(clk, ....);
+               value(v, "log", clk);
+            \end{lstlisting}
+            
+            A clock may be driven by internal logic by use of the inbuilt
+            procedure {\bf clockfromexpr()}, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(clk, frequency=....);
+               value(v, "log");
+               clockfromexpr(clk <- v);
+            \end{lstlisting}
+            
+            If an internal clock signal is to be connected to an output pad
+            this can be done by passing the clock variable as a source
+            argument (third argument) to inbuilt procedure {\bf output()}
+            \autorefph{sec:ipoutput}.
+
+        \subsection{checking clock domains}
+        
+            The current clock domain and the previous clock domain can be
+            checked by inbuilt functions currentclock() \autorefph{sec:ifcurrentclock}
+            and prevclock() \autorefph{sec:ifprevclock} respectively. The returned
+            clock domain can be checked against a known clock, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               if (currentclock() != c100)
+                   .......
+            \end{lstlisting}
+            can be checked for null, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               if (currentclock() == null)
+                   .......
+            \end{lstlisting}
+            or can have its identifier printed -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               println(identifier(currentclock()));
+            \end{lstlisting}
+            The returned clock can also be assigned to a clock variable -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(c);
+               c := prevclock();
+            \end{lstlisting}
+            but note that a null assignment is not allowed.
+            
+            The clock domain of variables can be determined by inbuilt
+            functions domain() \autorefph{sec:ifdomain}, readdomain() \autorefph{sec:ifreaddomain}
+            and writedomain() \autorefph{sec:ifwritedomain}. These will return null if
+            the domain has not yet been established. The domain can be
+            tested, printed etc as illustrated in the previous paragraph.
+
+        \subsection{setting up clocks}
+
+            \index{clock!source}
+            Clock devices are highly part-specific. In general implementing a
+            clock requires the following -
+            \blist
+            \item   The clock signal and any intermediate signals must be
+                    declared to 3PL and connected via an FPGA input buffer
+                    using the inbuilt procedure {\bf clock()}.
+            \item   A clock driver such as a DLL or DCM must be created. This
+                    is done via library procedures (see below).
+            \item   An FPGA global clock buffer must be provided, for which
+                    there is a library procedure {\bf clockbufg()}.
+            \item   Additional timing constraints between clock groups may be
+                    needed, entered by using the library procedure {\bf
+                    maxdelay()}.
+                    \index{timing constraint}
+                    \index{constraint!timing}
+            \blend
+
+            The inbuilt procedure {\bf clock()} is used to create clock
+            variables, including any input and intermediate clock signals
+            associated with the clock generation hardware in the FPGA.
+            The frequency or period attributes must be supplied
+            and optionally the duty cycle attribute can be specified. For an
+            existing clock these parameters can be determined by the
+            inbuilt functions {\bf frequency()}, {\bf period()} and
+            {\bf dutycycle()}.
+            
+            Library procedures clkdll(), clkdlle(), clkdllhf(), clkdcm(), clkmmcm()
+            and pll() create the hardware elements which take an input or
+            internal clock and produce a related output clock. That output clock
+            may be simply the input clock conditioned by a delay-locked loop to
+            achieve zero delay or it may be a multiple, submultiple or
+            phase-shifted version of the input clock. The arguments passed to
+            this procedure and the capabilities it accesses differ with the FPGA
+            family. It can usually be called via library procedures which offer
+            a simpler interface for common situations.
+        
+            By default if the clock variable is used for any target
+            statements a timing group identifier will be generated for the clock
+            variable. This identifier is used to automatically generate a clock
+            period timing constraint for all logic driven by the clock. If the
+            clock variable has global scope the timing group identifier will be the
+            variable identifier converted to upper case. For any other scope the
+            timing group identifier will be the full hierarchical variable name
+            converted to upper case. The latter case is necessary to avoid any
+            possible ambiguity but results in a long identifier, and this is
+            impossible to use in any other timing constraint since it has arbitrary
+            integers embedded to disambiguate specific instances. Where a clock
+            variable is not global and its timing group identifier is to be used in
+            generating other timing constraints, e.g. between clock groups, a
+            timing group identifier must be supplied to replace the default id.
+            This is done by setting the attribute {\bf tnm} in the
+            clock variable.
+            
+            Note that the intermediate clock signals interconnecting the input
+            buffers, clock managers and global clock buffers are all variables
+            of mode {\bf clock} and potentially can all be used by 3PL to
+            control logic. However, Clock variables that can actually be used to clock
+            logic devices are restricted to those driven by
+            appropriate FPGA devices such as global clock buffers. The
+            limitations on which clock signals can be used to drive logic are
+            FPGA specific and 3PL itself makes no distinction.
+            
+            Where clock variables are assigned using the \verb':=' operator
+            and are also used to set the clock domain, note that logic
+            using that clock will be connected to the clock source determined
+            by the value the clock variable has when immediate execution
+            terminates. Changing the value of a clock variable by assignment,
+            even if accompanied by passing it to {\bf useclock()}, will not
+            result in associated code having different clock domains - the code
+            will all be driven by the clock source given by the final value of
+            the clock variable.
+
+            Further details may be obtained in the sections on the header files
+            for the individual boards.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    \section{Modules, procedures, functions and classes}
+        
+
+        \subsection{Module, procedure, function and class calls}\label{sec:mpfccall}
+        
+            Procedures, named modules and classes are called by
+            \begin{lstlisting}[gobble=12, language=threepl]
+               name (output arguments <- input arguments);
+            \end{lstlisting}
+            and if there are no output parameters -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               name (input arguments);
+            \end{lstlisting}
+            
+            Functions have no output parameters and are called by
+            \begin{lstlisting}[gobble=12, language=threepl]
+               name (arguments)
+            \end{lstlisting}
+            A function call appears within an expression (it may be the entire
+            expression itself).
+            
+            When a class, named module, procedure or function is called
+            the current scope, file scope and global scope are searched
+            in that order.
+            
+            Class calls are similar to function calls, the returned result being
+            a class instance which is an immediate value of type "class".
+            Unlike functions class calls may contain output arguments.
+        
+            For classes, procedures, named modules, functions or classes if
+            there are no arguments the parentheses are present but empty.
+            
+            Note that the separation of arguments into input and output
+            groupings is mostly a convention, but for some parameter
+            modes the mechanism by which an argument is passed to a parameter
+            differs depending on whether it is in the input group or the output
+            group (see \autorefph{sec:callparams} below.
+
+            \index{argument!key match}
+            Arguments are matched against parameters by position in the
+            argument list, but for declared modules, procedures or
+            functions (i.e. not inbuilt ones) they may also be paired
+            explicitly by using
+            \begin{lstlisting}[gobble=12, language=threepl]
+               parameter = argument
+            \end{lstlisting}
+            for each argument in the list where {\em parameter} is the parameter
+            identifier. This is refered to as "key match" argument passing. The
+            effect of using the '=' to match an argument to a parameter is simply
+            to re-order the argument list so that the arguments appear in the order
+            of the parameters, arguments being omitted where parameters have not
+            been matched. This means that arguments will be evaluated and assigned
+            to parameters in parameter order, left to right, not necessarily in
+            argument order.
+            
+            Key-match argument/parameter matching is useful where arguments are
+            sparse since it avoids runs of commas and resulting mistakes in
+            positioning arguments. It can also make code more readable by giving
+            clues to the purpose of each argument, but argument lists then
+            consume more space.
+                
+            Null arguments cannot appear among key-match arguments. If they do
+            the fatal error "too many input arguments" will occur, or else in
+            the case of a {\bf varargs} parameter (see \autorefph{sec:varargs})
+            "null argument to input varargs" or "null argument to output
+            varargs" errors.
+            
+            The constant {\bf null} may be passed to a parameter. If the
+            parameter is immediate mode and its type is "\verb'->'", i.e. it is a
+            pointer, then the pointer is assigned the null pointer. For
+            any other parameter mode and type the assignment is skipped.
+            Thus except for the case of pointers, the argument {\bf null}
+            can be used to conditionally skip passing an argument to a
+            parameter. This applies both to argument passing by position or
+            by key=value.
+
+            Non-key-match arguments cannot appear among key-match arguments unless
+            the last parameter is {\bf varargs} (see
+            \autorefph{sec:varargs}). If they do the fatal error "too many
+            input arguments" will occur.
+            
+            Argument matching to parameters by position and by key match can be
+            mixed in one call but position matched arguments must precede any
+            key matched arguments, i.e. no position matched arguments may appear
+            after a key matched argument (unless {\bf varargs} is used). The
+            occurence of the first key-match argument in a list signals the end of
+            matching arguments to parameters by position.
+            
+            Key-match argument passing cannot be used with inbuilt modules,
+            procedures or functions at the moment since these do not have
+            parameters as such. This may be changed in the future.
+            
+            Key-match argument passing  can also be used to pass arguments
+            to a {\bf varargs} list - see \autorefph{sec:varargs}.
+
+            Procedure and function calls may be recursive\index{recursion}.
+            Because calls are made during immediate execution, not target
+            execution, recursion does not involve code in the FPGA. In principle
+            class and module calls can also be recursive but it is hard to
+            envisage a case where this would be useful.
+
+        
+        
+        
+        
+        \subsection{Module, procedure, function and class declarations}\label{sec:mpfcdecl}
+        
+            \index{module!declaration}
+            A named module is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               name (output parameters <- input parameters) 
+                   body
+               }
+            \end{lstlisting}
+            or
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               name (input parameters) {
+                   body
+               }
+            \end{lstlisting}
+            if there are no output parameters. Similarly a procedure
+            declaration appears as -
+            \begin{lstlisting}[gobble=12, language=threepl]<<=
+               procedure
+               name (output parameters <- input parameters) {
+                   body
+               }
+            \end{lstlisting}
+            or
+            \index{procedure!declaration}
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               name (input parameters) {
+                   body
+               }
+            \end{lstlisting}
+            A function is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               function
+               name (parameters) {
+                   body
+               }
+            \end{lstlisting}
+            and has no output parameters.
+            
+            A class is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class
+               name (output parameters <- input parameters) 
+                   body
+               }
+            \end{lstlisting}
+            or
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class
+               name (input parameters) {
+                   body
+               }
+            \end{lstlisting}
+            if there are no output parameters.
+             
+            \index{module!leadermodule}
+            \index{leadermodule}
+            A leader module is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               leadermodule (s, n) {
+                   body
+               }
+            \end{lstlisting}
+            Argument {\bf s} is a comment string which is printed in the report
+            file when the module is executed. Optional argument {\bf n} is an
+            ordering integer. If omitted its default value is 0. The new module
+            will be placed in the leader module list after any modules with the
+            same or lower order number.
+            
+            {\bf Note that for leader, trailer or post-processing modules both
+            arguments must be literal constants, not variables or expressions, as
+            they are extracted from tokens during parsing, not evaluated during
+            immediate execution.}
+
+            Since it is not called directly it has no identifier. As each leader
+            module declaration is encountered during parsing it is added to the
+            leader module list. Modules in this list are executed in order prior
+            to beginning normal immediate execution.
+            
+            \index{module!trailermodule}
+            \index{trailermodule}
+            A trailer module is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               trailermodule (s, n) {
+                   body
+               }
+            \end{lstlisting}
+            Argument {\bf s} is a comment string which is printed in the report
+            file when the module is executed. Optional argument {\bf n} is an
+            ordering integer. If omitted its default value is 0. The new module
+            will be placed in the trailer module list after any modules with the
+            same or lower order number.
+
+            Since it is not called directly it has no identifier. As each
+            trailer module declaration is encountered during parsing it is added
+            to the trailer module list. Modules in this list are executed in
+            order after normal immediate execution terminates.
+            
+            If a trailer module is defined within a class then the class
+            variables, common block variables, modules, procedures and functions
+            will be accessible to the trailer module.
+            
+            \index{module!postmodule}
+            \index{postmodule}
+            A post-processing module is declared by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               postmodule (s, n) {
+                   body
+               }
+            \end{lstlisting}
+            Argument {\bf s} is a comment string which is printed in the report
+            file when the module is executed. Optional argument {\bf n} is an
+            ordering integer. If omitted its default value is 0. The new module
+            will be placed in the post module list after any modules with the
+            same or lower order number.
+
+            Since it is not called directly it has no identifier. As each
+            post-processing module declaration is encountered during parsing it
+            is added to the post-processing module list. Modules in this list
+            are executed in order after netlist and constraint file generation
+            has been completed. This code can invoke place-and-route
+            tools and any other post-processing operations which can again
+            be conditional on the time of last modification of related files.
+            
+            See also \autorefph{sec:lppostprocess} and \autorefph{sec:xpp}.
+                     
+            Module, procedure, function and class declarations may be nested. A
+            module, procedure, function or class can be called from within the
+            module, procedure, function or class in which it is declared or from
+            any nested module, procedure, function or class.
+
+            In the case of declarations in a file module the keywords {\bf
+            module}, {\bf procedure}, {\bf function} or {\bf class} may be
+            preceded by the keyword {\bf global} which makes the module, procedure
+            or function globally accessible. The keyword {\bf global} cannot be
+            used on declarations nested deeper than the file scope.
+        
+            \index{identifier}
+            Identifiers fall into four categories -.
+            \blist
+            \item   variables
+            \item   directives
+            \item   modules, procedures and classes
+            \item   functions and classes
+            \blend
+            The same identifier may be used in each of these categories as the
+            syntax disambiguates the multiple occurrences. The overlap with
+            classes is because a class is called in a similar manner to a
+            function but can also be called as for a procedure, the returned
+            value being ignored. It is thus preferable identifiers for modules,
+            procedures, functions and classes are mutually unique.
+            
+            The same identifier may also be used in different scopes in which
+            case the search order determines which is used. In the case
+            of modules, procedures and functions the most deeply nested will
+            be found first.
+
+            For procedures, named modules, functions or classes if there are no
+            parameters the parentheses are present but empty.
+            
+            A {\bf leadermodule} or {\bf trailermodule} can create variables in
+            the global scope (global.{\em name}) or in the file scope in which
+            it is declared (file.{\em name}).
+
+        \subsection{parameters and arguments}\label{sec:callparams}
+        
+            \index{module!parameter}
+            \index{procedure!parameter}
+            \index{function!parameter}
+            \index{argument!passing}
+            Parameters are declared using the same inbuilt variable creation
+            procedure calls as normal variables (they cannot be user-defined
+            procedures). These procedure calls are enclosed in the parentheses
+            following the module, procedure or function identifier. The type of a
+            parameter must be the same as that of the corresponding call argument
+            but word widths need not be the same. Where word widths differ the
+            assignment rules described previously (truncation or zero/sign padding)
+            apply.
+
+            Parameter variables which are not matched by corresponding
+            arguments become local variables. Parameters can be initialised so
+            that they have useful default values should they have no matching
+            arguments in a call. While obviously useful for input parameters
+            this also applies to output parameters.
+
+            Parameters may be any mode.
+
+            The argument to an immediate input parameter can be
+            an immediate expression, which includes the cases of a single
+            immediate variable or constant. An immediate mode parameter is always
+            assigned an argument by value, even if the argument is itself
+            an immediate variable, so if an immediate input parameter
+            is assigned within a module, procedure or function its local value
+            is simply changed and the argument is not affected.
+
+            The argument to a value input parameter can be an expression,
+            including the cases of single target or immediate variables or
+            constants. An immediate argument will be converted to a target
+            constant. Value input parameters are call-by-value if the argument
+            is not itself a single value variable. If the argument is a single
+            value variable the argument is passed by reference.
+            
+            A value input parameter may be passed an immediate compound
+            type in which case the parameter must be declared with a matching
+            target compound type. Any immediate value which exceeds the
+            size of the corresponding target type will cause a fatal error.
+            
+            A value argument may be passed to an input, selectvalue, static,
+            queue or priority output parameter. This causes the argument value
+            variable to refer to the parameter variable which itself is now a
+            local variable.
+
+            Precluding the cases listed above -
+            \blist
+            \item   immediate mode input parameter
+            \item   value mode input parameter passed anything except a value
+                    mode variable
+            \item   an output parameter which is input, selectvalue, static,
+                    queue or priority mode and is passed a value mode variable
+            \blend
+            which are call-by-value, all other parameters are
+            call-by-reference and can only be passed variables of the same
+            mode as arguments. Parameters which are Call-by-reference actually
+            use the argument variables instead of the parameter variables.
+            
+            Where a parameter would normally be assigned an argument value by
+            value rather than by reference, as described above, passing by
+            reference can be forced by using the inbuilt procedure {\bf ref()}
+            \autorefph{sec:ipref} instead of {\bf var()}, {\bf int()}, {\bf
+            str()} etc. In that case an argument which is an expression rather
+            than a variable will cause a fatal execution error.
+            
+            Note that the separation of parameters into input and output groups
+            is mostly a convention intended to make the code more readable.
+            Apart from the differences in the way arguments are passed to
+            parameters described above, there are no other semantic differences
+            between input and output parameters. In particular input
+            parameters may be assigned values (but note that the effect depends
+            on whether they are call-by-value or call-by reference) and 
+            output parameters may be used in expressions. However, it is preferable
+            to adhere to this scheme where possible. An exception is
+            where a variable is to be passed to a module or procedure within
+            which code appears both to assign to it and to use its value. In that
+            case it is best to pass it to an output parameter.
+
+            A value parameter is a very general way of passing target
+            arguments to a module, procedure or function. The argument to a
+            value parameter can be a constant (or compound value), an
+            expression or a variable of any mode except {\em memory} (an
+            immediate variable or expression will pass a constant). In the case
+            of a floating point target mode argument to a value parameter the
+            parameter type must either match the argument type exactly or else
+            must have the type omitted. Target floating point types cannot have
+            the mantissa or biased exponent sizes omitted and hence no
+            adjustment to the argument type is possible. If the parameter type
+            is given it must match the argument type exactly. If the parameter
+            type is missing it will take the type from the argument. In the
+            case where the argument is an immediate floating point type it will
+            be converted to a target type "float:23.8" when passed in the call.
+
+            An argument to a call-by-reference parameter may be a partial
+            variable reference, for example an array member, a sub-array or a
+            struct field. This is allowed as long as there is no type mismatch
+            with the associated parameter. If the parameter is not typed or has
+            an array dimensions omitted then the type or array dimensions can
+            be taken from the argument. The use of a partial variable as an
+            argument applies to the queue mode as well as all other modes.
+
+            Wherever a call-by-reference parameter is used in the code body,
+            the argument variable that it points to will be used instead. If a
+            parameter has not been passed an argument then it becomes simply
+            a local variable within the scope of the module, procedure or
+            function.
+            
+            Since call-by-reference parameters use the argument variable in
+            place of the parameter variable the clock domain of the
+            argument variable is relevant. Similarly a value parameter inherits
+            the clock domain or domains of its argument (a compound
+            value may have elements of differing clock domains).
+            
+            Note that it is important in which module a queue is read. This is
+            regardless of whether it is passed as an argument to a module,
+            procedure or function where it appears as a parameter. Ultimately a
+            queue variable, even if referenced via a parameter (or chain of
+            arguments/parameters), is read within a module.
+            Each module in which a queue is read constitutes a queue destination.
+            Each queue destination {\bf must} read a datum before it can be
+            popped from the queue. When a destination module reads a datum from a
+            queue the queue will appear to it to be unavailable unless and until
+            all other destination modules execute a read (they can of course all
+            read simultaneously). Reads in multiple locations in a destination
+            module read the same datum if they execute in the same clock cycle,
+            otherwise they will read different data.            
+
+            Where a parameter is static or queue mode the parameter will
+            have the clock of the matching argument variable.
+
+
+            \subsubsection{missing parameter target primitive widths}
+            
+                \index{parameter!missing target width}
+                A target mode parameter which is type {\em bits}, {\em uint} or
+                {\em int}, or is an array of one of these types, may have the
+                width missing following the colon, or may have width 0. In that
+                case the type match with the supplied argument will be checked
+                and the width will be taken from the argument. If the parameter
+                variable width is supplied it must agree with the width of the
+                argument variable. Note that the colon is still necessary in
+                the type string to indicate a target mode type. If the argument
+                is a constant the width will be the minimum necessary to
+                contain the constant taking into account the sign bit if type
+                {\em int}.\footnote{At the moment a target parameter array
+                variable cannot derive the type width from an argument which is
+                a compound value. In that case the target variable width
+                will be zero, giving a fatal error. This may be fixed in the
+                future.}        
+
+            \subsubsection{missing parameter dimensions}
+
+                \index{parameter!missing dimension}
+                A parameter type specification may have missing array
+                dimensions (empty '[]') in which case the type match with the
+                supplied argument will be checked and missing dimensions will
+                be copied from the argument type. Note that this cannot be
+                done if the parameter is created as one of a bracketed list,
+                e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   procedure
+                   p (var({a, b}, "[]int")) {
+                   }
+                \end{lstlisting}
+                is not allowed as both {\bf a} and {\bf b} must be the same type,
+                but the array dimension is not supplied and the arguments may be of
+                different dimensions. What is allowed is a common initialiser, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   procedure
+                   p (var({a, b}, "[][]int", {{3, 5, 1}, {4}})) {
+                   }
+                \end{lstlisting}
+                as here both {\bf a} and {\bf b} will be two-dimensional arrays
+                of type "[2][3]int" and both will be initialised.
+                
+                Where a parameter type has one or more missing dimensions and
+                both an initialiser and an argument are supplied the dimension
+                of the argument will be used. If an argument is not supplied
+                the dimension of the initialiser will be used.
+
+            \subsubsection{missing parameter types}
+
+                \index{parameter!missing type}
+                If a parameter is declared without a type at all, the type of
+                the call argument will be used.
+                A parameter variable with missing type must be created singly,
+                not as one of a bracketed list.
+
+            \subsubsection{missing parameter modes}
+
+                \index{parameter!missing mode}
+                If a parameter is declared without a mode, the mode of
+                the call argument will be used.
+                A parameter variable with missing mode must be created singly,
+                not as one of a bracketed list.
+
+            \subsubsection{type conversions}
+            
+                \index{string/type conversion}
+                In the particular case of a parameter of type "str" and argument of
+                type "type" the argument will be converted to string representation
+                of the type (the same as invoking unbuilt function {\bf
+                typestring()}). For a parameter of type "type" and argument of type
+                "type"  the string will be converted to a type.
+                
+                The same conversion occurs where a variable is created as one of
+                these types and an initialisation argument is of the other type.
+
+            \subsubsection{parameter/argument processing order}
+
+                \index{argument!passing!order}
+                For procedures and named modules the input parameter list is
+                processed first followed by the output parameter list.
+                Parameter lists are processed left to right. Within this order
+                later parameters can use characteristics derived from those
+                already processed.
+
+            \subsubsection{parameter testing}
+
+                \index{parameter!checking}
+                Parameters can be checked to determine if they were supplied an
+                argument by the use of the inbuilt function {\bf matched()}.
+                Undimensioned array parameters can have their dimensions
+                determined after argument matching by using the inbuilt
+                functions {\bf dimensions()} and {\bf dimension()}. Untyped
+                parameters can have their types determined after argument
+                matching by using the inbuilt function {\bf type()};
+
+            \subsubsection{variable number of arguments}\label{sec:varargs}
+
+                \index{argument!variable number}
+                \index{varargs}
+                Where the input or output arguments are unknown in number or mode
+                the input or output parameter list (or both) may contain the
+                keyword {\bf varargs} to match a number of arguments. {\bf
+                varargs} must be the last item in an input or output parameter
+                list i.e. it cannot be followed by any variable
+                creation procedure calls.
+
+                When {\bf varargs} appears in a parameter list
+                local array variables {\bf inargs} and {\bf outargs} as
+                appropriate will be created automatically. For each argument an
+                invisible parameter of appropriate mode will be created. For
+                arguments which are variables the mode will be the same as the
+                variable. For a target expression the parameter variable will
+                be mode {\em value}. These {\bf inargs} and {\bf outargs} arrays are
+                pointers to the created invisible parameters. Immediate code
+                can interrogate these invisible parameters via the pointer
+                arrays to determine mode, type, dimensions etc. using inbuilt
+                functions {\bf mode()}, {\bf type()}, {\bf typestring()}
+                (and possibly {\bf dimensions()} and {\bf dimension()}, though
+                {\bf typestring()} returns this information in string form).
+                Inbuilt function {\bf dimension()} can be used to get the
+                number of arguments from {\bf inargs} or {\bf outargs}. The
+                invisible parameters are accessed via the pointers, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    a <- inargs[1]->;
+                    outargs[3]-> <<- a + b;
+                \end{lstlisting}
+                If an argument has fields or array members then field
+                identifiers or array subscripts can follow the '\verb'->'',
+                e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    a <- inargs[1]->[2];
+                    outargs[3]->data <<- a + b;
+                \end{lstlisting}
+                
+                \index{varargs!inargs}
+                \index{varargs!outargs}
+                \index{varargs!inkeys}
+                \index{varargs!outkeys}
+                \index{varargs!inmap}
+                \index{varargs!outmap}
+                A function, module or procedure whose parameter list
+                contains {\bf varargs} can be passed key-match arguments.
+                Where the key-match arguments identify explicit parameters
+                the arguments will be assigned to the associated parameter
+                variables as usual. If the key does not match a parameter
+                identifier the key-argument pair will be assigned to the
+                varargs list. For this reason the varargs pointer arrays
+                {\bf inargs} and {\bf outargs} have associated arrays
+                {\bf inkeys} and {\bf outkeys} which are arrays of strings,
+                and {\bf inmap} and {\bf outmap} which are maps containing
+                pointers to arguments addressed by the key string.
+                
+                String arrays {\bf inkeys} and {\bf outkeys} contain the keys
+                from key-matched arguments. Where an argument to varargs is not
+                key-matched the associated key array entry is "". These arrays
+                of keys are always present when {\bf varargs} is used but if
+                there are no key-matched arguments then the key arrays will
+                contain empty strings.
+                
+                In addition to the above, key-match arguments are also entered
+                into maps, {\bf inmap} and {\bf outmap}, where the argument key
+                is the map key and the associated value is a pointer to the
+                argument value.
+                
+                Maps {\bf inmap} and {\bf outmap} only contain key-match
+                entries, not positional arguments. Map access using a key that
+                is not present in the map will return a null.                
+                
+                As an example, the procedure -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   procedure
+                   p (int({a, b}), varargs) {
+                   }
+                \end{lstlisting}
+                might be called by -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    p(, 2, k=3, a=5, n=4);
+                \end{lstlisting}
+                The first parameter {\bf a} is skipped and the second parameter
+                {\bf b} is positionally assigned 2. The next three arguments are
+                key-match, but the second of these will actually assign 5 to
+                parameter {\bf a}. Thus the varargs array {\bf inargs} will contain
+                pointers to immediate integer variables containing 3 and 4 and the
+                corresponding array {\bf inkeys} will contain "k" and "n".
+                
+                Note that we could also have non-key-match arguments (but not null
+                arguments) among the key-match arguments passed to varargs, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    p(2, k=3);
+
+                    procedure
+                    p (varargs) {
+                    }
+                \end{lstlisting}
+                would result in array {\bf inargs} containing pointers to
+                immediate integer variables containing 2 and 3 and the
+                string array {\bf inkeys} will contain "" and "k".
+                
+                If we did not have {\bf varargs} as the last parameter then
+                non-key-match arguments and null arguments cannot appear
+                among key-match arguments. If they do the fatal error
+                "too many input arguments" will occur.
+                
+                A compound value cannot be passed to a {\bf varargs}
+                parameter as there is no type available with which to
+                parse the compound value.
+                
+                These argument passing mechanisms are intended to provide
+                \blist
+                \item   argument matching to parameter by position
+                        or parameter identifier
+                \item   variable length, type and mode argument list
+                \item   extension of key=argument to variable argument lists
+                \blend
+                            
+                It is envisaged that module, procedure and function calls
+                would use one of the following scenarios for fixed parameter
+                lists, i.e. {\bf varargs} not used -
+                \blist
+                \item   positional arguments only
+                \item   key-match arguments only
+                \item   first few arguments positional, the remainder key-match
+                \blend
+
+                For variable argument lists, i.e. where a {\bf varargs} parameter
+                is used -
+                \blist
+                \item   parameters with final varargs - positional matching
+                        arguments to parameters, non-key-match and key-match
+                        arguments to varargs
+                \item   varargs parameter only - non-key-match and key-match
+                        arguments
+                \blend
+                The situation where some key-match arguments match parameters
+                and others are assigned to varargs and some positional
+                arguments match parameters and yet others are assigned to
+                varargs is quite legal but is probably much too confusing.
+                
+                Variable arguments can be passed on to nested calls by using
+                inbuilt function {\bf arglist()} \autorefph{sec:ifarglist}.
+                Note however that this cannot be used for calls to inbuilt modules,
+                procedures or functions.
+                
+                As an example -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    procedure q1 (varargs) {
+                        q2(arglist(null, inargs));
+                    }
+                \end{lstlisting}
+                In this case the input arguments to procedure q1 will be passed
+                to procedure q2. If inargs is simply passed directly it will
+                appear as a one-dimensional array of pointers. By passing
+                via arglist() the values pointed to will appear as separate arguments.
+                
+
+        \subsection{target code}
+
+                \index{immediate!target generation}
+                During immediate execution modules, procedures, functions and
+                classes exist as single code bodies even though perhaps called
+                repeatedly. In that sense they function in the same way as normal
+                programming languages. However, any target code that they generate
+                is not shared in any way. Target code is instantiated afresh on
+                every call.
+
+                For example
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    static(a, "[4]int:8");
+                    static(b, "[4]int:8");
+                    var(double, "[4]int");
+
+                    for (int(i) ; i<4 ; i++)
+                        reverse(a, double[i] <- b, i);
+
+                    procedure
+                    reverse (static(o, "[]int:8"), int(d) <- static(i, "[]int:8"), int(j) {
+                        d = j * 2;
+                        o[j] <- i[3-j];
+                    }
+                \end{lstlisting}
+                Here an immediate loop calls a procedure four times. Each time
+                the immediate integer argument {\em i} is doubled and stored in
+                the argument array {\em double}. However, the procedure also
+                generates a target assignment on each call. It is important to
+                note here that we have generated four target assignment
+                statements as a result of immediate execution. It is as though
+                we wrote -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    double[0] = 0 * 2;
+                    a[0] <- b[3];
+                    double[1] = 1 * 2;
+                    a[1] <- b[2];
+                    double[2] = 2 * 2;
+                    a[2] <- b[1];
+                    double[3] = 3 * 2;
+                    a[3] <- b[0];
+                \end{lstlisting}
+                Execution control of these target statements must be considered.
+                As written the above code must be immediately within a module to
+                be correct. Each of the generated target assignment statements
+                will be wrapped in its own infinite loop to execute on every
+                clock cycle (see next section). However, suppose that the
+                immediate loop above is contained within a {\em when} statement.
+                In that case we must enclose the four target assignments in a
+                parallel or sequential block, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    static(a, "[4]int:8");
+                    static(b, "[4]int:8");
+                    var(double, "[4]int");
+
+                    when (l) par {
+                        for (int(i) ; i<4 ; i++)
+                            reverse(a, double[i] <- b, i);
+                    }
+
+                    procedure
+                    reverse (static(o, "[]int:8"), int(d) <- static(i, "[]int:8"), int(j) {
+                        d = i * 2;
+                        o[j] <- i[3-j];
+                    }
+                \end{lstlisting}
+                which is equivalent to -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                    when (l) par {
+                        double[0] = 0 * 2;
+                        a[0] <- b[3];
+                        double[1] = 1 * 2;
+                        a[1] <- b[2];
+                        double[2] = 2 * 2;
+                        a[2] <- b[1];
+                        double[3] = 3 * 2;
+                        a[3] <- b[0];
+                    }
+                \end{lstlisting}
+                Here immediate execution of statements within the {\em par} is
+                carried out sequentially. Each immediate assignment is carried out
+                as it is encountered. Each target assignment is appended to the
+                parallel block code body to be eventually executed in parallel in
+                the FPGA. The {\bf when} itself will be within an infinite loop.
+
+
+
+
+
+
+    \section{Procedures}
+
+        \index{procedure}
+        A procedure is simply a way of writing code which can be used in one
+        or more places with the calling arguments effectively substituted for
+        the parameters. It also provides a way of hiding
+        variables which would otherwise be duplicated (variables local to the
+        procedure).
+
+        During immediate execution a procedure may execute any number of immediate
+        or target statements, but it must only create at most a single in-line
+        target statement. If a procedure created more than one in-line target
+        statement the behaviour of these statements would depend on the calling
+        context, i.e. the behaviour would be different if called from the top level
+        inside a module (each statement would then be in its own infinite loop) or
+        elsewhere (it must be inside a {\bf seq}, {\bf par} or {\bf sync} in which
+        case these environments would control the way the procedure body executed.
+        To achieve consistency in the way a procedure body behaves the single
+        in-line target statement rule has been imposed. The procedure body can now
+        explicitly use a {\bf seq}, {\bf par} or {\bf sync} block for the code body
+        or it can use an inline module so that the enclosed statements are in
+        individual infinite loops.
+
+        Any queues which are used within a procedure, whether they be global or
+        file scope or passed via arguments, have the calling module as their
+        destination module for signaling purposes.
+        
+        A procedure may return from within its code block by the
+        statement {\bf return;}. If there is no return statement then the procedure
+        will return after completing execution.
+        
+
+
+
+
+
+
+
+
+    \section{Functions}
+
+
+        \index{function}
+        A function code block may only contain
+        \blist
+        \item   immediate statements
+        \item   value, selectvalue, pointer or priority mode assignments
+        \item   module calls
+        \item   inline modules
+        \blend
+        It may contain procedure or function calls if they also observe the
+        same constraints. The reason for this restriction is that a function
+        can only contain code which references variables or expressions. It
+        cannot contain code which is one or more elements in a target
+        execution stream. It is assumed that the function will execute when
+        required (subject to any contained queues) and it cannot contribute
+        any extra execution cycles. However, the function may  contain one or
+        more modules since they each contain one or more independent
+        execution streams. The function in that case may simply
+        return a value which is a variable, or an expression containing one or
+        more variables, modified by the module.
+        
+        \index{value!function return}
+        \index{statement!return}
+        A function can return a value of any mode.
+        
+        A function returns a value by means of the statement {\bf
+        return(\dots);}
+
+        For example a function to double a value mode integer could be written -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            double (value(p, "int:8")) {
+                return(p + p);
+            }
+        \end{lstlisting}
+        This simply substitutes the expression for the call with the parameter
+        {\em p} replaced by the value of the argument.
+        
+        A function code body cannot contain in-line executable target code
+        statements. The above example could be legitimately rewritten as -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            double (value(p, "int:8")) {
+                value(v, "int:8");
+                v := p + p;
+                return(v);
+            }
+        \end{lstlisting}
+        
+        since the use of value mode variables does not generate in-line target
+        code. Value mode variables simply represent target mode expressions.If
+        however we attempted to change the example to -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            f (value(p, "int:8")) {
+                static(a, "int:8");
+                a <- p + p; // ERROR! in-line target code
+                return(a);
+            }
+        \end{lstlisting}
+        
+        This would give a fatal immediate execution error. This contains an
+        executable assignment statement which generates in-line target code.
+        It is not even clear exactly what this function should do. The
+        implication is perhaps that the evaluation of the function, when it
+        is called from an expression, will require a delay of one clock cycle
+        while the static assignment takes place. Target code execution
+        signaling does not allow this to be done this way! Note that removal
+        of the static assignment into a procedure would not make any
+        difference, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            f (value(p, "int:8")) {
+                static(a, "int:8");
+                x(a <- p);
+                return(a);
+            }
+
+            procedure
+            x (static(o, "int:8") <- value(i, "int:8")) {
+                o <- i + i;
+            }
+        \end{lstlisting}
+        
+        is still erroneous for the same reason - the procedure call
+        effectively just substitutes its body in place of the call so we
+        still get the previous code.
+
+        A target mode function can contain in-line target statements if
+        it isolates them within a module. That way those statements are
+        quite separate from the function body.
+        For example, suppose that we wish to use a static variable which has been
+        delayed by one clock cycle. We could write a function for that as
+        follows -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            delay (value(p, "int:8")) {
+               static(a, "int:8");
+               [
+                   a <- p;
+               ]
+               return(a);
+            }
+        \end{lstlisting}
+        The function body is now legal as it does not itself contain any in-line
+        target statements but generates a separate module which does contain
+        such statements. The function simply returns the value of a static
+        variable. That static variable is assigned in the independent module
+        (a named module call could have been used instead of an un-named module).
+        
+        Note that in the above example the assignment of the static variable {\bf
+        a} is unconditional and thus occurs every clock cycle regardless of when
+        the return value of the function is used. In some cases we may need to
+        ensure that the assignment only occurs when we use the value of the
+        function. This can be done by using the inbuilt function {\bf used()}
+        \autorefph{sec:ifused}. This function can only appear in the body
+        of a function definition so to use it in an associated module it must
+        be passed as a value mode variable to the module -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            function
+            f (value(p)) {
+                static(a, type(p));
+                value(used, "log", used());
+
+                [
+                    when (used)
+                        a <- p;
+                ]
+
+                return(a);
+            }
+        \end{lstlisting}
+        
+        As an aside there are two simplifications in this version. Firstly
+        the function parameter type has been omitted. It will take the type of
+        the argument, which is fine in this case. Secondly the type of static
+        mode variable {\bf a} has been copied from the function parameter rather
+        than being explicitly given. These make the code more succinct and also
+        provide some generality in the function. The type of the argument to
+        the function could be any target type however complex.
+        
+        Note that any source statement containing a call to this function, and
+        there may be any number, will create a separate instance of the entire
+        function code and its nested module. This is true even if there are
+        multiple calls within the same statement; each generates a separate
+        instance.
+        
+        As a note of caution suppose we were to call function {\bf f()} with an
+        argument which is a queue or an expression containing queue reads?
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            static(s, "uint:8");
+            queue(q, "uint:8");
+            
+            .
+            .
+            .
+            s <- f(q);
+            .
+            .
+        \end{lstlisting}        
+        
+        The behaviour of this code would probably not be what we would want. The
+        module would repeat execution of the {\bf when} until the function value
+        is used at which time it will attempt to do the assignment to {\bf a}. If
+        all queues in {\bf p} are available (not empty) then the assignment will
+        occur and the function will return the value of {\bf a} as before. If
+        however all queues in {\bf p} are not available that assignment will wait
+        until they are available. Meanwhile the function has no dependence on {\bf
+        p} and will simply return the value of {\bf a}. The value of {\bf a} will
+        belatedly change when {\bf p} becomes available. An attempt to fix the
+        problem using a {\bf sync} will also not work as the queue read is
+        actually in a different module to that in which the {\bf sync} appears -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            .
+            .
+            sync {          // WONT WORK!
+                s <- f(q);  // q is read in different module
+            }
+            .
+            .
+        \end{lstlisting}
+        
+        The solution is to abandon the attempt to use a function and a separate
+        module and instead simply code it in the following straightforward way -        
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            static(s, "uint:8");
+            queue(q, "uint:8");
+            static(a, type(q));
+            
+            .
+            .
+            sync {
+                a <- q;
+                s <- a;
+            }
+            .
+            .
+        \end{lstlisting}
+        
+        The declaration of a could be moved into the sync block since
+        it is not used outside that block -
+       
+        \begin{lstlisting}[gobble=8, language=threepl]
+            static(s, "uint:8");
+            queue(q, "uint:8");
+            
+            .
+            .
+            sync {
+                static(a, type(q));
+                a <- q;
+                s <- a;
+            }
+            .
+            .
+        \end{lstlisting}
+        
+        and the whole sync block could be placed in a procedure -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            static(s, "uint:8");
+            queue(q, "uint:8");
+            
+            .
+            .
+            p(s <- q);
+            .
+            .
+            procedure
+            p (static(ss) <- queue(qq)) {
+                sync {
+                    static(a, type(qq));
+                    a <- qq;
+                    ss <- a;
+                }
+            }
+        \end{lstlisting}
+
+        
+        A function call may be followed by subscripts and field identifiers
+        where the function returns an arrays, struct or class (arbitrarily nested).
+        
+        If a function returns a pointer then it may be dereferenced using
+        the \verb'->' operator, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           a = f()->;
+        \end{lstlisting}
+        The \verb'->' operator may be followed by subscripts or field identifiers,
+        e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           a = f()->[i].f2;
+        \end{lstlisting}
+  
+        These function call constructions may also appear on the left hand side
+        of an assignment statement, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           f()->[i].f2 = 5;
+        \end{lstlisting}
+        
+        A function call can also appear as an incrementing or decrementing
+        statement. In that case it will be followed by the \verb'->' operator
+        and a ++ or --, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           f()->[i].f2++;
+        \end{lstlisting}
+        If the variable pointed to by the function return is static then
+        this will generate a target statement.
+        
+        The example could be further complicated by a multiply indirect
+        function call and the return of an array of pointers, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           a[2]->b.f1[j]->().f3[4]->[i].f2++;
+        \end{lstlisting}        
+        
+
+
+
+
+
+
+
+    \section{Modules}\label{sec:modules}
+
+        \index{module}
+        A module is a subroutine whose main purpose is to create execution
+        threads in the FPGA.
+        
+        Modules are similar to procedures but differ in two respects -
+        \blist
+        \item   modules are single destinations for queues
+                whereas procedures have no particular significance when
+                reading and writing queues
+        \item   module top level in-line target statements are each enclosed
+                in individual infinite loops, but a procedure can only
+                generate one in-line target statement which is inserted
+                in-line back at the calling location
+        \blend
+        Thus modules form the base of target code execution by initiating
+        execution threads whereas procedures are simply a means of re-using
+        immediate code or improving readability by subdivision. An execution
+        thread thus initiated can only terminate if it encounters a {\bf stop()}
+        procedure call (\autorefph{sec:ipstop}) around which there is no parallel
+        execution path.
+        
+        Module definitions can be nested but scope rules determine where they can
+        be called.
+
+        Module and procedure calls can be nested but executable target statements
+        directly within each module have independent infinite loops, i.e.
+        execution threads. Where modules are nested each individual module is
+        a separate queue destination regardless of the nesting. For example -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            m1(q);
+            
+            module m1 (queue(q1)) {
+                ... <- q1;
+                .
+                .
+                m2(q1);
+                .
+            }
+            
+            module m2 (queue(q2)) {
+            .
+                ... <- q2;
+                .
+            }
+        \end{lstlisting}
+        Module m1 is called and in turn calls module m2. Each of the modules
+        reads the queue and is thus a destination for the queue. Thus to pop
+        an entry from the queue both reads must execute, whether simultaneously
+        or at different times.
+
+        Modules usually communicate with each other mainly by means of queues,
+        but variables of other target modes can also be used - a module
+        need not use queues at all. A module need not contain any target
+        executable statements at all, in which case it is effectively a procedure.
+
+        Queues to be read or written by a module may be passed in the call via
+        parameters (named module) or else may be in the global scope or in the
+        same file scope (file or inline modules). There may be several places in
+        a module where a queue is written. These queue writes will either be
+        mutually exclusive events or will simultaneously write to different
+        parts of a compound type. Writes to words within a queue constitute
+        separate queue writes if they occur at different times (clock cycles)
+        but are a single queue write if they occur simultaneously (the same
+        clock cycle)\footnote{Simultaneous writing to the same word in a queue
+        is an undetected execution error. Where this is not precluded by the
+        logic it can be avoided by arbitration using the waitpri control
+        structure \autorefph{sec:waitpri}}.
+
+
+        
+        Every un-nested target statement within a module is placed within an
+        infinite loop. Thus if a file module (source file) contained only -
+        \begin{lstlisting}[gobble=12, language=threepl]
+            static(s, "uint:8");
+           
+            s++;
+        \end{lstlisting}
+        then the only target executable statement, {\bf s++}, would execute on
+        every clock cycle. If the statement were nested, say in a {\bf when}
+        statement,
+        \begin{lstlisting}[gobble=12, language=threepl]
+            value(l, "log");
+            static(s, "uint:8");
+           
+            when (l)
+            s++;
+        \end{lstlisting}
+        then the top level statement, the {\bf when}, would execute on every clock
+        cycle but the nested increment statement would only execute on the clock
+        cycles where {\bf l} is true. Similarly a sequential thread would be created
+        by
+        \begin{lstlisting}[gobble=12, language=threepl]           
+            seq {
+                .
+                ... target statements
+                .
+            }
+        \end{lstlisting}
+        where the sequential block would repeat indefinitely but the enclosed
+        target statements would execute sequentially. The sequential execution
+        could be initiated by a boolean -
+        \begin{lstlisting}[gobble=12, language=threepl]           
+            value(l, "log");
+            
+            when (l) seq {
+                .
+                ... target statements
+                .
+            }
+        \end{lstlisting}
+        While {\bf l} is false the {\bf when} will execute on every clock cycle.
+        When {\bf l} is true the {\bf when} will execute the sequential block,
+        which will take a number of clock cycles. On completion of the sequential
+        block the when will again execute as before.
+        
+        Any nested modules within a module operate as separate modules,
+        independent except for any shared variables.
+        
+        Another simple type of module is an in-line module. This is simply
+        a code block enclosed in brackets, e.g.
+        \begin{lstlisting}[gobble=12, language=threepl]           
+            [
+                .
+                ... target statements
+                .
+            ]
+        \end{lstlisting}
+        Here again each un-nested statement will execute in its own infinite loop.
+        
+        An in-line module is "called" when immediate execution reaches it. Thus
+        it can be called multiple times (it can even be enclosed in a loop)
+        and each occurence produces a separate instance of the target code
+        within the module.
+        
+        A named module is a declared module. It has an identifier and optional
+        input and output parameters, e.g.
+        \begin{lstlisting}[gobble=12, language=threepl]           
+            module m1 (value(out, "uint:16" <- int(i), value(in, "uint:8")) {
+                .
+                ... statements
+                .
+            }
+        \end{lstlisting}
+        Again un-nested statements are enclosed in infinite loops.
+        
+    
+
+        
+        There are six types of module -
+        \blist
+        \item   file modules are created by a {\bf module} statement which imports
+                the source code for the module from a source file. The main
+                source file also forms a file module.
+        \item   named modules are declared in the source code in a similar way
+                to procedures and functions. They are invoked by name.
+        \item   inline modules occur as source code enclosed in brackets and are
+                called implicitly at the point at which they occur.
+        \item   leader modules are created by a {\bf leadermodule()} statement
+                and are called automatically once prior to execution of the main
+                source code.
+        \item   trailer modules are created by a {\bf trailermodule()} statement
+                and are called automatically once following completion of
+                execution of the main source code.
+        \item   post processing modules are created by a {\bf postmodule()}
+                statement and are called automatically once following completion
+                of execution of any trailer modules.
+        \blend
+        
+        Named modules can be invoked as often as required since they are called
+        by name. Inline modules can be invoked more than once
+        by being enclosed in a loop. File modules can only be invoked once.
+
+        \subsection{file modules}
+
+            \index{module!file}
+            When the main source file is read by 3PL that source file becomes
+            a module, called a file module.
+            Additional file modules are imported by a module statement, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                module "spi.3pl"
+            \end{lstlisting}
+            A file module can have only one instance, i.e. it can only be imported
+            once.
+            
+            A file module has no parameters and thus cannot be
+            passed arguments.
+            
+            A feature of a file module is that it has its own scope and can thus
+            be used to hide variables, limiting their access to code within the
+            file module, including nested modules, procedures, functions and
+            classes.
+
+
+        \subsection{named modules}
+
+            \index{module!named}
+            Named modules are declared and invoked as described in the
+            previous section. Each call creates a new instantiation of a
+            module.
+            
+            A module call will normally be made at the top level with respect to
+            target code but this need not be the case. In particular there
+            is occasional need to include a module call within a function
+            body. For example a function to delay a value by one clock cycle
+            cannot have target executable statements in its body; it
+            can only return expressions. However, a module to create the delay can
+            be called within the function body since the module
+            code executes independently. The function would return an
+            output value from the module.
+            
+            It is allowed, but not good practice, to call modules from within
+            target structures such as {\bf when}, {\bf branch}, {\bf seq while},
+            {\bf par while}, {\bf sync while}, {\bf seq do while}, {\bf par do
+            while} or {\bf sync do while}. Since the module target code does not
+            execute in-place but in a completely separate execution environment a
+            module call within these structures will appear misleading. In
+            particular a module call within a target loop structure will not be
+            subject in any way to the loop iterations. Note that a module call
+            within an immediate loop will indeed be called subject to loop
+            iterations.
+                        
+            A module may return from within its code block by the statement {\bf
+            return;} (this includes file modules and inline modules). If there
+            is no return statement a module code body simply terminates as usual
+            at the end. For the initial file module, whether it executes a
+            return or simply executes to the last statement, any trailer modules
+            are executed after it terminates.
+
+        \subsection{inline modules}
+
+            \index{module!in-line}
+            In-line modules are intended for very simple modules where the
+            source code would be more verbose were they to be
+            declared and called in the usual way.
+
+            An inline module is written in-line within square brackets,
+            i.e.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                [
+                    body
+                ]
+            \end{lstlisting}
+            
+            This construct both defines the module and also represents the call,
+            i.e. when immediate code execution reaches the in-line module the
+            module is 'called'. An alternative way to look at it is that immediate
+            code flows into and through the in-line module and if a return statement is
+            encountered this is similar to a continue statement in a loop, i.e. it
+            skips to the end of the block. The square brackets delineate the code
+            block as a separate source or destination for any queue reads or writes
+            that it contains, as for all modules.
+            
+            An in-line module has no parameters and thus cannot be passed
+            arguments.
+
+            An inline module is a statement in a code body, but while it
+            is allowed to appear within target control structures such as
+            {\em when}, {\em sync} etc. it does not make sense to do so
+            as the code for the module is not generated in-line but as an
+            independent entity. It is normal to include inline modules
+            within immediate control structure such as {\em if}, {\em
+            for} etc. to make the calls conditional or to replicate them,
+            during immediate execution, for example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+                for (int(i) ; i<6 ; i++)
+                    [
+                        body
+                    ]
+            \end{lstlisting}
+            which would instantiate six copies of the module. Clearly to make
+            sense the content of the module would differ in some way on each
+            iteration.
+
+            An inline module may read and write queues. These queues may be created
+            outside the module but in an accessible scope or may be created inside
+            the module. there are no module parameters or arguments so queues cannot
+            be passed to the module by that means.
+ 
+            An inline module has a block scope similar to braced code blocks in
+            control structures. The module can access variables back to the
+            enclosing procedure, function or named module. It can also access
+            its file scope and global scope.
+        
+            An inline module code block may return conditionally prior to the end
+            of the block by the statement {\bf return;}, otherwise it will return
+            after the last statement.
+
+
+
+        \subsection{leader modules}
+
+            \index{module!leader}
+            Leader modules are declared by a {\bf leadermodule()} statement.
+            They are created during parsing, not during immediate execution.
+            They are invoked prior to the start of immediate execution. An
+            optional argument to the statement can be used to determine the
+            order of execution of leader modules.
+            
+            A leader module has two parameters, a comment string and an optional
+            order integer. The comment string is used to report execution of the
+            leader module in the report file if present. The order integer is
+            used to order the execution of multiple leader modules.
+
+        \subsection{trailer modules}
+
+            \index{module!trailer}
+            Trailer modules are declared by a {\bf trailermodule()} statement.
+            They are created during parsing, not during immediate execution.
+            They are invoked following completion of immediate execution of
+            the main program. An optional arguments to the statement can be
+            used to determine the order of execution of trailer modules.           
+            
+            A trailer module has two parameters, a comment string and an
+            optional order integer. The comment string is used to report
+            execution of the trailer module in the report file if present. The
+            order integer is used to order the execution of multiple trailer
+            modules.
+            
+            Trailer modules are used to finalise target code that by its
+            nature remains incomplete during execution. This is usually
+            external interfaces to other devices such as CPUs, memory or other
+            FPGAs. For example a multiplexed interface may have a
+            number of ports created during immediate execution which are
+            unknown in number until main program execution has completed.
+            Trailer code can then generate the necessary connecting logic.
+
+        \subsection{post-processing modules}
+
+            \index{module!post-processing}
+            Post-processing modules are declared by a {\bf postmodule()}
+            statement. They are created during parsing, not during immediate
+            execution. They are invoked following completion of immediate
+            execution of the main program and any trailer modules. An optional
+            arguments to the statement can be used to determine the order of
+            execution of trailer modules.
+            
+            A post-processing module has two parameters, a comment string and an
+            optional order integer. The comment string is used to report
+            execution of the post-processing module in the report file if
+            present. The order integer is used to order the execution of
+            multiple post-processing modules.
+            
+            Post-processing modules are intended to invoke place-and-route
+            tools following successful generation of netlist and constraint
+            file(s). This can be done by using calls to inbuilt procedures
+            {\bf exec()} or {\bf shell()}.
+            
+            
+
+
+
+
+     \section{Classes}\label{sec:classes}
+     
+        The class structure is provided for complicated interfaces where multiple
+        ports may be added to an interface during immediate execution and the
+        logic to tie it all together is added at the end. For most straightforward
+        applications classes are not needed and indeed 3PL existed for two decades
+        before the need for classes was finally recognised.
+       
+        A class provides a wrapper around a collection of variables and associated
+        modules, procedures, functions and nested classes. In its simplest form
+        it provides functionality similar to a struct -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class c () {
+                int(i, 34);
+                static(s, "uint:8");
+            }
+        \end{lstlisting}
+        
+        An instance of this class can be created by -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            var(cl, "class");
+            cl = c();
+        \end{lstlisting}
+        
+        or more simply -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            var(cl, "class", c());
+        \end{lstlisting}
+                
+        or even more simply -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class(cl, c());
+        \end{lstlisting}
+        
+        Thus a class is called in a similar way to a function but differs in that -
+        \blist
+        \item   A call to a class only ever returns an immediate value of type
+                "class".
+        \item   Unlike a function call, a class call can have output arguments.
+        \blend        
+        
+        Variables within the above class instance {\bf cl} can be accessed as
+        in the following examples -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            j = cl.i;
+            cl.s++;
+        \end{lstlisting}
+        
+        Each class instance also has a variable {\bf this} of type "class"
+        defined which is the current class instance. 
+        
+        Like modules, procedures and functions, variables are re-created on
+        each call and hence their values can be different in different instances
+        of the class.
+        
+        It should be noted that parameters created in the call to the class are
+        local variables (as is the case with modules, procedures and functions)
+        and so they can also be accessed in the same way as the other class
+        variables.
+        
+        There are cases where it would be convenient to share data between class
+        instances and this can be done by using a common block -
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class c () {
+                common {
+                    value(v, "log");
+                }
+                int(i, 34);
+                static(s, "uint:8");
+            }
+        \end{lstlisting}
+        
+        here variable {\bf v} is created once only when the class is called to
+        create the first instance of the class. All further instances will share
+        the same variable and its value. Common block variables can be both
+        evaluated and assigned in any instance of the class and any changes will
+        be reflected in all instances of the class. Note that variables are
+        only created in the class common block on the first call, they cannot
+        be created by later calls.
+        
+        The common block must be at the top level within the class, i.e. it
+        cannot be enclosed within any other control structure.
+        
+        If common class variables are to be given initial values derived from
+        arguments to the first class call then it is probably good practice to
+        call the class once initially to create the common class variables and
+        employ conditional statements to return immediately having done that. If
+        the initialisation call is not intended to create an instance then the
+        return value can be discarded by calling the class using a procedure call
+        syntax. Later calls to the class will automatically ignore the common
+        block. Using key/value argument/parameter assignments makes it easy to
+        hide this once-only code, e.g.
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class(cl);              // create variable of type "class"
+            
+            c(v1=x);                // call to initialise common
+            cl = c(i1=5, i2=7));    // call to create a class instance
+            
+            // class definition
+            class c (int({i1, i2}), value(v1, "log")) {
+                common {
+                    value(v, "log", v1);    // copy v1 to common v
+                }
+                if (matched(v1)
+                    return; // is initial call - ignore the rest.
+                    
+                int(i, 34);
+                static(s, "uint:8");
+                .
+                i = i1 + i2;
+                .
+                .
+            }
+        \end{lstlisting}
+        The above could also have instead -
+        \begin{lstlisting}[gobble=8, language=threepl]
+                if (!matched(i1) && !matched(i2))
+                    return;
+        \end{lstlisting}
+                
+        A class can contain definitions of modules, procedures, functions and
+        classes and these can be called as in the following example -
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class(cl, c());
+            int(j);
+            static(ss, "uint:8");
+            
+            cl.p(j <- 4);   // assigns 4 * cl.i to j
+            ss <- cl.f();   // FPGA code assigning cl.s + 5 to ss
+            
+            class c () {
+                int(i, 34);
+                static(s, "uint:8");
+                
+                procedure p (int(out) <- int(in)) {
+                    out = in * i;
+                }
+                
+                function f () {
+                    return(s + 5);
+                }
+            }
+        \end{lstlisting}
+        
+        Here the first assignment statement is immediate, calling class
+        procedure {\bf p()}. Parameter {\bf in}, whose argument is 4, is
+        mutiplied by class variable {\bf i} and the result is assigned via parameter
+        {\bf out} to {\bf j}.
+        
+        The second assignment statement is target (FPGA) code. The class
+        function {\bf f()} is called and returns the sum of the static 8-bit
+        unsigned integer class variable {\bf s} and constant 5 and the returned
+        value is assigned to static variable {\bf ss}.
+        
+        A class cannot contain in-line target statements in its code body,
+        either directly or via a procedure call.
+        
+        Modules, procedures and functions can have their own local variables as
+        usual but also have read and write access to variables in the class in
+        which they are defined (as in the example above). They also can call
+        other modules, procedures, functions and classes defined within the
+        class.
+        
+        A module, procedure, function or class defined within a class may
+        be preceded by the keyword {\bf private}, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class c () {
+                .
+                .
+                .
+                
+                private
+                procedure p (int(out) <- int(in)) {
+                   .
+                   .
+                }
+                
+                function f () {
+                    .
+                    .
+                }
+            }
+        \end{lstlisting}
+        which means that the module etc can only be called from within the class,
+        not via class instance. For example in -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+            class(cl, c());
+            .
+            cl.p();
+            i = cl.f();
+            
+            class c () {
+                .
+                .
+                
+                private
+                procedure p (int(out) <- int(in)) {
+                    out = in * i;
+                }
+                
+                function f () {
+                    return(s + 5);
+                }
+            }
+        \end{lstlisting}
+        the call {\bf cl.p()} will fail whereas {\bf i = cl.f()} will succeed.
+

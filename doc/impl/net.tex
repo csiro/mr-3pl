@@ -1,0 +1,216 @@
+The {\bf Net} class is small, its main function being to hold a net
+identifier and associated NET class instance. The net connections to
+elements are instances of class {\bf Net} (a net identifier wrapper),
+not class {\bf NET} (the actual net). When two {\bf Net}s are connected
+together it is not necessary to visit all elements to which the {\bf
+Net}s are connected, instead one of the associated {\bf NET} class
+instances is merged into the other and both {\bf Net} instances now
+contain the same {\bf NET} instance.
+
+A {\bf Net} constructor which is not passed an identifier will create
+one consisting of "n" with an appended unique integer.
+
+The member variables for {\bf Net} are -
+
+{\bf private String id} - the net identifier.
+
+{\bf private NET net} - the actual net.
+
+There are six other member variables, input\_elements, input\_ports, output\_elements,
+output\_ports, input\_index and output\_index, which are just temporary variables
+used when traversing connected elements.
+
+There are some class variables -
+
+{\bf private static int icount} - an integer used to form unique
+net identifiers of the form "n123". It is incremented after each use.
+
+{\bf private static int hashcode\_count} - an integer used to form a
+crude unique hash code for use by methods {\bf equals()} and {\bf
+hashCode()} on instances of class {\bf NET}. These methods are used by
+HashMap and HashSet classes to distinguish or equate NET class
+instances.
+
+{\bf private static HashMap\verb'<'String, Net\verb'>' identmap = new HashMap\verb'<'String,
+Net\verb'>'(20000)} - a map of nets. The key is a net identifier and the
+associated value is class Net.
+
+{\bf private static HashSet\verb'<'NET\verb'>' instances = new HashSet\verb'<'NET\verb'>'(20000)} -
+the set of NETs. This set is traversed when writing nets to the netlist
+file.
+
+{\bf public static Net LO} \\
+{\bf public static Net HI} -
+globally available GND and VCC nets. {\bf LO} and {\bf HI} are assigned
+in the constructor XElements() because they are then connected there to
+newly constructed Elements GND and VCC.
+
+
+
+
+For an operation on a net the net identifier is used to extract the
+{\bf Net} class instance from static map {\bf instances}. The {\bf Net}
+in turn contains variable {\bf net}, class {\bf NET}, which is the
+actual net. Many instances of net identifier class {\bf Net} will
+contain the same actual {\bf NET}, meaning that they are connected.
+
+The main methods are described in the following subsections.
+
+\subsection{constructors and class creation methods}
+
+    Constructor {\bf Net()} creates an un-named net with a unique
+    identifier of the form "n123".
+
+    A net with a constructed identifier can also be produced by
+    constructor
+    \begin{lstlisting}[gobble=4, language=java]
+        public Net (String header)
+    \end{lstlisting}
+    which creates a net with a unique identifier by concatenating a
+    unique integer to the header string supplied. This is used for
+    signals which are not derived from source code variables but which
+    are easier to trace in the netlist if given meaningfull identifier
+    headers.
+
+    A named Net can be constructed using constructor
+    \begin{lstlisting}[gobble=4, language=java]
+        public Net (String ident, boolean large)
+    \end{lstlisting}
+    which creates a net using the supplied identifier. The second
+    parameter {\bf large}, if true, causes lists inside class
+    NET to be created with a large initial size (10000) instead of the
+    default size. This is used for Nets {\bf GND} and {\bf VCC} as they have
+    a very large number of connections.
+
+    A named net can also be constructed using method
+    \begin{lstlisting}[gobble=4, language=java]
+        static public Net get (String ident)
+    \end{lstlisting}
+    which returns a named net if it already exists and otherwise
+    constructs it.
+
+    An array of unnamed Nets can be created by method
+    \begin{lstlisting}[gobble=4, language=java]
+        static public Net[] netArray (int size)
+    \end{lstlisting}
+    where parameter {\bf size} provides the dimension of the array.
+
+\subsection{method init()}
+
+    This method re-initialises the class static variables prior
+    to any run of 3PL.
+
+\subsection{method equals()}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public boolean equals (Object o)
+    \end{lstlisting}
+    This method returns true if the argument is the same Net or
+    is connected to the object Net (they share the same NET class
+    instance). If the argument is null or not class Net then
+    false is returned.
+
+\subsection{connection to an Element}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public void connect (Element e, String port, PortType type)
+    \end{lstlisting}
+    This method connects a Net to an Element port but only modifies the
+    Net structure, not that of the Element to which it connects. This is
+    only called from methods {\bf addInput()}, {\bf addOutput()} or {\bf
+    addTS()} in class Element which handle the related changes in that
+    class.
+
+\subsection{disconnection from an Element}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public void disconnect (Element e, String port)
+    \end{lstlisting}
+    This method disconnects a Net to an Element port but only modifies
+    the Net structure, not that of the Element to which it is connected.
+    The method is only called in -
+    \blist
+    \item   Element.strip()
+    \item   Element.removeNet()
+    \item   TDECode.optimiseXOR()
+    \item   TDECode.inputEliminate()
+    \blend
+    In each case related changes to the Element are carried out
+    elsewhere
+
+
+\subsection{connection to another Net}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public void connect(Net n) {
+            if (n.equals(LO) || n.equals(HI)) {
+                n.connect(this);
+                return;
+            }
+
+            if (this.equals(n))
+                throw new ExEx("SYSTEM ERROR - netlist self-connect");
+
+            if ((getNumOutputs() + n.getNumOutputs()) > 1) {
+                msg("connection of nets will result in multiple sources");
+                .
+                .
+                .
+
+            }
+
+            // Add all element connections of the new Net to this Net.
+            net.nets.addAll(nnet.nets);
+            net.elements.addAll(nnet.elements);
+            net.ports.addAll(nnet.ports);
+            net.porttypes.addAll(nnet.porttypes);
+            net.inports += nnet.inports;
+            net.outports += nnet.outports;
+            net.tsoutports += nnet.tsoutports;
+
+            // Add in the new ident list.
+            net.idents.addAll(nnet.idents);
+
+            // Append UCF and NCF strings from Net n to this Net.
+            addConstraints("U", nnet.getConstraints("U"));
+            addConstraints("N", nnet.getConstraints("N"));
+
+            instances.remove(n.net);
+
+            // Change all Nets associated with n.net to reference net.
+            for (Net nn : nnet.nets)
+                nn.net = net;
+        }
+    \end{lstlisting}
+    This method connects two Nets. It does this by effectively
+    merging the two NET subclasses so the the Nets share the same
+    NET subclass; it adds the data from one NET to the other NET
+    then deletes the former. It also traverses all Nets from the merged
+    NET to change their nested NET class instance to the merged
+    instance. If the argument Net is connected to GND or VCC then
+    the method calls itself with the object and argument interchanged.
+    This is to ensure that the Net identifier "GND" or "VCC"
+    remains at the head of the list of connected identifiers and
+    hence when {\bf setPrefIdent()} is called from TDEList.ncode()
+    the "GND" or "VCC" will be encountered first in the list and will
+    be set as the final preferred identifier (otherwise an "OPAD..."
+    identifier might be encountered and prevail and the GND net in
+    the netlist file would be labelled thus).             
+
+\subsection{method addProperty()}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addProperty (String p, String v) {
+            net.properties.put(p,  v);
+        }
+    \end{lstlisting}
+    This method adds a property string to a net. P is the property identifier
+    and v is the value string.
+
+\subsection{Output Net instance to the EDIF netlist file}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        static public void outputInstances (PrintWriter pw)
+    \end{lstlisting}
+    This method writes all Net instances to the EDIF file including
+    all Element port connections.

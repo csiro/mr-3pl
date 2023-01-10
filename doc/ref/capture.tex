@@ -1,0 +1,141 @@
+\pagebreak
+
+\section{Capture a data stream - capture.3pl}\label{chap:capture}
+
+    \index{library!capture.3pl}
+    This library contains a single function. That function captures a
+    data stream when triggered.
+    
+    This library must be incorporated by using a {\bf source} statement, i.e.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       cource "capture.3pl"
+    \end{lstlisting}
+
+
+
+    \subsection{library modules}
+    
+    
+        \subsubsection{capture - capture a data sequence}\label{sec:lmcapture}
+
+            {\bf Library: capture.3pl}
+
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               queue(out),
+               static({running, triggered}, "log")
+               <-
+               value(in),
+               int(length),
+               value(trigger_position, "uint:20", 0),
+               value({start, trigger, readout}, "empty")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable\\
+            {\bf running} is true when data storage is running\\
+            {\bf triggered} is true when a trigger has occured\\
+
+            {\bf Input parameters:} \\
+            {\bf in} is the data stream input.\\
+            {\bf length} is the length of captured data.\\
+            {\bf trigger\_position} controls the length of data captured
+            after the trigger.\\
+            {\bf start} is asserted to start data storing.\\
+            {\bf trigger} is asserted to halt data storage after
+            some number of samples.\\
+            {\bf readout} is asserted to trigger stored data readout.\\
+
+            {\bf description:} \\
+            The {\bf capture()} module acts like a logic analyser. Following
+            assertion of {\bf start} input data {\bf in} is stored continuously,
+            the data buffer wrapping around. When {\bf trigger} is asserted data
+            will continue to be stored such that the data value that occured
+            coincident with the trigger is stored at the point in the stored
+            data given by {\bf trigger\_position} (buffer wraparound is taken
+            care of).
+
+            The length of captured data is given by immediate input parameter
+            length. This must be a power of 2 and may have values -\\
+            256 to 4096 for Virtex and Virtex-E\\
+            512 to 16384 for Virtex2 and Virtex2 Pro\\
+            1024 to 32768 for Virtex5.
+
+            The input data may be any type.
+
+            Input parameter {\bf start} starts data recording. If the argument
+            does not contain queue reads it must be type "log" in which case the
+            transition from false to true starts recording (it may stay true for
+            some time as only the transition is recognised). If the argument
+            does contain queue reads then it may be any type, including "null",
+            and arrival of a datum starts recording (the type and value is not
+            significant). If this parameter is not supplied with an argument
+            then data recording will start following global logic start and will
+            continue following readout. {\bf start} is ignored if already
+            running or during readout.
+
+            Input parameter {\bf trigger} finalises the data capture, data
+            recording running on for some time if necessary to position the
+            captured data around the trigger position. If the argument does not
+            contain queue reads it must be type "log" in which case the
+            transition from false to true finalises the data capture (it may
+            stay true for some time as only the transition is recognised). If
+            the argument does contain queue reads then it may be any type,
+            including "null", and arrival of a datum finalises the data capture
+            (the type and value is not significant). If the trigger position is
+            not zero then data recording must have started an appropriate number
+            of clock cycles prior to the trigger to have stored valid data. The
+            trigger is ignored if data recording is not running, the trigger has
+            already occured or if readout is in progress.
+
+            Input parameter {\bf readout} starts a readout of the stored data to
+            the output queue. If the argument does not contain queue reads it must
+            be type "log" in which case the transition from false to true starts
+            the readout (it may stay true for some time as only the transition
+            is recognised). If the argument does contain queue reads then it may
+            be any type, including "null", and arrival of a datum starts the
+            readout (the type and value is not significant). If the output queue
+            blocks, readout will pause until write availability is restored. If
+            this parameter is not supplied with an argument then readout will
+            occur automatically following a trigger and subsequent completion of
+            data capture. {\bf readout} is ignored if data recording is running.
+
+            The input parameter {\bf trigger\_position} may have either an
+            immediate or target argument. The trigger position is recognised
+            each time a trigger occurs. The trigger position is the index into
+            the output data block of the clock cycle in which the trigger
+            occured.
+
+            The output queue {\bf out} should be the same type as {\bf in} (it
+            can differ if it can nevertheless be assigned from the type of {\bf
+            in}, e.g. it may be an integer type of different width).
+
+            Output parameter {\bf running} is true when data reecording is
+            running, including after the trigger.
+
+            Output parameter {\bf triggered} is true following the trigger
+            input. It is false on completion of readout or when data recording
+            is restarted if no readout is performed.
+ 
+ 
+ 
+
+
+    \subsection{library procedures}
+    
+        None.
+
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

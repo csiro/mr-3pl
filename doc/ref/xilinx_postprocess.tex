@@ -1,0 +1,122 @@
+\pagebreak
+
+\section{Xilinx netlist postprocessing module - xilinx/postprocess.3pl}\label{ch:pp}
+
+    \index{library!xilinx/postprocess.3pl}
+    This module converts the EDIF netlist produced by 3PL to a configuration
+    file. It has a single procedure.
+    
+    This library must be incorporated by using a postmodule statement, e.g. -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       postmodule ("xilinx/postprocess.3pl");
+    \end{lstlisting}
+    
+    See \autorefph{sec:mpfcdecl} and \autorefph{sec:xpp}.
+    
+    More than one postprocessing module can be specified in which case an
+    additional integer argument can be supplied to specify ordering. If omitted
+    the order in which the modules have been added to the list will be the order
+    of execution. Thus far only this module has been used.
+    
+
+
+    \subsection{library modules}
+
+        None.
+
+
+
+    \subsection{library procedures}
+
+        \subsubsection{postprocess - post-process the netlist file}\label{sec:lppostprocess}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                global procedure
+                postprocess(
+                    str(rname),
+                    str(tool),
+                    float(minver, 1.0),
+                    float(maxver, 9999.0)
+                ) {}
+            \end{lstlisting}
+
+
+
+            {\bf Output parameters:} \\
+            
+            None.
+
+            {\bf Input parameters:} \\
+            \begin{tabular}{| l | l | l | l |}
+            \hline
+                            & mode      & type   & \\
+            \hline \hline
+            {\bf rname}     & immediate & str    & optional file name for recipe file \\ \hline
+            {\bf tool}      & immed     & str    & "ise" or "vivado" \\ \hline
+            {\bf minver}    & immediate & float  & minimum version number  \\ \hline
+            {\bf maxver}    & immediate & float  & maximum version number \\ \hline
+            \end{tabular}
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure executes the Xilinx place-and-route tools to
+            generate the configuration bit file from the EDIF netlist file
+            produced by 3PL. To do this it executes the Xilinx tools
+            on the host CPU via calls to exec().
+            
+            {\bf rname} optional and is the name of a file containing a recipe
+            of commands. If supplied it overrides the recipe file specified by
+            directive {\bf postProcessRecipe}. Recipe files
+            {\bf ise\_cpld.cmd}, {\bf ise\_fpga.cmd}, {\bf ise\_xflow.cmd}
+            and {\bf vivado.tcl} are available in the directory
+            containing postprocess.3pl.
+            
+            {\bf tool} "ise" or "vivado" must be supplied and specifies the
+            main place-and-route tool to be used.
+            
+            If directives {\bf XILINX\_ISE} or {\bf XILINX\_VIVADO} are supplied
+            (as appropriate to the platform) then this specifies the specific
+            path of the place-and-route tool to execute. Otherwise the path
+            specified by directive {\bf XILINX} will be used along with  {\bf
+            minver} and {\bf maxver} to select the specific version of the ISE
+            or Vivado software. The highest version \verb'>=' minver and
+            \verb'<=' maxver will be used.
+
+
+            if directive {\bf postProcessAppendFile} exists it specifies
+            a file to append to the bit file, usually a .info file
+
+            if directive {\bf postProcessCompress} exists and is true
+            the bit file will be compressed.
+
+            If directive {\bf postProcessFilter} exists it specifies that the
+            standard output from the place-and-route tools should be filtered.
+            Values may be -
+            \blist
+            \item   "error" - lines starting with "ERROR" are retained
+            \item   "critical" - the above plus lines starting with "CRITICAL" are
+                    retained
+            \item   "warning" - the above plus lines starting with "WARNING" are
+                    retained
+            \item   "info" - the above plus lines starting with "INFO" are
+                    retained
+            \blend
+            any other values being ignored. If this directive is not defined or
+            has an invalid value then no filtering is applied.
+    
+    
+    
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

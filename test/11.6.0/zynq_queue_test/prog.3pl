@@ -1,0 +1,15 @@
+//module directive("BOARD")
+module "boards/avnet/microzed_7010.3pl"
+
+class(cpu, cpu_api());
+
+queue(p, "uint:32"); attributes(p, depth=512, domain=c100);
+
+cpu.read(p, "PR", wordcount=true, ilevel=true);
+cpu.write(p <- "PW", freecount=true, ilevel=true);
+cpu.read(?p, "PE");
+cpu.read(queuewords(p), "PC");
+
+static(fred, "uint:16", 1234);
+cpu.read(fred, "RFRED");
+cpu.write(fred <- "WFRED");

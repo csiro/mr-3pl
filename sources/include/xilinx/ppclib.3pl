@@ -1,0 +1,607 @@
+// Include file for Xilinx Embedded PPC (in Virtex II, II Pro, 4, 5)
+nosource
+
+log(assertn, false);
+
+// PowerPC 405 module -
+// FPGA BRAM for instruction and data memory.
+// CPU starts in real mode.
+// initial instruction OCM address 00000000
+// initial data OCM address 01000000
+// Instruction RAM is 64 bits wide and has 10 bit address (depth 1024)
+// so uses 4 blocks. Size is 8K bytes.
+// Data RAM is 32 bits wide and has 11 bit address (depth 2048) so
+// uses 4 blocks. Size is 8K bytes.
+//
+//
+// Output parameters -
+//  iramp       pointer to instruction RAM
+//                                       64 bits
+//      -------------------------------------------------------------------------
+//      | byte 0 | byte 1 | byte 2 | byte 3 | byte 4 | byte 5 | byte 6 | byte 7 |
+//      -------------------------------------------------------------------------
+//  dramp0      pointer to data RAM byte 0 (most sig)
+//  dramp1      pointer to data RAM byte 1
+//  dramp2      pointer to data RAM byte 2
+//  dramp3      pointer to data RAM byte 3 (least sig)
+//                     32 bits
+//      -------------------------------------
+//      | byte 0 | byte 1 | byte 2 | byte 3 |
+//      -------------------------------------
+//
+// Input parameters -
+//  xloc, yloc  location of PPC405
+//  iramea      true if instruction ram 2nd port required for external access
+//  dramea      true if data ram 2nd port required for external access
+//  cpuclken    enable CPU core clock
+//  cpureset    reset the CPU - this should be raised for a clock cycle
+global procedure
+ppcbr (
+    var({iramp, dramp0, dramp1, dramp2, dramp3}, "->")
+    <-
+    int({xloc}),
+    log({iramea, dramea}),
+    value({cpuclken, cpureset}, "log")
+) {
+    if (!matched(xloc))
+        texit("ppcbr() - xloc must be supplied");
+    
+    var(dramxlocs, "[2][4]int", {{ 1,  2,  1,  2}, { 7,  8,  7,  8}});
+    var(dramylocs, "[2][4]int", {{13, 13, 14, 14}, {13, 13, 14, 14}});
+    var(iramxlocs, "[2][4]int", {{ 1,  2,  1,  2}, { 7,  8,  7,  8}});
+    var(iramylocs, "[2][4]int", {{ 7,  7,  8,  8}, { 7,  7,  8,  8}});
+    var({iramlocs, dramlocs}, "[4]str");
+    for (int(i) ; i<4 ; i++) {
+        iramlocs[i] = "RAMB16_X" + iramxlocs[xloc][i] + "Y" + iramylocs[xloc][i];
+        dramlocs[i] = "RAMB16_X" + dramxlocs[xloc][i] + "Y" + dramylocs[xloc][i];
+    }
+
+    int(iports, iramea ? 2 : 1);
+    int(dports, dramea ? 2 : 1);
+    int(i);
+
+    static(run, "log");
+
+    //
+    // Data RAM
+    //
+    type(dramaddr, "uint:11");
+    rram(dram0, dports, "bits:8", dramaddr); dramp0 = &dram0;
+    rram(dram1, dports, "bits:8", dramaddr); dramp1 = &dram1;
+    rram(dram2, dports, "bits:8", dramaddr); dramp2 = &dram2;
+    rram(dram3, dports, "bits:8", dramaddr); dramp3 = &dram3;
+    attributes(dram0, {loc=dramlocs[0], continuous=true});
+    attributes(dram1, {loc=dramlocs[1], continuous=true});
+    attributes(dram2, {loc=dramlocs[2], continuous=true});
+    attributes(dram3, {loc=dramlocs[3], continuous=true});
+    value(dsocmbramwrdbus, "bits:32");
+    value(dsocmbramabus, "uint:22");
+    value(dsocmbrambytewrite, "[4]log");
+    value(dsocmd, "[4]bits:8");
+    value(bramdsocmrddbus, "bits:32", cast(dsocmd, "bits:32"));
+    value(dsocmbramen, "log");
+
+    when (dsocmbramen && dsocmbrambytewrite[0])
+        rramwrite(dram0, 0, dsocmbramabus, (bramdsocmrddbus>>24) & 0xff);
+    when (dsocmbramen && dsocmbrambytewrite[1])
+        rramwrite(dram1, 0, dsocmbramabus, (bramdsocmrddbus>>16) & 0xff);
+    when (dsocmbramen && dsocmbrambytewrite[2])
+        rramwrite(dram2, 0, dsocmbramabus, (bramdsocmrddbus>>8) & 0xff);
+    when (dsocmbramen && dsocmbrambytewrite[3])
+        rramwrite(dram3, 0, dsocmbramabus, bramdsocmrddbus & 0xff);
+
+    when (dsocmbramen && !dsocmbrambytewrite[0])
+        rramread(dram0, 0, dsocmbramabus);
+    when (dsocmbramen && !dsocmbrambytewrite[1])
+        rramread(dram1, 0, dsocmbramabus);
+    when (dsocmbramen && !dsocmbrambytewrite[2])
+        rramread(dram2, 0, dsocmbramabus);
+    when (dsocmbramen && !dsocmbrambytewrite[3])
+        rramread(dram3, 0, dsocmbramabus);
+    dsocmd[3] := rramout(dram0, 0);
+    dsocmd[2] := rramout(dram1, 0);
+    dsocmd[1] := rramout(dram2, 0);
+    dsocmd[0] := rramout(dram3, 0);
+
+    //
+    // Instruction RAM
+    //
+    type(iramaddr, "uint:10");
+    var(iraminit, "[1024]uint");
+    for (int(j) ; j<1024 ; j++)
+        iraminit[j] = 0x4800001248000012;
+    rram(iram, iports, "bits:64", iramaddr, iraminit); iramp = &iram;
+    attributes(iram, {loc=iramlocs, continuous=true});
+    value(isocmbramrdabus, "uint:21");
+    value(bramisocmrddbus, "bits:64");
+    value(isocmbramen, "log");
+
+    when (isocmbramen)
+        rramread(iram, 0, isocmbramrdabus);
+    bramisocmrddbus := rramout(iram, 0);
+    
+    int(iscntlvalue, 0x81); // initial value of ISCNTL
+    int(isarcvalue,  0x00); // initial value of ISARC - instructions at 00000000
+    int(dscntlvalue, 0x81); // initial value of DSCNTL
+    int(dsarcvalue,  0x00); // initial value of DSARC - data at 00000000
+
+    //
+    // PLB null ICU interface
+    //
+    value(c405plbicuabus, "uint:30");
+    value(c405plbicusize, "uint:2");
+    value(c405plbicupriority, "uint:2");
+    value({c405plbicurequest, c405plbicuabort}, "log");
+
+    var(plbc405icurddbus, selectvalue, "bits:64");
+    attributes(plbc405icurddbus, {direct=true});
+    var(plbc405icurdwdaddr, selectvalue, "uint:3");
+    attributes(plbc405icurdwdaddr, {direct=true});
+    var(plbc405icussize1, selectvalue, "log");
+    attributes(plbc405icussize1, {direct=true});
+
+    var({plbcicuaddrack, plbcicubusy, plbcicuerr, plbcicurddack}, selectvalue, "log");
+    attributes({plbcicuaddrack, plbcicubusy, plbcicuerr, plbcicurddack}, {direct=true});
+    value(plbc405icuaddrack, "log", !plbcicuaddrack);
+    value(plbc405icubusy, "log", !plbcicubusy);
+    value(plbc405icuerr, "log", !plbcicuerr);
+    value(plbc405icurddack, "log", !plbcicurddack);
+
+    pullup(plbcicuerr);
+
+    //Note: C405PLBICUPRIORITY ignored
+
+    struct(req,
+        addr,   type(c405plbicuabus),
+        lts8,   "log"
+    );
+    queue(icureq, req);
+    static({plbbusy, plbbusy_del}, "log");
+    
+    plbbusy_del <- plbbusy;
+        
+    when (plbbusy || plbbusy_del)
+        plbcicubusy |- assertn;
+
+    when (c405plbicurequest && !c405plbicuabort) sync {
+        icureq.addr <<- c405plbicuabus;
+        icureq.lts8 <<- cast(getbit(c405plbicusize, 1), "log");
+        plbcicuaddrack |- assertn;
+        plbc405icussize1 |- true;
+        plbbusy <- true;
+    }
+    
+    value(branchto0, "uint:64", 0x4800000248000002);
+    
+    sync {
+        when (icureq.lts8) seq {
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 0;
+                plbcicurddack |- assertn;
+            }
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 2;
+                plbcicurddack |- assertn;
+            }
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 4;
+                plbcicurddack |- assertn;
+            }
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 6;
+                plbcicurddack |- assertn;
+                when (!c405plbicurequest || c405plbicuabort)
+                    plbbusy <- false;
+            }
+        } else seq {
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 0;
+                plbcicurddack |- assertn;
+            }
+            par {
+                plbc405icurddbus |- branchto0;
+                plbc405icurdwdaddr |- 2;
+                plbcicurddack |- assertn;
+                when (!c405plbicurequest || c405plbicuabort)
+                    plbbusy <- false;
+            }
+        }
+    }
+
+    //
+    // PLB null DCU interface
+    //
+
+    /*
+    value(c405plbdcube, "uint:8");
+    value(c405plbdcupriority, "uint:2");
+    value(c405plbdcuabus, "uint:32");
+    value(c405plbdcuwrdbus, "bits:64");
+    value({ c405plbdcuabort, c405plbdcucacheable, c405plbdcuguarded,
+            c405plbdcurequest, c405plbdcurnw, c405plbdcusize2,
+            c405plbdcuu0attr}, "log");
+
+    value(plbc405dcurddbus, "bits:64");
+    value(plbc405dcurdwdaddr, "uint:4");
+
+    value({ plbc405dcuaddrack, plbc405dcubusy, plbc405dcuerr,
+            plbc405dcurddack, plbc405dcussize1, plbc405dcuwrdack}, "log");
+    plbc405dcurddbus "bits:64" :=
+    plbc405dcurdwdaddr "uint:4":=
+
+    plbc405dcuaddrack :=
+    plbc405dcubusy :=
+    plbc405dcuerr :=
+    plbc405dcurddack :=
+    plbc405dcussize1 :=
+    plbc405dcuwrdack :=
+    */
+
+
+    static(rstc405resetcore, "log");
+    when (cpureset) seq {
+        run <- true;
+        rstc405resetcore <- true;
+        wait(8);
+        rstc405resetcore <- false;
+    }
+
+
+    ppc405(
+        DSOCMBRAMABUS= dsocmbramabus,
+        DSOCMBRAMWRDBUS=dsocmbramwrdbus,
+        DSOCMBRAMEN=dsocmbramen,
+        DSOCMBRAMBYTEWRITE=dsocmbrambytewrite,
+        ISOCMBRAMRDABUS=isocmbramrdabus,
+        ISOCMBRAMEN=isocmbramen,
+        C405PLBICUABUS=c405plbicuabus,
+        C405PLBICUREQUEST=c405plbicurequest,
+        C405PLBICUSIZE=c405plbicusize,
+        //C405PLBICUU0ATTR=c405plbicuu0attr,
+        C405PLBICUABORT=c405plbicuabort,
+        //C405PLBICUCACHEABLE=c405plbicucacheable,
+        C405PLBICUPRIORITY=c405plbicupriority//,
+        //C405PLBDCUABORT=c405plbdcuabort,
+        //C405PLBDCUCACHEABLE=c405plbdcucacheable,
+        //C405PLBDCUGUARDED=c405plbdcuguarded,
+        //C405PLBDCUREQUEST=c405plbdcurequest,
+        //C405PLBDCURNW=c405plbdcurnw,
+        //C405PLBDCUSIZE2=c405plbdcusize2,
+        //C405PLBDCUU0ATTR=c405plbdcuu0attr,
+        //C405PLBDCUWRITETHRU=c405plbdcuwritethru,
+        //C405PLBDCUABUS=c405plbdcuabus,
+        //C405PLBDCUBE=c405plbdcube,
+        //C405PLBDCUPRIORITY=c405plbdcupriority,
+        //C405PLBDCUWRDBUS=c405plbdcuwrdbus
+        <-
+        XLOC=nullarg(xloc),
+        YLOC=0,
+        BRAMDSOCMCLK=currentclock(),
+        BRAMISOCMCLK=currentclock(),
+        CPMC405CLOCK=currentclock(),
+        PLBCLK=currentclock(),
+        TIEC405DETERMINISTICMULT=false,
+        TIEC405DISOPERANDFWD=false,
+        TIEC405MMUEN=false,
+        RSTC405RESETCHIP=false, 
+        RSTC405RESETCORE=rstc405resetcore,
+        RSTC405RESETSYS=false,
+        JTGC405TRSTNEG=true,
+        BRAMDSOCMRDDBUS=bramdsocmrddbus,
+        BRAMISOCMRDDBUS=bramisocmrddbus,
+        TIEDSOCMDCRADDR=0,
+        TIEISOCMDCRADDR=0,
+        DSCNTLVALUE=dscntlvalue,
+        DSARCVALUE=dsarcvalue,
+        ISCNTLVALUE=iscntlvalue,
+        ISARCVALUE=isarcvalue,
+        CPMC405CPUCLKEN=cpuclken,
+        PLBC405ICURDDBUS=plbc405icurddbus,
+        PLBC405ICURDWDADDR=plbc405icurdwdaddr,
+        PLBC405ICUADDRACK=plbc405icuaddrack,
+        PLBC405ICUBUSY=plbc405icubusy,
+        PLBC405ICUERR=plbc405icuerr,
+        PLBC405ICURDDACK=plbc405icurddack,
+        PLBC405ICUSSIZE1=plbc405icussize1//,
+        //PLBC405DCURDDBUS=plbc405dcurddbus,
+        //PLBC405DCURDWDADDR=plbc405dcurdwdaddr,
+        //PLBC405DCUADDRACK=plbc405dcuaddrack,
+        //PLBC405DCUBUSY=plbc405dcubusy,
+        //PLBC405DCUERR=plbc405dcuerr,
+        //PLBC405DCURDDACK=plbc405dcurddack,
+        //PLBC405DCUSSIZE1=plbc405dcussize1,
+        //PLBC405DCUWRDACK=plbc405dcuwrdack
+    );
+    
+    struct(ma,
+        {reset, ocm, icureq, addrack, rddack, bsy}, "log"
+    );
+    queue(p1, ma); buffersize(p1, 512);
+    queue(p2, "uint:30"); buffersize(p2, 512);
+    static(count, "uint:9");
+    cpu_read_queue(p1, 0x77, 0x78);
+    cpu_read_queue(p2, 0x79);
+    cpu_write_static(count <- 0x7a);
+    when (run) seq {
+        sync while (count != 0) {
+            p1.reset <<- rstc405resetcore;
+            p1.ocm <<- isocmbramen;
+            p1.icureq <<- c405plbicurequest;
+            p1.addrack <<- plbc405icuaddrack;
+            p1.rddack <<- plbc405icurddack;
+            p1.bsy <<- plbc405icubusy;
+            when (isocmbramen)
+                p2 <<- isocmbramrdabus;
+            when (c405plbicurequest)
+                p2 <<- c405plbicuabus;
+            when (!isocmbramen && !c405plbicurequest)
+                p2 <<- 0;
+            count--;
+        }
+        stop();
+    }
+}
+
+// Power PC 405.
+// This is used in Virtex2, Virtex2Pro, Virtex4, Virtex5.
+
+global procedure
+ppc405 (
+    value({ C405CPMCORESLEEPREQ, C405CPMMSRCE, C405CPMMSREE, C405CPMTIMERIRQ,
+            C405CPMTIMERRESETREQ, C405DBGMSRWE, C405DBGSTOPACK,
+            C405DBGWBCOMPLETE, C405DBGWBFULL, C405DCRREAD, C405DCRWRITE,
+            C405JTGCAPTUREDR, C405JTGEXTEST, C405JTGPGMOUT, C405JTGSHIFTDR,
+            C405JTGTDO, C405JTGTDOEN, C405JTGUPDATEDR, C405PLBDCUABORT,
+            C405PLBDCUCACHEABLE, C405PLBDCUGUARDED, C405PLBDCUREQUEST,
+            C405PLBDCURNW, C405PLBDCUSIZE2, C405PLBDCUU0ATTR,
+            C405PLBDCUWRITETHRU, C405PLBICUABORT, C405PLBICUU0ATTR,
+            C405RSTCHIPRESETREQ, C405RSTCORERESETREQ, C405RSTSYSRESETREQ,
+            C405TRCCYCLE, C405PLBICUREQUEST, C405TRCTRIGGEREVENTOUT,
+            C405XXXMACHINECHECK, DSOCMBRAMEN, DSOCMBUSY, ISOCMBRAMEN,
+            ISOCMBRAMEVENWRITEEN, ISOCMBRAMODDWRITEEN, C405PLBICUCACHEABLE}, "log"),
+    value(C405DBGWBIAR, "bits:30"),
+    value(C405DCRABUS, "bits:10"),
+    value(C405DCRDBUSOUT, "bits:32"),
+    value(C405PLBDCUABUS, "bits:32"),
+    value(C405PLBDCUBE, "bits:8"),
+    value(C405PLBDCUPRIORITY, "uint:2"),
+    value(C405PLBDCUWRDBUS, "bits:64"),
+    value(C405PLBICUABUS, "uint:30"),
+    value(C405PLBICUPRIORITY, "uint:2"),
+    value(C405PLBICUSIZE, "uint:2"),
+    value(C405TRCEVENEXECUTIONSTATUS, "uint:2"),
+    value(C405TRCODDEXECUTIONSTATUS, "uint:2"),
+    value(C405TRCTRACESTATUS, "uint:4"),
+    value(C405TRCTRIGGEREVENTTYPE, "uint:11"),
+    value(DSOCMBRAMABUS, "uint:22"),
+    value(DSOCMBRAMBYTEWRITE, "[4]log"),
+    value(DSOCMBRAMWRDBUS, "bits:32"),
+    value(ISOCMBRAMRDABUS, "uint:21"),
+    value(ISOCMBRAMWRABUS, "uint:21"),
+    value(ISOCMBRAMWRDBUS, "bits:32")
+    <-
+    int({XLOC, YLOC}),
+    clock({ BRAMDSOCMCLK, BRAMISOCMCLK, CPMC405CLOCK, PLBCLK}),
+    value({ CPMC405CORECLKINACTIVE, CPMC405CPUCLKEN, CPMC405JTAGCLKEN, 
+            CPMC405TIMERCLKEN, CPMC405TIMERTICK, DBGC405DEBUGHALT,
+            DBGC405EXTBUSHOLDACK, DBGC405UNCONDDEBUGEVENT, DCRC405ACK, 
+            EICC405CRITINPUTIRQ, EICC405EXTINPUTIRQ, JTGC405BNDSCANTDO,
+            JTGC405TCK, JTGC405TDI, JTGC405TMS, JTGC405TRSTNEG,
+            MCBCPUCLKEN, MCBJTAGEN, MCBTIMEREN, MCPPCRST,
+            PLBC405DCUADDRACK, PLBC405DCUBUSY, PLBC405DCUERR, 
+            PLBC405DCURDDACK, PLBC405DCUSSIZE1, PLBC405DCUWRDACK,
+            PLBC405ICUADDRACK, PLBC405ICUBUSY, PLBC405ICUERR, 
+            PLBC405ICURDDACK, PLBC405ICUSSIZE1, RSTC405RESETCHIP, 
+            RSTC405RESETCORE, RSTC405RESETSYS, TIEC405DETERMINISTICMULT,
+            TIEC405DISOPERANDFWD, TIEC405MMUEN, TRCC405TRACEDISABLE,
+            TRCC405TRIGGEREVENTIN}, "log"),
+    value(BRAMDSOCMRDDBUS, "bits:32"),
+    value(BRAMISOCMRDDBUS, "bits:64"),
+    value(DCRC405DBUSIN, "bits:32"),
+    value(DSARCVALUE, "uint:8"),
+    value(DSCNTLVALUE, "uint:8"),
+    value(ISARCVALUE, "uint:8"),
+    value(ISCNTLVALUE, "uint:8"),
+    value(PLBC405DCURDDBUS, "bits:64"),
+    value(PLBC405DCURDWDADDR, "uint:3"),
+    value(PLBC405ICURDDBUS, "bits:64"),
+    value(PLBC405ICURDWDADDR, "uint:3"),
+    value(TIEDSOCMDCRADDR, "uint:8"),
+    value(TIEISOCMDCRADDR, "uint:8")
+) {
+    var(inputs,
+        "[]str",
+        {   "CPMC405CORECLKINACTIVE", "CPMC405CPUCLKEN", "CPMC405JTAGCLKEN", 
+            "CPMC405TIMERCLKEN", "CPMC405TIMERTICK", "DBGC405DEBUGHALT",
+            "DBGC405EXTBUSHOLDACK", "DBGC405UNCONDDEBUGEVENT", "DCRC405ACK", 
+            "EICC405CRITINPUTIRQ", "EICC405EXTINPUTIRQ", "JTGC405BNDSCANTDO",
+            "JTGC405TCK", "JTGC405TDI", "JTGC405TMS", "JTGC405TRSTNEG",
+            "MCBCPUCLKEN", "MCBJTAGEN", "MCBTIMEREN", "MCPPCRST",
+            "RSTC405RESETCHIP",  "RSTC405RESETCORE", "RSTC405RESETSYS",
+            "TIEC405DETERMINISTICMULT", "TIEC405DISOPERANDFWD", "TIEC405MMUEN",
+            "TRCC405TRACEDISABLE", "TRCC405TRIGGEREVENTIN", "BRAMDSOCMRDDBUS",
+            "BRAMISOCMRDDBUS", "DCRC405DBUSIN", "DSARCVALUE", "DSCNTLVALUE",
+            "ISARCVALUE", "ISCNTLVALUE", "TIEDSOCMDCRADDR", "TIEISOCMDCRADDR",
+            "PLBC405DCURDDBUS", "PLBC405ICURDDBUS", "PLBC405DCUADDRACK",
+            "PLBC405DCUBUSY", "PLBC405DCUERR",  "PLBC405DCURDDACK",
+            "PLBC405DCUSSIZE1", "PLBC405DCUWRDACK", "PLBC405ICUADDRACK",
+            "PLBC405ICUBUSY", "PLBC405ICUERR",  "PLBC405ICURDDACK",
+            "PLBC405ICUSSIZE1"
+        }
+    );
+    var(outputs405,
+        "[]str",
+        {   "C405CPMCORESLEEPREQ", "C405CPMMSRCE", "C405CPMMSREE",
+            "C405CPMTIMERIRQ", "C405CPMTIMERRESETREQ", "C405DBGMSRWE",
+            "C405DBGSTOPACK", "C405DBGWBCOMPLETE", "C405DBGWBFULL",
+            "C405DCRREAD", "C405DCRWRITE", "C405JTGCAPTUREDR", "C405JTGEXTEST",
+            "C405JTGPGMOUT", "C405JTGSHIFTDR", "C405JTGTDO", "C405JTGTDOEN",
+            "C405JTGUPDATEDR", "C405RSTCHIPRESETREQ", "C405RSTCORERESETREQ",
+            "C405RSTSYSRESETREQ", "C405TRCCYCLE", "C405PLBICUREQUEST",
+            "C405TRCTRIGGEREVENTOUT", "C405XXXMACHINECHECK", "C405DBGWBIAR",
+            "C405DCRABUS", "C405DCRDBUSOUT", "C405TRCEVENEXECUTIONSTATUS",
+            "C405TRCODDEXECUTIONSTATUS", "C405TRCTRACESTATUS",
+            "C405TRCTRIGGEREVENTTYPE"
+        }
+    );
+    var(outputsplb,
+        "[]str",
+        {   "C405PLBDCUABORT", "C405PLBDCUCACHEABLE",
+            "C405PLBDCUGUARDED", "C405PLBDCUREQUEST", "C405PLBDCURNW",
+            "C405PLBDCUSIZE2", "C405PLBDCUU0ATTR", "C405PLBDCUWRITETHRU",
+            "C405PLBICUABORT", "C405PLBICUU0ATTR", "C405PLBDCUABUS", "C405PLBDCUBE",
+            "C405PLBDCUPRIORITY", "C405PLBDCUWRDBUS", "C405PLBICUABUS",
+            "C405PLBICUCACHEABLE", "C405PLBICUPRIORITY"
+        }
+    );
+    var(outputsd,
+        "[]str",
+        {"DSOCMBRAMEN", "DSOCMBUSY", "DSOCMBRAMBYTEWRITE", "DSOCMBRAMWRDBUS"}
+    );
+    var(outputsi,
+        "[]str",
+        {   "ISOCMBRAMEN", "ISOCMBRAMEVENWRITEEN", "ISOCMBRAMODDWRITEEN",
+            "ISOCMBRAMWRDBUS"
+        }
+    );
+    
+    element("PPC405");
+    if (matched(CPMC405CLOCK))
+        elementclockinput(, "CPMC405CLOCK", CPMC405CLOCK);
+    else
+        fatal("CPU405 clock not connected");
+    if (matched(PLBCLK))
+        elementclockinput(, "PLBCLK", PLBCLK);
+    if (matched(BRAMDSOCMCLK))
+        elementclockinput(, "BRAMDSOCMCLK", BRAMDSOCMCLK);
+    if (matched(BRAMISOCMCLK))
+        elementclockinput(, "BRAMISOCMCLK", BRAMISOCMCLK);
+
+    for (int(i) ; i<dimension(inputs) ; i++) {
+        if (matched(inputs[i]->)) {
+            int(s, size(inputs[i]->));
+            if (s == 1)
+                elementinput(, inputs[i], inputs[i]->);
+            else
+                for (int(j) ; j<size(inputs[i]->) ; j++)
+                    elementinput(, inputs[i]+(s-j-1), getbit(inputs[i]->, j));
+        }
+    }
+    if (matched(PLBC405DCURDWDADDR)) {
+        int(s, size(PLBC405DCURDWDADDR));
+        int(k, 3);
+        for (int(j) ; j<s ; j++)
+            elementinput(, "PLBC405DCURDWDADDR"+k--, getbit(PLBC405DCURDWDADDR, j));
+    }
+    if (matched(PLBC405ICURDWDADDR)) {
+        int(s, size(PLBC405ICURDWDADDR));
+        int(k, 3);
+        for (int(j) ; j<s ; j++)
+            elementinput(, "PLBC405ICURDWDADDR"+k--, getbit(PLBC405ICURDWDADDR, j));
+    }
+
+    for (int(i) ; i<dimension(outputs405) ; i++) {
+        if (matched(outputs405[i]->)) {
+            int(s, size(outputs405[i]->));
+            if (s == 1)
+                elementoutput(outputs405[i]-> <- , outputs405[i]);
+            else {
+                value(v, "["+s+"]log");
+                for (int(j) ; j<s ; j++)
+                    elementoutput(v[j] <- , outputs405[i]+(s-j-1));
+                outputs405[i]-> := cast(v, type(outputs405[i]->));
+            }
+            domain(outputs405[i]->, CPMC405CLOCK);
+        }
+    }
+
+    for (int(i) ; i<dimension(outputsplb) ; i++) {
+        if (matched(outputsplb[i]->)) {
+            int(s, size(outputsplb[i]->));
+            if (s == 1)
+                elementoutput(outputsplb[i]-> <- , outputsplb[i]);
+            else {
+                value(v, "["+s+"]log");
+                for (int(j) ; j<s ; j++)
+                    elementoutput(v[j] <- , outputsplb[i]+(s-j-1));
+                outputsplb[i]-> := cast(v, type(outputsplb[i]->));
+            }
+            domain(outputsplb[i]->, PLBCLK);
+        }
+    }
+    if (matched(C405PLBICUSIZE)) {
+        int(s, size(C405PLBICUSIZE));
+        int(k, 3);
+        value(v, "["+s+"]log");
+        for (int(j) ; j<s ; j++)
+            elementoutput(v[j] <- , "C405PLBICUSIZE"+k--);
+        C405PLBICUSIZE := cast(v, type(C405PLBICUSIZE));
+        domain(C405PLBICUSIZE, PLBCLK);
+    }
+
+    for (int(i) ; i<dimension(outputsd) ; i++) {
+        if (matched(outputsd[i]->)) {
+            int(s, size(outputsd[i]->));
+            if (s == 1)
+                elementoutput(outputsd[i]-> <- , outputsd[i]);
+            else {
+                value(v, "["+s+"]log");
+                for (int(j) ; j<s ; j++)
+                    elementoutput(v[j] <- , outputsd[i]+(s-j-1));
+                outputsd[i]-> := cast(v, type(outputsd[i]->));
+            }
+            domain(outputsd[i]->, BRAMDSOCMCLK);
+        }
+    }
+    if (matched(DSOCMBRAMABUS)) {
+        int(s, size(DSOCMBRAMABUS));
+        int(k, 29);
+        value(v, "["+s+"]log");
+        for (int(j) ; j<s ; j++)
+            elementoutput(v[j] <- , "DSOCMBRAMABUS"+k--);
+        DSOCMBRAMABUS := cast(v, type(DSOCMBRAMABUS));
+        domain(DSOCMBRAMABUS, BRAMDSOCMCLK);
+    }
+
+    for (int(i) ; i<dimension(outputsi) ; i++) {
+        if (matched(outputsi[i]->)) {
+            int(s, size(outputsi[i]->));
+            if (s == 1)
+                elementoutput(outputsi[i]-> <- , outputsi[i]);
+            else {
+                value(v, "["+s+"]log");
+                for (int(j) ; j<s ; j++)
+                    elementoutput(v[j] <- , outputsi[i]+(s-j-1));
+                outputsi[i]-> := cast(v, type(outputsi[i]->));
+            }
+            domain(outputsi[i]->, BRAMISOCMCLK);
+        }
+    }
+    if (matched(ISOCMBRAMRDABUS)) {
+        int(s, size(ISOCMBRAMRDABUS));
+        int(k, 28);
+        value(v, "["+s+"]log");
+        for (int(j) ; j<s ; j++)
+            elementoutput(v[j] <- , "ISOCMBRAMRDABUS"+k--);
+        ISOCMBRAMRDABUS := cast(v, type(ISOCMBRAMRDABUS));
+        domain(ISOCMBRAMRDABUS, BRAMISOCMCLK);
+    }
+    if (matched(ISOCMBRAMWRABUS)) {
+        int(s, size(ISOCMBRAMWRABUS));
+        int(k, 28);
+        value(v, "["+s+"]log");
+        for (int(j) ; j<s ; j++)
+            elementoutput(v[j] <- , "ISOCMBRAMWRABUS"+k--);
+        ISOCMBRAMWRABUS := cast(v, type(ISOCMBRAMWRABUS));
+        domain(ISOCMBRAMWRABUS, BRAMISOCMCLK);
+    }
+    
+    if (matched(XLOC) && matched(YLOC))
+        elementStrProperty(id, "LOC", "PPC405_X"+XLOC+"Y"+YLOC);
+    elementend(id);
+}

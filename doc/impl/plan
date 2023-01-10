@@ -1,0 +1,48 @@
+overview
+    operation
+    files
+
+walk through main
+
+notes on parsing
+    include files
+    filename line column tokens
+    ++ -- flags, not operators
+
+interpreter
+    WordSpec class
+    Type class
+    reforval, Ref, Val classes
+    var, Static, Pipe etc. classes
+
+TDE code
+    TDEVar class
+        catalog
+        common
+    TDE class
+    code element description
+    examples
+    TDEList class
+
+TDE code to netlist
+    element class
+    net class
+    NET class
+    TDECode class
+    XTDECode class
+    families and code within
+    family-dependent TDE code optimisation
+    netlist optimisation
+    
+    import, export
+
+
+
+
+Optimisation
+    
+Use of element() in libraries to create instances
+    so don't have to change 3PL when adding new FPGA families
+    with new or extended elements - can be done in 3PL libraries.
+
+

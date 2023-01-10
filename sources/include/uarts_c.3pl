@@ -1,0 +1,349 @@
+// simple UART and baudrate generator
+//
+// This is much the same as uarts.3pl but it creates a class wrapper.
+// This is probably unnecessary and it is simpler to use uarts.3pl instead!
+//
+nosource
+
+
+struct (file.brc,
+    baud_rate,  "int",
+    bits,       "int",
+    domain,     "->",
+    brc16,      "->"
+);
+var(file.brclist, "list");
+
+// Construct a simple UART.
+//
+// 'brc' is the internal transmitter baud clock, 1/16 the rate of 'brc16',
+// and is brought out in case anything wants it
+// 'br' is the baud rate.
+// 'csize' is the number of bits.
+//
+global class
+uarts_c (
+    value(brc, "log")
+    <-
+    int(br),
+    int(csize)
+) {
+
+    // A UART output section. 'txd' is the transmit output, usually
+    // connected direct to an output pin.
+    //
+    // 'in' is the input data, always 8 bits.
+    //
+    // Transmission occurs only if 'txen' and 'cts' (if connected) are asserted.
+    // If either go false the transmitter will stop at the end of the
+    // current character. 'cts' usually connects to an output pin. 'txbusy'
+    // indicates the transmitter is operating.
+    //
+    // If 'parenb' is true, an even parity bit is added,
+    // odd if 'parodd' is also true.
+    // If 'cstopb' is true, a second stop
+    // bit is added.
+    //
+    // The default is 8-bit characters, no parity, 1 stop bit.
+    //
+    // FIXME Flow-control ('cts') is not yet tested
+    // FIXME Cannot produce BREAK
+    //
+    module
+    uart_tx (
+        value({txd, txbusy}, "log")
+        <-
+        queue(in),
+        value(txen, "log", true),
+        value(cts, "log", true),
+        log(parenb),
+        log(parodd),
+        log(cstopb)
+    ) {
+        value(in_, "bits:"+csize, cast(in, "bits:"+csize));
+        value(brc16, "log", brc16(br, csize, "uart_tx()"));
+
+        /* divide 'brc16' by 16 to get baud-rate clock enable ('brc') */
+        value(brc_, "log");
+        var(brc_seq_init, "[16]log", {true});
+        brc_ := sequence(brc_seq_init, type(brc_), brc16) && brc16;
+        if (matched(brc))
+            brc := brc_;
+
+        static({txd_, txbusy_}, "log", true);
+        static(bitcount, "uint:"+size(csize), csize);
+        if (matched(txd))
+            txd := txd_;
+        if (matched(txbusy))
+            txbusy := txbusy_;
+        if (parenb)
+            static(parity, "log", parodd);
+
+        static(data, "bits:"+csize);
+        when (<in_ && txen && cts) seq {
+            // send start bit
+            // latch data
+            // set busy condition
+            wait_while(!brc_);
+            sync {
+                data <- in_;
+                if (parenb)
+                    reset(parity);
+                txd_ <- false;
+                txbusy_ <- true;
+                reset(bitcount);
+            }
+            // send 'csize' bits
+            seq while (bitcount != 0) {
+                wait_while(!brc_);
+                txd_ <- cast(data, "log");
+                if (parenb)
+                    parity <- parity ^^ cast(data, "log");
+                data <- data >> 1;
+                bitcount--;
+            }
+            // optionally send parity bit
+            if (parenb) seq {
+                wait_while(!brc_);
+                txd_ <- parity;
+            }
+            // optionally send extra stop bit
+            if (cstopb) seq {
+                wait_while(!brc_);
+                reset(txd_);
+            }
+            // send stop bit
+            wait_while(!brc_);
+            reset(txd_);
+        } else
+            // clear busy condition
+            reset(txbusy_);
+    }
+
+    // A UART receiver section. 'rxd' is the receive input, usually
+    // connected direct to an input pin.
+    //
+    // 'oferr' is true if there was a framing error, and 'operr' indicates a
+    // parity error (can only occur if 'parenb' is true). 'oferr' and 'operr' are
+    // valid whenever out is available.
+    //
+    // Optional input 'rxen' if false will disable the receiver when the
+    // current character is complete. Output 'rts' is true when the receiver
+    // will accept a character. It goes false when 'rxen' is false or a
+    // received character was not acknowleded before the expected start
+    // of the next character.
+    // 
+    // parenb', 'parodd' and 'cstopb' have the same meanings
+    // as in uart_tx().
+    //
+    // Optional input 'tq' shifts the data sampling point to 3/4 rather than
+    // 1/2 way.
+    //
+    // FIXME flow-control ('rts') supported is not tested.
+    // FIXME should detect BREAK.
+    module
+    uart_rx (
+        queue(out), value({oferr, operr, overflow, rts}, "log")
+        <-
+        value(rxd, "log"),
+        value(rxen, "log", true),
+        log(parenb),
+        log(parodd, true),
+        log({cstopb, tq})
+    ) {
+        value(brc16, "log", brc16(br, csize, "uart_rx()"));
+        static(data, "bits:"+csize);
+        static(bitcount, "uint:"+size(csize), csize);
+        static({ferr, perr, oflo}, "log");
+        static(parity, "log", parodd);
+        if (matched(oferr))
+            oferr := ferr;
+        if (matched(operr))
+            operr := perr;
+        if (matched(overflow))
+            overflow := oflo;
+        rts := !>out;
+
+        // divide 'brc16' by 16 to get baud-rate 'clock', 'brc'
+        // resample RXD against 16x baud clock
+        value(brc, "log");
+        static(brc_count, "uint:4", 9);
+        static({rxd16, rxd16_prev}, "log");
+        when (brc16) par {
+            brc_count++;
+            rxd16 <- rxd;
+            rxd16_prev <- rxd16;
+        }
+        brc := brc16 && (brc_count == 0);
+
+        // character start trigger looks for down-transition of rxd -
+        when (!rxd16 && rxd16_prev && rxen) seq {
+            // set phase of 'brc' for data sampling
+            if (tq) par {
+                reset(bitcount, ferr, perr, oflo, parity, data);
+                brc_count <- 5;
+            } else
+                reset(brc_count, bitcount, ferr, perr, oflo, parity);
+            wait_until(brc);
+            reset(brc_count);
+            wait_until(brc);
+            reset(brc_count);
+            // read 'csize' bits
+            seq while (bitcount != 0) {
+                wait_until(brc);
+                par {
+                    data <- (data << 1) | cast(rxd16, "bits:1");
+                    if (parenb)
+                        parity <- parity ^^ rxd16;
+                    bitcount--;
+                }
+            }
+            // optionally read parity bit
+            if (parenb) seq {
+                wait_until(brc);
+                perr <- rxd16 ^^ parity;
+            }
+            // check optional extra stop bit
+            if (cstopb) seq {
+                wait_until(brc);
+                ferr <- !rxd16;
+            }
+            // check stop bit
+            wait_until(brc);
+            //reset(brc_count);
+            if (cstopb)
+                ferr <- ferr || !rxd16;
+            else
+                ferr <- !rxd16;
+            when (>out)
+                out <<- cast(reverse(data), type(out));
+            else
+                oflo <- true;
+            //wait_until(brc);
+        }
+    }
+
+    // Return a baud-rate X 16 pulse train.
+    // 'br' is the baud rate.
+    // 'bits' is the number of data bits.
+    //
+    // Synthesize a clock-enable pulse at a frequency related to C
+    // by the relationship
+    //
+    //		Fo = Fc * N / 2^k
+    //
+    // br16 is the required baud-rate clock x 16 frequency in Hz.
+    // bits is the number of data bits.
+    //
+    // This uses a direct digital frequency synthesis technique as 
+    // described in Xcell journal 31, Q1 1999. Fo (the generated
+    // frequency) must be equal to Fc or less than half Fc, and is subject
+    // to jitter of the period of Fc.
+    //
+    // Assume clock tolerances of +-200ppm (+-0.02%) worst case, so worst case
+    // end-to-end difference of +-0.04%. Add this to the magnitude of the
+    // clock percentage error and iterate to reduce this total error
+    // to result in a shift of <= one cycle of the 16x baud rate clock in the
+    // last data bit.
+    //
+    // k is the number of bits of the adder/latch, while N is a
+    // constant representable in k bits.
+    function
+    brc16(int(br), int(bits), str(caller)) {
+        int(br16, br*16);
+        float(clock_freq, frequency(currentclock()));
+        int(k, -1);
+        int({n, twotok});
+        float({f, error});
+        float(elim, 0.0625 / (1 + bits) - 4e-4);
+        clock(cc);
+        cc := currentclock();
+
+        // Search list of previous baud rate clocks.
+        // If baud rate, number of bits and clock domain are the same,
+        // return the previous function value ratyher than constructing logic
+        // for an identical one.
+        for (int(i) ; i<entries(brclist) ; i++) {
+            if (br == brclist[i].baud_rate &&
+                bits == brclist[i].bits &&
+                cc == brclist[i].domain->)
+                return(brclist[i].brc16->);
+        }
+
+        // A new baud rate clock.
+        // Add it to the list so that duplicate baud rate clocks are not generated.
+        var(brcentry, file.brc);
+        brcentry.baud_rate = br;
+        brcentry.bits = bits;
+        brcentry.domain = &cc;   
+
+        if (!((clock_freq == br16) || (clock_freq > 2.0 * br16)))
+            texit(caller + " clock frequency < 32 * baud rate");
+        do {
+            // Iterate from k==0 upwards until required error minimum
+            // is reached or until k==17.
+            k = k + 1;
+            twotok = 1 << k;
+            n = floor(br16 * twotok / clock_freq);
+            f = clock_freq * n / twotok;
+            error = mod(br16 - f) / br16;
+        } while (k < 17 && error > elim);
+        if (error > elim) {
+            println(caller + " warning - baud rate tolerance exceeds limit for " +
+                    bits + " bits");
+            println("clock " + clock_freq + "Hz br16 " + br16 + "Hz k " + k + " n " + n);
+        }
+
+
+        if (k == 0) {
+            // br16 == clock freq, so output is constant 'true'
+            value(out, "log", true);
+            brcentry.brc16 = &out;
+        append(brclist,, brcentry);
+            return(out);
+        }
+        static(l, "uint:"+k);
+        value(out, "log", to_pulse(cast(l >> (k - 1), "log")));
+        [l <- l + n;]
+        brcentry.brc16 = &out;
+        append(brclist,, brcentry);
+        return(out);
+    }
+
+    // microsecond and millisecond pulses
+    module
+    subsecond_clocks (value({ms, us}, "log") <- ) {
+        int(freq_mhz, frequency(currentclock()));
+        static(usco, "uint:"+size(freq_mhz-1), freq_mhz-1);
+        static(msco, "uint:10", 999);
+
+        when (usco == 0) par {
+            reset(usco);
+            us <- true;
+        } else par {
+            usco--;
+            reset(us);
+        }
+        when (usco == 0)
+            when (msco == 0) par {
+                reset(msco);
+                ms <- true;
+            } else par {
+                msco--;
+                reset(ms);
+            }
+    }
+
+    /*
+    // Parity function. 'd' are the data bits and 'parodd' means generate
+    // odd parity
+    function
+    uart_parity (value(d, "bits:"), log(parodd)) {
+        int(size, size(d));
+        value(b, "["+size+"]log", cast(d, "["+size+"]log"));    
+        value(p, "log", parrod);
+        for (int(i) ; i<size ; i++)
+            p := p ^^ b[i];
+    }
+    */
+}

@@ -1,0 +1,68 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+//setdirective("excludeinfo", true);
+
+class(cpu, cpu_api());
+
+static(r, "uint:16", 0x137);
+static(rr, "int:35");
+static(rrr, "uint:6");
+static(rrra, "log");
+cpu.write(r <- "W");
+cpu.read(r, "R");
+
+cpu.write(rr <- "WW");
+cpu.read(rr, "RR");
+cpu.write(rrr, access=rrra <- "WWW");
+cpu.read(rrr, "RRR");
+
+cpu.receive_event(rrra, "EVR");
+
+queue(q, "int:14", mindepth=16, domain=null);
+queue(qo, "int:14", mindepth=16, domain=null);
+static(acc, "log");
+static(count, "uint:5");
+
+cpu.write(q <- "WQ", freecount=true, ilevel=true);
+cpu.read(out=qo, access=acc, count=count <- q, "RQ", wordcount=true, ilevel=true);
+cpu.receive_event(waswritten(q), "EVQ");
+cpu.read(qo, "RQO");
+
+var(minit, "[256]int");
+for (int(i) ; i<256 ; i++)
+    minit[i] = i * 3;
+rmemory(m, 1, "uint:8", "uint:16", minit);
+
+cpu.write(m <- "MW", port=0);
+cpu.read(m, "MR", port=0);
+
+
+
+struct (st1,
+    ff1,    "uint:12",
+    ff2,    "log"
+);
+struct(st2,
+    f1, "uint:9",
+    f2, "int:12",
+    f3, "log",
+    f4, st1,
+    f5, "[2][3]int:8"
+);
+
+
+static(s, st2, {511, 0, false, {123, true}, {{0x40, 4, 7}, {0,1,-2}}});
+
+cpu.write_static(s <- "SW");
+cpu.read_value("SR", s);
+
+static(uf, "ufixed:8.4", 32.25);
+static(f, "fixed:12.8", -40.5);
+static(fl, "float:8.12", -1.5);
+
+cpu.read(uf, "UFR");
+cpu.read(f, "FR");
+cpu.read(fl, "FLR");
+cpu.write_static(uf <- "UFW");
+cpu.write_static(f <- "FW");
+cpu.write_static(fl <- "FLW");

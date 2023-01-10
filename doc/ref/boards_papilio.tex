@@ -1,0 +1,57 @@
+\pagebreak
+
+\section{papilio Spartan 3E Board Header Files -\\
+            boards/gadgetfactory/papilio\_250.3pl\\
+            boards/gadgetfactory/papilio\_500.3pl}
+
+    
+    These libraries must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/gadgetfactory/papilio_250.3pl"
+    \end{lstlisting}
+    or
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/gadgetfactory/papilio_500.3pl"
+    \end{lstlisting}
+    
+    This header file incorporates "xilinx/xc3s.3pl", "xilinx/common.3pl" and
+    "stdlib.3pl".
+    
+    These header files define the pins and create the 32MHz clock, c32.
+    
+    If the following lines begin the source file
+    \begin{lstlisting}[gobble=4, language=threepl]
+       float(global.user_clock_ratio, 2.0);
+       module "demo/.3pl"
+    \end{lstlisting}
+    clock {\bf uclk} will also be established, in this case at half the
+    {\bf c32} frequency. Values allowed are 1.5, 2.0, 2.5, 3.0, 3.5, 4.0,
+    4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0,
+    14.0, 15.0 and 16.0.
+    
+    The header code in both cases leaves the current clock as {\bf c32} for the
+    beginning of application code.
+
+
+    \subsection{library modules}
+    
+        None.
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+
+    \subsection{library classes}
+    
+        None.

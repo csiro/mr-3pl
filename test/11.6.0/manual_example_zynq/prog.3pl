@@ -1,0 +1,17 @@
+module "boards/avnet/microzed_7010.3pl"
+
+class(cpu, cpu_api());
+
+static(a, "int:25");
+static(b, "int:18");
+
+cpu.write(a <- "A");
+cpu.write(b <- "B");
+
+static(p, "int:48");
+
+p <- a * b;
+
+cpu.read(p, "P");
+
+cpu.signal_interrupt("INT", p == 1);    // interrupt when p == 1

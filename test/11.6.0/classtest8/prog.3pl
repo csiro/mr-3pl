@@ -1,0 +1,54 @@
+// Create an instance of class 'init' which will
+// executethe common block and print out the common variable 'mm' assigned
+// from parameter 'nn'.
+class(ci);
+ci = init(nn=89);
+
+// Call class 's' twice verifying that the common block is correctly
+// executed. The common block also creates a global variable.
+class(c1, s(7));
+c1.ppp();
+class(c2, s(10));
+println("S c1 inst " + c1.cv.k + " (77)");
+println("S c2 inst " + c2.cv.k + " (77)");
+c1.cv.k = 88;
+println("S c1 inst " + c1.cv.k + " (88)");
+println("S c2 inst " + c2.cv.k + " (77)");
+//println(z); // should fail
+c1.ppp();
+println("GGG " + g + " (123)");
+
+class init (int(nn)) {
+    common {
+        int(mm, nn);
+        println("init " + mm + " (89)");
+    }
+}
+
+class s (int(i)) {
+    common {
+        int(z, i);
+        int(global.g, 123);
+        println("ZZZ COM " + z + " (7)");
+        
+    }
+
+    int(j, 14);
+    j = i;
+    println("ZZZ " + z + " (7)");
+    
+    procedure ppp () {
+        println("ZZZ ppp " + z + " (7)");
+    }
+    
+    class v () {
+        int(k, 77);
+    }
+    var(cv, "class", v());
+    println("YYY V " + cv.k + " (77)");
+    
+    function f () {
+        int(class.n, 33);
+        return(i);
+    }
+}

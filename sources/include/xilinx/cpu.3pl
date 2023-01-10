@@ -1,0 +1,1089 @@
+nomodule
+
+// This file provides classes for an FPGA/CPU interface. It is currently
+// used for the Zynq family (included in module zynq_axi.3pl) and for
+// serial interfaces (included in module uart_cpu.3pl).
+// These modules incorporate this file and instantiate the classes
+// therein by -
+//      source "xilinx/cpu.3pl"
+//      class(cpu, CPU_API());
+//      global function cpu_api () {
+//          return(cpu);
+//      }
+// This means that the instance of this class, 'cpu', can be called
+// from the calling file module (uart_spu.3pl or zynq_axi.3pl) and can
+// also be passed to the application program via global function cpu_api().
+//
+// The application program creates a class instance by -
+//
+//      class(cpu, cpu_api());
+//
+// User programs which require a CPU interface simply include the appropriate
+// module -
+//      module "uart_spu.3pl"
+// or
+//      module "zynq_axi.3pl"
+// which in turn include this current file.
+//
+
+//
+// Enumerated type for the type of CPU/FPGA transfer.
+//  read_val    read a 3PL value to CPU
+//  write_stat  write a 3PL static from CPU
+//  read_q      read a 3PL queue to CPU
+//  write_q     write a 3PL queue from CPU
+//  read_mem    read FPGA RAM to CPU
+//  write_mem   write FPGA RAM from CPU
+//
+enum (itype,
+    read_val, write_stat,
+    read_q, write_q,
+    read_mem, write_mem
+);
+
+//
+// Class containing requirements from the API, class CPU_API, to be
+// implemented in the code generator, class CPU_CODEGEN.
+//
+//    interface_name - interface procedure name string, e.g. "write_static"
+//    object_name - interface identifier string
+//    typestring - string giving the data type
+//    trace - stack trace string for error message
+//    itype - interface type as an enum, e.g. write_stat
+//    write - true for write, false for read
+//    check - true if queue availability is true/false rather than a count
+//    var - pointer to variable to be written to or read from
+//    out - pointer to optional output queue for read_queue
+//    access - pointer to access output variable
+//    count - pointer to count output for read_queue
+//    reset - pointer to reset signal for write_queue
+//    genproc - pointer to a class procedure in class CPI_CODEGEN
+//    addr - the interface address
+//    caddr - address from which to read a queue availability count
+//    laddr - address to which can be written a queue interrupt level
+//    ilevel - queue level at which an interrupt is desired
+//    qdepth - depth of the input or output queue
+//    iev - interrupt event number (interrupt index)
+//    port - memory port, 0 or 1
+//
+//
+class 
+busCommon () {
+    str({interface_name, object_name, typestring, trace});
+    var(interface_type, itype);
+    log({write, check});
+    var({var, out, access, count, reset, genproc}, "->");
+    int({addr, caddr, laddr, ilevel, qdepth, iev, port});
+}
+
+class(codegen, CPU_CODEGEN());   // class to implement the API
+
+//
+// Class providing the CPU interface.
+// Each member of enumerated type 'itype' above corresponds to one procedure
+// in this class. Each procedure adds an entry in the interface list which
+// is a list of class busCommon. The list is later traversed and each entry
+// is implemented using modules in class CPU_CODEGEN (later in this file).
+//
+class
+CPU_API () {
+    var(interrupt_map, "map");
+    int(num_interrupts, 16);                            // number of available interrupts
+    value(interrupts, "["+num_interrupts+"]log", false);// interrupt signals
+    int(interrupt_n);                                   // next interrupt number to allocate
+    var(gp_names, "map");
+    var({dma_read_ptr , dma_write_ptr, sigint_ptr}, "->");
+    
+    trailermodule ("bus interfaces", 1) {
+        create_bus_interfaces();
+    }
+    
+    //
+    // Queue creation of CPU read module.
+    //
+    procedure
+    read (
+            varargs
+            <- 
+            var(in),
+            str(name),
+            varargs
+        ) {
+        int(ins, dimension(inargs));
+        int(outs, dimension(outargs));
+        if (ins != dimension(inmap))
+            texit("cpu.read() - an input argument is not key.value");
+        if (outs != dimension(outmap))
+            texit("cpu.read() - an output argument is not key.value");
+        
+        switch (mode(in)) {
+        case "queue":
+            var(validinkeys, "map", {wordcount=true, ilevel=true});
+            var(validoutkeys, "map", {count=true, out=true, access=true});
+            checkKeys("read", "queue", inkeys, validinkeys);
+            checkKeys("read", "queue", outkeys, validoutkeys);
+            read_queue(
+                count=outme("count"), out=outme("out"), access=outme("access")
+                <-
+                in, name, wordcount=inme("wordcount"), ilevel=inme("ilevel")
+            );
+        case {"value","static"}:
+            var(validinkeys, "map");
+            var(validoutkeys, "map", {access=true});
+            checkKeys("read", "value or static", inkeys, validinkeys);
+            checkKeys("read", "value or static", outkeys, validoutkeys);
+            read_value(access=outme("access") <- in, name);
+        case {"cmemory","rmemory"}:
+            var(validinkeys, "map", {port=true});
+            var(validoutkeys, "map", {access=true});
+            if (inme("port") == null)
+                texit("cpu.read() - input argument 'port' missing for cmemory or rmemory");
+            checkKeys("read", "cmemory or rmemory", inkeys, validinkeys);
+            checkKeys("read", "cmemory or rmemory", outkeys, validoutkeys);
+            read_memory(access=outme("access") <- in, name, inme("port"));
+        default:
+            texit("cpu.read() - source variable is not mode queue, value or static");
+        }
+    }
+
+
+    //
+    // Queue creation of CPU write module.
+    //
+    procedure
+    write (
+            var(out),
+            varargs
+            <- 
+            str(name),
+            varargs
+        ) {
+        int(ins, dimension(inargs));
+        int(outs, dimension(outargs));
+        if (ins != dimension(inmap))
+            texit("cpu.write() - an input argument is not key-value");
+        if (outs != dimension(outmap))
+            texit("cpu.write() - an output argument is not key-value");
+        
+        if (!matched(out)) {
+            if (inme("freecount") != null)
+                texit("cpu.write() - input argument 'freecount' not valid");
+            if (inme("ilevel") != null)
+                texit("cpu.write() - input argument 'ilevel' not valid");
+            if (inme("port") != null)
+                texit("cpu.write() - input argument 'port' not valid");
+            if (inme("reset") != null)
+                texit("cpu.write() - output argument 'reset' not valid");
+            write_static(, outme("access") <- name);
+        } else if (mode(out) == "static") {
+            if (inme("freecount") != null)
+                texit("cpu.write() - input argument 'freecount' not valid for static");
+            if (inme("ilevel") != null)
+                texit("cpu.write() - input argument 'ilevel' not valid for static");
+            if (inme("port") != null)
+                texit("cpu.write() - input argument 'port' not valid for static");
+            if (inme("reset") != null)
+                texit("cpu.write() - output argument 'reset' not valid for static");
+            write_static(out, outme("access") <- name);
+        } else if (mode(out) == "queue") {
+            write_queue(
+                out
+                <-
+                name, inme("freecount"), inme("ilevel"), inme("reset")
+            );
+        } else if (mode(out) == "rmemory" || mode(out) == "cmemory")
+            write_memory(out <- name, inme("port"));
+        else
+            texit("cpu.write() - destination variable is not mode queue or static");
+    }    
+    
+    private procedure
+    checkKeys (str(func), str(mode), var(keys, "[]str"), var(valkeys, "map")) {
+        int(n, dimension(keys));
+        for (int(i) ; i<n ; i++)
+            if (valkeys[keys[i]] == null)
+                texit(func + "() mode " + mode + "- argument key '" + keys[i] + "' not valid");
+    }
+
+    private function
+    inme (str(key)) {
+        if (calling.inmap[key] == null)
+            return(null);
+        else {
+            return(calling.inmap[key]->);
+        }
+    }
+
+    private function
+    outme (str(key)) {
+        if (calling.outmap[key] == null)
+            return(null);
+        else
+            return(calling.outmap[key]->);
+    }
+
+    //
+    // Queue creation of CPU readable value module.
+    //
+    procedure
+    read_value (
+        static(access, "log")
+        <-
+        value(in),
+        str(name)
+    ) {
+        if (!matched(in))
+            texit("cpu.read_value() - no input value argument");
+        if (!matched(name))
+            texit("cpu.read_value() - no name argument");
+        if (size(in) > directive("tlimit"))
+            texit("cpu.read_value() - data input has too many bits (limit " + directive("tlimit") + ")");
+        if (gp_names[name] != null) {
+            println("cpu.read_value() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        if (hasqueuereads(in)) {
+            println(args.trace);
+            texit("cpu.read_value() - input value has queue reads");
+        }
+        
+        if (matched(access)) {
+            v.access = &access;
+        }
+        v.interface_name = "read_value";
+        v.interface_type = itype.read_val;
+        v.object_name = name;
+        v.write = false;
+        v.var = &in;
+        v.typestring = typestring(in);
+        v.iev = -1;
+        v.trace = stacktrace();
+        v.genproc = &codegen.read_value_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Queue creation of CPU writable static module.
+    //
+    procedure
+    write_static (
+        static(out),
+        static(access, "log")
+        <-
+        str(name)
+    ) {
+        if (matched(out) && size(out) > directive("tlimit"))
+            texit("write_static() - data output has too many bits (limit " + directive("tlimit") + ")");
+        if (!matched(name))
+            texit("write_static() - name not given");
+        if (gp_names[name] != null) {
+            println("write_static() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        v.interface_name = "write_static";
+        v.interface_type = itype.write_stat;
+        v.object_name = name;
+        v.write = true;
+        if (matched(access))
+            v.access = &access;
+        if (matched(out)) {
+            v.var = &out;
+            v.typestring = typestring(out);
+        }
+        v.iev = -1;
+        v.trace = stacktrace();
+        v.genproc = &codegen.write_static_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Queue creation of CPU readable queue module.
+    //
+    procedure
+    read_queue (
+        static(count),
+        queue(out),
+        static(access, "log")
+        <-
+        queue(in),
+        str(name),
+        log(wordcount),
+        var(ilevel)
+    ) {
+        if (!matched(in))
+            texit("read_queue() - no input queue argument");
+        if (!matched(name))
+            texit("read_queue() - no name argument");
+        if (size(in) > directive("tlimit"))
+            texit("read_queue() - data input has too many bits (limit " + directive("tlimit") + ")");
+        if (gp_names[name] != null) {
+            println("read_queue() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        v.qdepth = attribute(in, "depth");
+        if (matched(ilevel)) {
+            if (interrupt_n == num_interrupts)
+                texit("read_queue() - no available interrupts");
+            v.iev = interrupt_n++;
+            interrupt_map[name] = v.iev;
+            switch (typestring(ilevel)) {
+            case "log":
+                if (ilevel)
+                    v.ilevel = -1;  // -1 indicates variable level
+                else
+                    v.ilevel = -2;  // -2 indicates empty/non-empty
+            case {"uint", "int"}:
+                v.ilevel = ilevel;
+                if (ilevel >= v.qdepth) {
+                    texit("read_queue() - level argument too large for queue depth");
+                }
+            default:
+                texit("read_queue() - level argument type not log, int or uint");
+            }
+        } else
+            v.iev = -1;
+
+        v.interface_name = "read_queue";
+        v.interface_type = itype.read_q;
+        v.object_name = name;
+        v.write = false;
+        if (matched(wordcount)) {
+            v.check = !wordcount;
+            v.caddr = -1;
+        }
+        v.var = &in; 
+        v.typestring = typestring(in);
+        v.trace = stacktrace();
+        if (matched(count)) {
+            if (head(typestring(count), 4) != "uint")
+                texit("read_queue() - count output argument not type \"uint:\"");
+            if (size(count) < size(attribute(in, "depth")))
+                texit("read_queue() - count output width too small");
+            v.count = &count;
+        }
+        if (matched(access))
+            v.access = &access;
+        if (matched(out))
+            v.out = &out;
+        v.genproc = &codegen.read_queue_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Queue creation of CPU writable queue module.
+    //
+    procedure
+    write_queue (
+        queue(out)
+        <-
+        str(name),
+        log(freecount),
+        var(ilevel),
+        value(reset, "log")
+    ) {
+        if (!matched(name))
+            texit("write_queue() - no name argument");
+        if (!matched(out))
+            texit("write_queue() - no output queue argument");
+        if (size(out) > directive("tlimit"))
+            texit("write_queue() - data output has too many bits (limit " + directive("tlimit") + ")");
+        if (gp_names[name] != null) {
+            println("write_queue() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        if (matched(ilevel)) {
+            if (interrupt_n == num_interrupts)
+                texit("read_queue() - no available interrupts");
+            v.iev = interrupt_n++;
+            interrupt_map[name] = v.iev;
+            switch (typestring(ilevel)) {
+            case "log":
+                if (ilevel)
+                    v.ilevel = -1;  // -1 indicates variable level
+                else
+                    v.ilevel = -2;  // -2 indicates empty/non-empty
+            case {"uint", "int"}:
+                v.ilevel = ilevel;
+                if (ilevel >= v.qdepth)
+                    texit("write_queue() - level argument too large for queue depth");
+            default:
+                texit("write_queue() - level argument type not log, int or uint");
+            }
+        } else
+            v.iev = -1;
+
+        v.interface_name = "write_queue";
+        v.interface_type = itype.write_q;
+        v.object_name = name;
+        v.write = true;
+        if (matched(freecount)) {
+            v.check = !freecount;
+            v.caddr = -1;
+        }
+        v.qdepth = attribute(out, "depth");
+        v.var = &out; 
+        v.typestring = typestring(out);
+        v.reset = matched(reset) ? &reset : null;
+        v.trace = stacktrace();
+        v.genproc = &codegen.write_queue_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Queue creation of CPU readable memory interface module.
+    //
+    procedure
+    read_memory (
+        static(access, "log")
+        <-
+        var(mem),
+        str(name),
+        int(port)
+    ) {
+        if (!matched(mem))
+            texit("read_memory() - mem not given");
+        if (!matched(name))
+            texit("read_memory() - name not given");
+        if (gp_names[name] != null) {
+            println("read_memory() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        if (tail(mode(mem), 2) != "ry")
+            texit("read_memory() - memory argument not memory mode");
+        int(mds, size(memorydatatype(mem)));
+        if (mds > directive("tlimit"))
+            texit("read_memory() - memory data type too wide (limit " + directive("tlimit") + " bits)");
+
+        v.interface_name = "read_memory";
+        v.interface_type = itype.read_mem;
+        v.object_name = name;
+        v.write = false;
+        v.var = &mem;
+        v.typestring = typevalstring(memorydatatype(mem));
+        v.iev = -1;
+        v.port = port;
+        v.trace = stacktrace();
+        if (matched(access))
+            v.access = &access;
+        v.genproc = &codegen.read_memory_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Queue creation of CPU writable memory interface module.
+    //
+    procedure
+    write_memory (
+        var(mem)
+        <-
+        str(name),
+        int(port)
+    ) {
+        if (!matched(name))
+            texit("write_memory() - name not given");
+        if (gp_names[name] != null) {
+            println("write_memory() - '" + name + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        } else
+            gp_names[name] = stacktrace();
+
+        class(v, busCommon());
+
+        if (tail(mode(mem), 2) != "ry")
+            texit("write_memory() - memory argument not memory mode");
+        int(mds, size(memorydatatype(mem)));
+        if (mds > directive("tlimit"))
+            texit("write_memory() - memory data type too wide (limit " + directive("tlimit") + " bits)");
+        v.interface_name = "write_memory";
+        v.interface_type = itype.write_mem;
+        v.object_name = name;
+        v.write = true;
+        v.var = &mem;
+        v.typestring = typevalstring(memorydatatype(mem));
+        v.iev = -1;
+        v.port = port;
+        v.trace = stacktrace();
+        v.genproc = &codegen.write_memory_gen;
+        add_interface(&v);
+    }
+
+    //
+    // Target procedure to execute a CPU interrupt.
+    //
+    procedure
+    interrupt (str(event)) {
+        value(event_sig, "log");
+        if (!matched(event))
+            texit("cpu_receive_event() - event identifier not supplied");
+
+        assert(event_sig <-);
+
+        signal_interrupt(event, event_sig);
+    }
+
+    //
+    // Module to link an interrupt to a signal.
+    //
+    module
+    signal_interrupt(str(event), value(sig, "log")) {
+        if (hasqueuereads(sig)) {
+            println(args.trace);
+            texit("sigint() - input value has queue reads");
+        }
+        if (gp_names[event] != null) {
+            println("sigint() - name '" + event + "' already used");
+            println("previous use -");
+            println(gp_names[name]);
+            texit();
+        }
+        if (interrupt_n == num_interrupts)
+            texit("sigint() - no free interrupt addresses - " + event);
+        interrupt_map[event] = interrupt_n++;
+        sigint_ptr->(interrupt_n, sig);
+    }
+
+    //
+    // DMA read module.
+    //
+    module
+    dma_read (queue(data) <- queue(address), queue(burstlen), int(bus)) {
+        if (directive("uart_cpu")) {
+            if (matched(burstlen) || matched(bus))
+                texit("dma_read - parameters 'burstlen' or 'bus' not allowed for serial interface");
+            dma_read_ptr->(data <- address);
+        } else
+            dma_read_ptr->(data <- address, burstlen, bus);
+    }
+
+    //
+    // DMA write module.
+    //
+    module
+    dma_write (queue(data), queue(address), queue(burstlen), int(bus)) {
+        if (directive("uart_cpu")) {
+            if (matched(burstlen) || matched(bus))
+                texit("dma_read - parameters 'burstlen' or 'bus' not allowed for serial interface");
+            dma_write_ptr->(data, address);
+        } else
+            dma_write_ptr->(data, address, burstlen, bus);
+    }
+
+}
+
+//
+// This class implements the interfaces constructed by class CPU_API above.
+// Each member of enumerated type 'itype' above corresponds to one module
+// in this class.
+//
+class
+CPU_CODEGEN () {
+    //
+    // Create CPU readable value module.
+    //
+    module
+    read_value_gen (class(args)) {
+        log(access_used, args.access != null);
+        log(arg_domain_assigned);
+        clock(arg_domain);
+        if (domain(args.var->) != null) {
+            arg_domain := domain(args.var->);
+            arg_domain_assigned = true;
+        } else {
+            attributes(args.var->, domain=bus_clk);
+            arg_domain := bus_clk;
+            arg_domain_assigned = true;
+        }
+        if (hasqueuereads(args.var->)) {
+            println(args.trace);
+            texit("cpu.read_value_gen(\"" + args.object_name + "\") - input value has queue reads");
+        }
+        if (access_used) {
+            if (domain(args.access->) != null) {
+                if (!arg_domain_assigned) {
+                    arg_domain := domain(args.access->);
+                    arg_domain_assigned = true;
+                } else if (arg_domain != domain(args.access->)) {
+                    println(args.trace);
+                    exit("cpu_CODEGEN.read_value(\"" + args.object_name + "\") - argument clock domains differ");
+                }
+            } else {
+                if (!arg_domain_assigned) {
+                    attributes(args.access->, domain=bus_clk);
+                    arg_domain := bus_clk;
+                    arg_domain_assigned = true;
+                } else {
+                    attributes(args.access->, domain=arg_domain);
+                }
+            }
+        }
+        log(use_bus_clk, domain(args.var->) == bus_clk);
+        static(in_r, type(args.var->), domain=bus_clk, continuous=true);
+
+        useclock(bus_clk);
+
+        in_r <- use_bus_clk ? args.var-> : sample(args.var->);
+
+        value(acc, "log");
+        cpu_read(acc <- 0, args.addr, in_r);
+
+        if (access_used) {
+            if (use_bus_clk)
+                args.access-> <- acc;
+            else {
+                useclock(domain(args.access->));    // domain of input
+                args.access-> <- resync(acc);
+                useclock();                         // back to bus clock domain
+            }
+        }
+
+        useclock(); // return to original clock domain
+    }
+
+    //
+    // Create CPU writable static module.
+    //
+    module
+    write_static_gen (class(args)) {
+        log(out_used, args.var != null);
+        log(access_used, args.access != null);
+        log(arg_domain_assigned);
+        clock(arg_domain);
+
+        if (!out_used && !access_used) {
+            println(args.trace);
+            exit("cpu_CODEGEN.write_static(\"" + args.object_name + "\") - no output arguments");
+        }
+
+        if (out_used) {
+            if (domain(args.var->) != null) {
+                arg_domain := domain(args.var->);
+                arg_domain_assigned = true;
+            } else {
+                attributes(args.var->, domain=bus_clk);
+                arg_domain := bus_clk;
+                arg_domain_assigned = true;
+            }
+        }
+
+        if (access_used) {
+            if (domain(args.access->) != null) {
+                if (!arg_domain_assigned) {
+                    arg_domain := domain(args.access->);
+                    arg_domain_assigned = true;
+                } else if (arg_domain != domain(args.access->)) {
+                    println(args.trace);
+                    exit("cpu_CODEGEN.write_static(\"" + args.object_name + "\") - output arguments clock domains differ");
+                }
+            } else {
+                if (!arg_domain_assigned) {
+                    attributes(args.access->, domain=bus_clk);
+                    arg_domain := bus_clk;
+                    arg_domain_assigned = true;
+                } else {
+                    attributes(args.access->, domain=arg_domain);
+                }
+            }
+        }
+
+        useclock(bus_clk);                 // to bus clock domain
+
+        value(access, "log");
+
+        if (arg_domain == bus_clk) {
+            // outputs are in bus clock domain
+            if (out_used)
+                cpu_write(args.var->, access <- 0, args.addr);
+            else
+                cpu_write(, access <- 0, args.addr);
+            if (access_used)
+                args.access-> <- access;
+        } else {  
+            // outputs are NOT in bus clock domain
+            if (out_used) {
+                static(local.data, type(args.var->));
+                cpu_write(data, access <- 0, args.addr);
+            } else
+                cpu_write(, access <- 0, args.addr);
+
+            useclock(out_used ? domain(args.var->) : domain(args.access->));
+
+            value(acc, "log", resync(access));
+            if (access_used)
+                args.access-> <- acc;
+            if (out_used)
+                when (acc)
+                    args.var-> <- accept(data);
+
+            useclock(); // return to bus clock domain
+        }
+
+        useclock(); // return to original clock domain
+    }
+
+    //
+    // Create CPU readable queue module.
+    //
+    module
+    read_queue_gen (class(args)) {
+        log(is_sync, writedomain(args.var->) == bus_clk);
+        log(caddrused, args.caddr > 0);
+        log(ievused, args.iev >= 0);
+
+        if (writedomain(args.var->) == null) {
+            println(args.trace);
+            exit("cpu_CODEGEN.read_queue(\"" + args.object_name + "\") - queue write domain has not been established");
+        }
+
+        useclock(bus_clk);
+
+        value(access, "log");
+
+        if (caddrused && !args.check || ievused && args.laddr != 0) {
+            if (is_sync)
+                value(local.count,, queuewords(args.var->)); 
+            else
+                value(local.count,, asyncqueuewords(args.var->));
+        }
+
+        if (args.out != null)
+            cpu_read(access,, args.out-> <- 0, args.addr, args.var->);
+        else
+            cpu_read(access <- 0, args.addr, args.var->);
+
+        if (args.access != null) {
+            if (domain(args.access->) == null)
+                attributes(args.access->, domain=bus_clk);
+            if (domain(args.access->) == bus_clk)
+                args.access-> <- access;
+            else {
+                static(acc, "log"); attributes(acc, continuous=true);
+                useclock(domain(args.access->));    // domain of input
+                args.access-> <- resync(access);
+                useclock();                         // back to bus_clk domain
+            }
+        }
+        
+        if (caddrused) {
+            if (args.check)
+                cpu_read(<- 0, args.caddr, <args.var->);
+            else
+                cpu_read(<- 0, args.caddr, count);
+        }
+
+        if (ievused) {
+            int(pdepthbits, size(queuedepth(args.var->)-1));
+            if (args.laddr == 0)
+                // No interrupt level set -
+                // interrupt simply on read availability.
+                sigint(args.iev, <args.var->);
+            else {
+                if (!is_sync) {
+                    println(args.trace);
+                    exit("cpu_CODEGEN.read_queue(\"" + args.object_name + "\") - level interrupt used and input queue not synchronous");
+                }
+                if (args.ilevel < 0) {
+                    // Interrupt level setable from the CPU
+                    static(ilevel, "uint:"+pdepthbits, 1);  // initial level 1
+                    cpu_write(ilevel <- 0, args.laddr);
+                    sigint(args.iev, count >= ilevel, args.interface_name);
+                } else {
+                    // level fixed 
+                    sigint(args.iev, count >= args.ilevel, args.interface_name);
+                }
+
+            }
+        }
+
+        if (args.count != null) {
+            if (writedomain(args.count->) == null)
+                attributes(args.count->, domain=bus_clk);
+            if (!is_sync) {
+                println(args.trace);
+                exit("cpu_CODEGEN.read_queue(\"" + args.object_name + "\") - count output used on asynchronous queue");
+            }
+
+            args.count-> <- queuewords(args.var->);
+        }
+
+        useclock(); // return to original clock domain
+    }
+
+    //
+    // Create CPU writable queue module.
+    //
+    module
+    write_queue_gen (class(args)) {
+        log(is_sync, readdomain(args.var->) == bus_clk);
+        log(caddrused, args.caddr > 0);
+        log(ievused, args.iev >= 0);
+
+
+        if (readdomain(args.var->) == null) {
+            println(args.trace);
+            exit("cpu_CODEGEN.write_queue(\"" + args.object_name + "\") - queue read domain has not been established");
+        }
+        if (args.reset != null && readdomain(args.reset) == null) {
+            println(args.trace);
+            exit("cpu_CODEGEN.write_queue(\"" + args.object_name + "\") - reset domain has not been established");
+        }
+
+        useclock(bus_clk);
+
+        value(access, "log");
+
+        if (caddrused && !args.check || ievused && args.laddr != 0) {
+            log(is_sync, readdomain(args.var->) == bus_clk);        
+            if (is_sync)
+                value(local.count,, queuespaces(args.var->)); 
+            else
+                value(local.count,, asyncqueuespaces(args.var->));
+        }
+
+        cpu_write(args.var->, access <- 0, args.addr);
+
+        if (caddrused) {
+            if (args.check)
+                cpu_read(0, args.caddr, >args.var->);
+            else
+                cpu_read(0, args.caddr, count);        
+        }
+
+        if (ievused) {
+            int(pdepthbits, size(queuedepth(args.var->)-1));
+            if (args.laddr == 0)
+                // No interrupt level set -
+                // interrupt simply on write availability.
+                sigint(args.iev, >args.var->, args.interface_name);
+            else {
+                if (!is_sync) {
+                    println(args.trace);
+                    exit("cpu_CODEGEN.write_queue(\"" + args.object_name + "\") - level interrupt used and output queue not synchronous");
+                }
+                if (args.ilevel < 0) {
+                    // Interrupt level setable from the CPU
+                    static(ilevel, "uint:"+pdepthbits, 1);  // initial level 1
+                    cpu_write(ilevel <- 0, args.laddr);
+                    sigint(args.iev, count >= ilevel, args.interface_name);
+                } else {
+                    // fixed level
+                    sigint(args.iev, count >= args.ilevel, args.interface_name);
+                }
+
+            }
+        }
+
+        if (args.reset != null) {
+            if (domain(args.reset) != bus_clk) {
+                when (resync(args.reset))
+                    reset(args.var->);
+            } else {
+                when (args.reset)
+                    reset(args.var->);
+            }
+        }
+
+        useclock(); // return to original clock domain
+    }
+
+    //
+    // Create CPU readable memory interface module.
+    //
+    module
+    read_memory_gen (class(args)) {
+        log(access_used, args.access != null);
+        clock(arg_domain);
+        log(is_cmem, head(mode(args.var->), 1) == "c");
+        type(mdtype, memorydatatype(args.var->));
+
+        if (portdomain(args.var->, args.port) != null)
+            arg_domain := portdomain(args.var->, args.port);
+        else {
+            if (is_cmem) {
+                attributes(args.var->, domain=bus_clk);
+            } else {
+                if (args.port == 0)
+                    attributes(args.var->, domain0=bus_clk);
+                else
+                    attributes(args.var->, domain1=bus_clk);
+            }
+            arg_domain := bus_clk;
+        }
+        if (access_used) {
+            if (arg_domain != domain(args.access->)) {
+                println(args.trace);
+                exit("cpu_CODEGEN.read_memory(\"" + args.object_name + "\") - argument clock domains differ");
+            }
+        }
+
+        useclock(bus_clk);                 // to bus clock domain
+
+        if (!direxists("uart_cpu")) {
+            // Overload file.memaddr
+            // Of 30 bit address (the 2 byte address bits have been stripped) -
+            //  the lower gp_ext_raddr_width[1] bits
+            //          form the read address within the selected memory
+            //  the next gp_ext_raddr_width[1] bits
+            //          form an address to select the particular memory
+            value(local.memaddr, "uint:"+gp_ext_raddr_width[1], cast(?gp_rda_p[1]->.addr, gp1_mem_raddr_type));
+        }
+
+        type(dtype, "bits:"+size(mdtype));
+        static(data, dtype);
+        value({init, contin}, "log");
+
+        if (arg_domain == bus_clk) {
+            // memory is in bus clock domain
+            value(acc, "log");
+            cpu_read(acc, init <- 1, args.addr, data, contin);
+
+            when (init) seq {
+                if (is_cmem)
+                    data <- cast(cmemoryread(args.var->, args.port, memaddr), dtype);
+                else {
+                    rmemoryread(args.var->, args.port, memaddr);
+                    data <- cast(rmemoryout(args.var->, args.port), dtype);
+                }
+                assert(contin <-);
+            }
+        } else {
+            // memory is NOT in bus clock domain
+            cpu_read(, init <- 1, args.addr, data, contin);
+
+            useclock(arg_domain);   // to memory clock domain
+
+            static(data_, dtype);
+            value(init_, "log", resync(init));
+            value(acc, "log");
+
+            when (init_) seq {
+                if (is_cmem) par {
+                        data_ <- cast(cmemoryread(args.var->, args.port, accept(memaddr)), dtype);
+                        assert(acc <- );
+                    }
+                else {
+                    rmemoryread(args.var->, args.port, accept(memaddr));
+                    par {
+                        data_ <- cast(rmemoryout(args.var->, args.port), dtype);
+                        assert(acc <- );
+                    }
+                }
+            } else
+                assert(acc <- );
+
+
+
+            useclock();             // return to bus_clk clock domain
+
+            if (access_used) {
+                if (use_bus_clk)
+                    args.access-> <- acc;
+                else {
+                    useclock(domain(args.access->));    // domain of input
+                    args.access-> <- resync(acc);
+                    useclock();                         // back to bus clock domain
+                }
+            }
+            
+            data <- accept(data_);  // resync(acc) below ensures data copy across clocks is OK
+
+            contin := resync(acc);
+        }
+
+        useclock(); // return to original clock domain
+    }
+
+    //
+    // Create CPU writable memory interface module.
+    //
+    module
+    write_memory_gen (class(args)) {
+        clock(arg_domain);
+        log(is_cmem, head(mode(args.var->), 1) == "c");
+        var(mptr, "->", (head(mode(args.var->), 1) == "c") ? procptr(cmemorywrite) : procptr(rmemorywrite));
+        type(mdtype, memorydatatype(args.var->));
+
+        if (portdomain(args.var->, args.port) != null)
+            arg_domain := portdomain(args.var->, args.port);
+        else {
+            if (is_cmem) {
+                attributes(args.var->, domain=bus_clk);
+            } else {
+                if (args.port == 0)
+                    attributes(args.var->, domain0=bus_clk);
+                else
+                    attributes(args.var->, domain1=bus_clk);
+            }
+            arg_domain := bus_clk;
+        }
+
+        useclock(bus_clk);                 // to bus clock domain
+
+        if (!direxists("uart_cpu")) {
+            // Overload file.memaddr
+            // Of 30 bit address (the 2 byte address bits have been stripped) -
+            //  the lower gp_ext_waddr_width[1] bits
+            //          form the write address within the selected memory
+            //  the next gp_ext_waddr_width[1] bits
+            //          form an address to select the particular memory
+            value(local.memaddr, "uint:"+gp_ext_waddr_width[1], cast(?gp_wra_p[1]->.addr, gp1_mem_waddr_type));
+        }
+        type(dtype, "bits:"+size(mdtype));
+        static(mdata, dtype);
+        value(access, "log");
+
+        cpu_write(mdata, access <- 1, args.addr);
+
+
+
+        if (arg_domain == bus_clk) {
+            // memory is in bus clock domain
+            when(access)
+                mptr->(args.var->, args.port, memaddr, cast(mdata, mdtype));
+        } else {  
+            // memory is NOT in bus clock domain
+
+            useclock(arg_domain);   // switch to memory domain
+
+
+            when (resync(access))
+                    mptr->(args.var->, args.port, accept(memaddr), accept(cast(mdata, mdtype)));
+
+
+            useclock(); // return to bus clock domain
+        }
+
+        useclock(); // return to original clock domain
+    }
+}

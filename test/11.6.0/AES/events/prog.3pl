@@ -1,0 +1,18 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+class(cpu, cpu_api());
+
+static(start, "log");
+value({ev1, ev2}, "log");
+
+cpu.write(start <- "STARTW");
+
+seq {
+    wait_until(start);
+    assert(ev1 <-);
+    assert(ev2 <-);
+    start <- false;
+}
+
+cpu.receive_event(ev1, "EV1");
+cpu.receive_event(ev2, "EV2");

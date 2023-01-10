@@ -1,0 +1,310 @@
+(edif prog
+ (edifVersion 2 0 0)
+ (edifLevel 0)
+ (keywordMap (keywordLevel 0))
+ (status
+  (written
+   (timestamp 2022 2 11 5 38 37)
+   (program "3PL" (version "11.5.1M (devel svn 9947, dun202)"))
+   (comment "
+        ALU = false
+        FIFO = false
+        OS = mac os x
+        QUEUEREG = false
+        arch = x86_64
+        comms_baud_rate = 53475
+        compileOnly = false
+        compilerMakeDate = 2021-08-06 14:54:59 +1000
+        continuous = false
+        currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest
+        date = 2022-02-11 16:38:37 +1100
+        designName = prog
+        excludeinfo = true
+        family = XC3S
+        filePath = false
+        forceExec = true
+        gatesNotLuts = false
+        intTruncWarning = false
+        intermediateOnly = false
+        listNets = true
+        listTDEs = true
+        listTDEsSel = 0
+        locations = false
+        netFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.net
+        netlistDisplay = false
+        netlistFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.edn
+        optimiseConnect = true
+        outputDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+        parentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+        part = xc3s400aft256-4
+        postProcessTool = ise
+        reportFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.rpt
+        rptToFile = true
+        sigList = false
+        skipPostProc = true
+        sourceFile = prog.3pl
+        srlAddrWidth = 4
+        uart_cpu = true
+        unassOut = fatal
+        version = 11.5.1M (devel svn 9947, dun202)
+    ")
+  )
+ )
+
+ (external xixc3s
+  (edifLevel 0)
+  (technology (numberDefinition ))
+  (cell FDRSE (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port C (direction INPUT))
+     (port CE (direction INPUT))
+     (port D (direction INPUT))
+     (port R (direction INPUT))
+     (port S (direction INPUT))
+     (port Q (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell INV (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell GND (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port G (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell VCC (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port P (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell DCM (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port CLKFB (direction INPUT))
+     (port CLKIN (direction INPUT))
+     (port PSCLK (direction INPUT))
+     (port PSEN (direction INPUT))
+     (port PSINCDEC (direction INPUT))
+     (port RST (direction INPUT))
+     (port CLK0 (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell BUFG (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell OBUF (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell IBUFG (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+ )
+
+ (library top_level
+  (edifLevel 0)
+  (technology (numberDefinition ))
+  (cell prog (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port PORT_C10 (direction INPUT) (property LOC (string "C10")))
+     (port PORT_M1 (direction OUTPUT) (property LOC (string "M1")))
+     (port PORT_N1 (direction OUTPUT) (property LOC (string "N1")))
+    )
+    (contents
+     (instance b35 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b34 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b33 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b32 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b27 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b25 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b31 (viewRef view_1 (cellRef INV (libraryRef xixc3s))))
+     (instance b30 (viewRef view_1 (cellRef FDRSE (libraryRef xixc3s)))
+      (property INIT (string "R"))
+     )
+     (instance b29 (viewRef view_1 (cellRef INV (libraryRef xixc3s))))
+     (instance b0 (viewRef view_1 (cellRef GND (libraryRef xixc3s))))
+     (instance b1 (viewRef view_1 (cellRef VCC (libraryRef xixc3s))))
+     (instance dcm0 (viewRef view_1 (cellRef DCM (libraryRef xixc3s)))
+      (property CLKIN_PERIOD (string "62.50"))
+     )
+     (instance e0 (viewRef view_1 (cellRef BUFG (libraryRef xixc3s))))
+     (instance b26 (viewRef view_1 (cellRef OBUF (libraryRef xixc3s))))
+     (instance b28 (viewRef view_1 (cellRef OBUF (libraryRef xixc3s))))
+     (instance b2 (viewRef view_1 (cellRef IBUFG (libraryRef xixc3s))))
+     (net GND
+      (joined
+       (portRef G (instanceRef b0))
+       (portRef PSCLK (instanceRef dcm0))
+       (portRef RST (instanceRef dcm0))
+       (portRef PSINCDEC (instanceRef dcm0))
+       (portRef PSEN (instanceRef dcm0))
+       (portRef R (instanceRef b30))
+       (portRef S (instanceRef b30))
+       (portRef R (instanceRef b25))
+       (portRef S (instanceRef b25))
+       (portRef R (instanceRef b27))
+       (portRef S (instanceRef b27))
+       (portRef D (instanceRef b32))
+       (portRef CE (instanceRef b32))
+       (portRef R (instanceRef b32))
+       (portRef D (instanceRef b33))
+       (portRef CE (instanceRef b33))
+       (portRef R (instanceRef b33))
+       (portRef S (instanceRef b34))
+       (portRef R (instanceRef b35))
+       (portRef S (instanceRef b35))
+      )
+     )
+     (net VCC
+      (joined
+       (portRef P (instanceRef b1))
+       (portRef CE (instanceRef b30))
+       (portRef D (instanceRef b34))
+       (portRef CE (instanceRef b34))
+       (portRef D (instanceRef b35))
+      )
+     )
+     (net prog_FMOD1_aes_sp3a_eval400_c16_in
+      (joined
+       (portRef CLKIN (instanceRef dcm0))
+       (portRef O (instanceRef b2))
+      )
+     )
+     (net glob_c16
+      (joined
+       (portRef CLKFB (instanceRef dcm0))
+       (portRef O (instanceRef e0))
+       (portRef C (instanceRef b30))
+       (portRef C (instanceRef b25))
+       (portRef C (instanceRef b27))
+       (portRef C (instanceRef b32))
+       (portRef C (instanceRef b33))
+       (portRef C (instanceRef b34))
+       (portRef C (instanceRef b35))
+      )
+     )
+     (net prog_FMOD1_aes_sp3a_eval400_c16_raw
+      (joined
+       (portRef CLK0 (instanceRef dcm0))
+       (portRef I (instanceRef e0))
+      )
+     )
+     (net E6_0
+      (joined
+       (portRef O (instanceRef b29))
+       (portRef D (instanceRef b25))
+      )
+     )
+     (net glob_c16_start
+      (joined
+       (portRef D (instanceRef b30))
+       (portRef Q (instanceRef b34))
+       (portRef CE (instanceRef b35))
+      )
+     )
+     (net SSD9
+      (joined
+       (portRef Q (instanceRef b30))
+       (portRef S (instanceRef b32))
+       (portRef S (instanceRef b33))
+      )
+     )
+     (net E13_0
+      (joined
+       (portRef O (instanceRef b31))
+       (portRef D (instanceRef b27))
+      )
+     )
+     (net SDD21
+      (joined
+       (portRef CE (instanceRef b25))
+       (portRef Q (instanceRef b32))
+      )
+     )
+     (net OUTPUTBIT18_0
+      (joined
+       (portRef I (instanceRef b26))
+       (portRef I (instanceRef b29))
+       (portRef Q (instanceRef b25))
+      )
+     )
+     (net PORT_N1
+      (joined
+       (portRef PORT_N1)
+       (portRef O (instanceRef b26))
+      )
+     )
+     (net SDD22
+      (joined
+       (portRef CE (instanceRef b27))
+       (portRef Q (instanceRef b33))
+      )
+     )
+     (net OUTPUTBIT20_0
+      (joined
+       (portRef I (instanceRef b28))
+       (portRef I (instanceRef b31))
+       (portRef Q (instanceRef b27))
+      )
+     )
+     (net PORT_M1
+      (joined
+       (portRef PORT_M1)
+       (portRef O (instanceRef b28))
+      )
+     )
+     (net PORT_C10
+      (joined
+       (portRef PORT_C10)
+       (portRef I (instanceRef b2))
+      )
+     )
+     (net n10
+      (joined
+       (portRef R (instanceRef b34))
+       (portRef Q (instanceRef b35))
+      )
+     )
+    )
+   )
+  )
+ )
+
+ (design prog
+  (cellRef prog
+   (libraryRef top_level)
+  )
+  (property PART (string "xc3s400aft256-4"))
+ )
+)

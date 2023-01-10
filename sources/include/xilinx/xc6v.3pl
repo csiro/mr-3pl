@@ -1,0 +1,43 @@
+// Include file for Virtex-6 XC6V elements.
+nosource
+
+presetdirective("postProcessTool", "ise");
+
+source "xilinx/common.3pl"
+module "xilinx/postprocess.3pl"
+module "stdlib.3pl"
+module "xilinx/clocks.3pl"
+module "xilinx/io.3pl"
+module "xilinx/dsp48.3pl"
+module "xilinx/ppclib.3pl"
+module "xilinx/gtp_dual.3pl"
+
+// Specify allowed special I/O and clock elements valid for
+// this device.
+// Map "elementMap" is in common.3pl.
+elementMap["BUFG"] = true;
+elementMap["BUFGCE"] = true;
+elementMap["BUFGMUX_CTRL"] = true;
+elementMap["BUFGCTRL"] = true;
+elementMap["BUFR"] = true;
+elementMap["BUFIO"] = true;
+elementMap["MMCM"] = true;
+elementMap["IDDR"] = true;
+elementMap["ODDR"] = true;
+elementMap["IDELAYE1"] = true;
+elementMap["ODELAYE1"] = true;
+elementMap["IODELAYE1"] = true;
+elementMap["ISERDESE1"] = true;
+
+leadermodule ("attributes", 100) {
+    attributeprocedure(processPinAttributes);
+}
+
+trailermodule ("constraints", 100) {
+    netlistcommentfromdirs();
+    generateConstraints();
+}
+
+postmodule ("Xilinx postprocessing") {
+    postprocess("xilinx/ise_fpga.cmd", directive("postProcessTool"), 11.1);
+}

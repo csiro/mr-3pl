@@ -1,0 +1,250 @@
+Directives - initial values.
+----------------------------
+
+	ALU              = false
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	compileOnly      = false
+	compilerMakeDate = 2021-08-06 14:54:59 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest
+	date             = 2022-02-11 16:38:37 +1100
+	designName       = prog
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	unassOut         = fatal
+	version          = 11.5.1M (devel svn 9947, dun202)
+
+
+Memory requested 746061824 bytes
+3PL version 11.5.1M (devel svn 9947, dun202).
+Source file /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.3pl
+command line options - rntfs
+2022-02-11 16:38:37 +1100
+
+Parsing source.
+---------------
+
+
+    source files
+    ------------
+
+       prog.3pl
+        FMOD1    /Users/dun202/src/mine/3pl/sources/include/boards/avnet   aes_sp3a_eval400.3pl
+            FMOD2    /Users/dun202/src/mine/3pl/sources/include/xilinx   xc3s.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   common.3pl
+                FMOD3    /Users/dun202/src/mine/3pl/sources/include/xilinx   postprocess.3pl
+                FMOD4    /Users/dun202/src/mine/3pl/sources/include   stdlib.3pl
+                FMOD5    /Users/dun202/src/mine/3pl/sources/include/xilinx   clocks.3pl
+                FMOD6    /Users/dun202/src/mine/3pl/sources/include/xilinx   io.3pl
+            FMOD7    /Users/dun202/src/mine/3pl/sources/include/xilinx   uart_cpu.3pl
+                FMOD8    /Users/dun202/src/mine/3pl/sources/include   jsontype.3pl
+                FMOD9    /Users/dun202/src/mine/3pl/sources/include   uarts.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   cpu.3pl
+
+
+Immediate execution.
+--------------------
+
+
+Executing leader modules.
+-------------------------
+
+	module "attributes" order 100
+	-----------------------------
+
+
+
+
+Executing main module.
+----------------------
+
+
+
+
+Executing trailer modules.
+--------------------------
+
+	module "create uart bus interface" order 0
+	------------------------------------------
+
+	module "constraints" order 100
+	------------------------------
+
+
+
+
+Creating target-mode variable logic.
+------------------------------------
+
+	static variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.inforeset' unused - deleted
+	static variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.inforead' unused - deleted
+	static variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.cpu_write_static_0.out' unused - deleted
+
+Queue variables with multiple sink modules
+------------------------------------------
+
+
+
+
+Clock variables driving clocked logic.
+-------------------------------------
+
+	glob:c16
+
+Clock variables not driving clocked logic.
+------------------------------------------
+
+	FMOD1/aes_sp3a_eval400:c16_in
+	FMOD1/aes_sp3a_eval400:c16_raw
+	clkdcm/psclk
+	clkdcm/dclk
+	clkdcm/clk90
+	clkdcm/clk180
+	clkdcm/clk270
+	clkdcm/clk2x
+	clkdcm/clk2x180
+	clkdcm/clkdv
+	clkdcm/clkfx
+	clkdcm/clkfx180
+
+
+Directives - final values.
+-------------------------
+
+	ALU              = false
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	comms_baud_rate  = 53475
+	compileOnly      = false
+	compilerMakeDate = 2021-08-06 14:54:59 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest
+	date             = 2022-02-11 16:38:37 +1100
+	designName       = prog
+	excludeinfo      = true
+	family           = XC3S
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+	part             = xc3s400aft256-4
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	srlAddrWidth     = 4
+	uart_cpu         = true
+	unassOut         = fatal
+	version          = 11.5.1M (devel svn 9947, dun202)
+
+
+Optimising intermediate code.
+-----------------------------
+
+	optimisation passes: 2
+	Platform-specific optimisation pass.
+	Intermediate code cleanup optimisation.
+	cleanup optimisation passes: 1
+
+	clock variables - 
+
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkin' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_in'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfb' is linked to clock variable 'glob.c16'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.psclk' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.dclk' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk0' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_raw'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk90' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk270' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk2x' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk2x180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkdv' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfx' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfx180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clockbufg_0.in' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_raw'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clockbufg_0.out' is linked to clock variable 'glob.c16'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.bus_clk' is linked to clock variable 'glob.c16'
+
+Printing TDE list to .icl file
+------------------------------
+
+Generating EDIF code.
+---------------------
+
+	generating netlist from intermediate code
+	intermediate list elements - 47
+	convert intermediate list to netlist
+		converting logic
+		converting static and queue variables
+	Elements before optimisation - 16
+	Net IDs before optimisation - 33
+	Nets before optimisation - 19
+	checking net and element validity before optimisation
+	optimising netlist gates
+		optimisation passes: 2
+	checking net and element validity after optimisation
+	Elements after optimisation - 16
+	Net IDs after optimisation - 34
+	Nets after optimisation - 19
+	resolving net identifiers
+	writing netlist to .edn file
+	writing ise constraints file /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.ncf
+	writing list of equivalent nets
+
+	cell occurrences -
+
+		INV                 2
+		OBUF                2
+		VCC                 1
+		BUFG                1
+		FDRSE               7
+		GND                 1
+		IBUFG               1
+		DCM                 1
+
+Parse time                                  0.539s
+Immediate execution time                    0.265s
+Intermediate code list optimisation time    0.007s
+Netlist generation time                     0.047s
+Netlist optimisation time                   0.003s
+Netlist output time                         0.005s
+Total elapsed time                          0.865s
+Memory usage: max 746061824 total 324534272 free 310408224
+-s option - skipping post-processing

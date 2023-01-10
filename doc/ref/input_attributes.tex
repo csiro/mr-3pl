@@ -1,0 +1,99 @@
+        These attributes are not case-sensitive but will be converted to
+        lower case.
+
+        The following attributes are used by {\bf input()} itself.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf input mode attributes} \\
+        \hline
+        differential & netlist & log          & differential                         \\
+        loc          & netlist & str or []str & locations                            \\
+        \hline
+        \btabularxend
+                
+        Where an attribute value is an array the dimension must be equal to
+        the number of pins and each array member will apply to the corresponding
+        output pad or buffer. A single attribute value will be applied to all pins.
+
+        {\bf differential} indicates that the input pads are differential.
+
+        The {\bf loc} attribute is mandatory. The array dimension
+        must exactly match the number of bits in the variable type. If the input
+        is differential the array dimension must be twice the number of
+        bits, the locations being used in pairs for the +ve and the -ve inputs
+        (in that order).
+
+        The following attribute is read-only and is created when {\bf
+        input()} is called and can be retrieved from the input mode
+        variable if required by using inbuilt function {\bf attribute()}.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf input mode} \\
+        \hline
+        ids          & 3PL & []str & element IDs       \\
+        \hline
+        \btabularxend       
+        
+        {\bf ids} is a string array that contains the netlist identifiers of the
+        input buffer elements. This attribute is read-only and is initialised
+        when the input variable is created. This identifier can be used should
+        there be a necessity to apply a constraint (other than location which is
+        done via the port name) to the input buffer.
+
+        The following attributes are required for constraint generation and are
+        handled at completion of immediate execution by library procedure {\bf
+        generateconstraints()} \autorefph{sec:lpgenerateconstraints}. The
+        attribute values are single values which will be applied to all input
+        bits.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf input mode} \\
+        \hline
+        ibuf\_delay\_value & constraint & int or []int & extra delay to IBUF                      \\
+        ifd\_delay\_value  & constraint & int or []int & extra delay to IFD                       \\
+        tnm                & constraint & str or []str & timing group id                          \\
+        pullup             & constraint & log or []log & pullup                                   \\
+        pulldown           & constraint & log or []log & pulldown                                 \\
+        diff\_term         & constraint & log or []log & differential  $100\Omega$ termination    \\
+        iostandard         & constraint & str or []str & voltage standard                         \\
+        \hline
+        \btabularxend
+        
+        {\bf ibufdelay} specifies a delay to be inserted in the non-registered
+        output path from an input buffer. The values (integers) are 0 to 12
+        inclusive (default 0).
+        
+        {\bf ifddelay} specifies a delay to be inserted in the registered
+        path within an input buffer. The values (integers) are 0 to 6
+        inclusive (default is a value generated automatically, see device
+        databook).
+        
+        {\bf tnm} is the name of a timing group in which the input pads
+        are to be included for timing constraint purposes.
+        
+        If {\bf pullup} or {\bf pulldown} are true the input will be given
+        a weak pullup or pulldown. It is not allowed for both these
+        attributes to be true.
+        
+        {\bf diff\_term} indicates that a $100\Omega$ termination resistance
+        be applied to a differential input.
+        
+        {\bf iostandard} is a string specifying one of the allowed
+        I/O standards (see Xilinx documentation).
+        
+        The following attributes are tolerated but ignored. They may be included
+        as attributes for the output side of a bi-directional pin.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf input mode} \\
+        \hline
+        slew              & constraint & str or []str   & timing group id                          \\
+        drive             & constraint & uint or []uint & drive current                                  \\
+        \hline
+        \btabularxend
+        
+        Any attributes that are not listed above will result in a fatal error.

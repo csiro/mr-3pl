@@ -1,0 +1,303 @@
+// Pipelined floating-point library
+nosource
+
+global module
+itof (queue(out) <- value(in)) {
+    int(esize, biasedexponentwidth(out));
+    int(msize, mantissawidth(out));
+    int(bexpbase, 1 << (esize - 1) - 1 + msize);
+    type(mplus1, "uint:"+(msize+1));
+    switch (primtypestring(in)) {
+    case "uint":
+        struct(mplus1type,
+            mant,   mplus1,
+            shift,  "uint:"+size(msize+1)
+        );
+        queue({p1, p2}, mplus1type);
+        p1.mant <<- in;
+        dlz(p2 <- p1, topbit(msize+1));
+        value(vout, floatstruct(type(out)));
+        vout.mant := p2.mant; // truncation will drop off left 1 bit
+        vout.bexp := (p2.mant == 0) ? 0 : bexpbase - p2.shift;
+        vout.sign := false;
+        out <<- cast(vout, type(out));
+        return;
+    case "int":
+        struct(mplus1type,
+            sign,   "log",
+            mant,   mplus1,
+            shift,  "uint:"+size(msize+1)
+        );
+        queue({p1, p2}, mplus1type);
+        p1.sign <<- in < 0;
+        p1.mant <<- (in < 0) ? -in : in;
+        dlz(p2 <- p1, topbit(msize+1));
+        value(vout, floatstruct(type(out)));
+        vout.mant := p2.mant; // truncation will drop off left 1 bit
+        vout.bexp := (p2.mant == 0) ? 0 : bexpbase - p2.shift;
+        vout.sign := p2.sign;
+        out <<- cast(vout, type(out));
+        return;
+    default:
+        texit("itof(): type not int or uint");
+    }
+}
+
+global module
+fmul (queue(out) <- value(in1), value(in2)) {
+    int(esize, biasedexponentwidth(out));
+    int(msize, mantissawidth(out));
+    int(bias, (1 << (esize - 1)) - 1);
+    type(mplus1, "uint:"+(msize+1));
+    value({denorm1, denorm2}, mplus1);
+    struct(dtype,
+        sign,   "log",
+        bexp,   "uint:"+esize,
+        mant1,  mplus1,
+        mant2,  mplus1,
+        zero,   "log"
+    );
+    struct(mplus1type,
+        sign,   "log",
+        bexp,   "uint:"+esize,
+        mant,   mplus1,
+        zero,   "log"
+    );
+
+    // If either operand is different in size to the result,
+    // insert a rescale stage.
+    type(outfloat, floatstruct(type(out)));
+    value({i1, i2}, outfloat);
+    if (esize != biasedexponentwidth(in1) || msize != mantissawidth(in1) ||
+        esize != biasedexponentwidth(in2) || msize != mantissawidth(in2)) {
+        queue({rp1, rp2}, type(out));
+        sync {
+            rp1 <<- in1;
+            rp2 <<- in2;
+        }
+        i1 := cast(rp1, outfloat);
+        i2 := cast(rp2, outfloat);
+    } else {
+        i1 := cast(in1, outfloat);
+        i2 := cast(in2, outfloat);
+    }
+    
+    queue(m1, dtype);
+    value(m1zero, "log", i1.mant == 0);
+    value(m2zero, "log", i2.mant == 0);
+    value(ms1zero, "log", i1.bexp == 0 && i1.mant == 0);
+    value(ms2zero, "log", i2.bexp == 0 && i2.mant == 0);
+    denorm1 := ms1zero ? 0 : (1 << msize);
+    denorm2 := ms2zero ? 0 : (1 << msize);
+    
+    sync {
+        m1.sign <<- i1.sign ^^ i2.sign;
+        m1.bexp <<- i1.bexp + i2.bexp - bias;
+        m1.mant1 <<- i1.mant | denorm1;
+        m1.mant2 <<- i2.mant | denorm2;
+        m1.zero <<- ms1zero || ms2zero;
+    }
+    
+    queue(m2, mplus1type);
+    
+    sync {
+        m2.sign <<- m1.sign;
+        m2.bexp <<- m1.zero ? 0 : m1.bexp;
+        m2.mant <<- (m1.mant1 * m1.mant2) >> msize;
+        m2.zero <<- m1.zero;
+    }
+    
+    value(ok, "log", cast(getbit(m2.mant, size(m2.mant)-1), "log") || m2.zero);
+    value(vout, floatstruct(type(out)));
+    vout.mant := ok ? m2.mant : m2.mant << 1;
+    vout.bexp := m2.bexp - (ok ? 0 : 1);
+    vout.sign := m2.sign;
+    out <<- cast(vout, type(out));
+}
+
+global module
+fdiv (queue(out) <- value(in1), value(in2)) {
+    texit("module fdiv() in float.3pl has not yet been implemented!");
+}
+
+global module
+fneg (queue(out) <- value(in)) {
+    int(esize, biasedexponentwidth(out));
+    int(msize, mantissawidth(out));
+    // If the input is different in size to the result,
+    // insert a rescale stage.
+    type(outfloat, floatstruct(type(out)));
+    value(i, outfloat);
+    if (esize != biasedexponentwidth(in) || msize != mantissawidth(in)) {
+        queue(rp1, type(out));
+        rp <<- in;
+        i := cast(rp, outfloat);
+    } else
+        i := cast(in, outfloat);
+    value(vout, outfloat);
+    vout.mant := i.mant;
+    vout.bexp := i.bexp;
+    vout.sign := i.sign ^ 1;
+    out <<- cast(vout, type(out));
+}
+
+global module
+fadd (queue(out) <- value(in1), value(in2)) {
+    faddsub(out <- in1, in2, false);
+}
+
+global module
+fsub (queue(out) <- value(in1), value(in2)) {
+    faddsub(out <- in1, in2, true);
+}
+
+
+
+
+
+
+
+module
+faddsub (queue(out) <- value(in1), value(in2), log(sub)) {
+    int(esize, biasedexponentwidth(out));
+    int(msize, mantissawidth(out));
+    type(mplus1, "uint:"+(msize+1));
+    type(mplus2, "uint:"+(msize+2));
+    struct(mplus1type,
+        sign,   "log",
+        bexp,   "uint:"+esize,
+        mant,   mplus1
+    );
+    struct(mplus2type,
+        sign,   "log",
+        bexp,   "uint:"+esize,
+        mant,   mplus2,
+        shift,  "uint:"+size(msize+2)
+    );
+    str(outfloat, floatstruct(type(out)));
+
+    // If either operand is different in size to the result,
+    // insert a rescale stage.
+    value({i1, i2}, outfloat);
+    if (esize != biasedexponentwidth(in1) || msize != mantissawidth(in1) ||
+        esize != biasedexponentwidth(in2) || msize != mantissawidth(in2)) {
+        queue({rp1, rp2}, type(out));
+        sync {
+            rp1 <<- in1;
+            rp2 <<- in2;
+        }
+        i1 := cast(rp1, outfloat);
+        i2 := cast(rp2, outfloat);
+    } else {
+        i1 := cast(in1, outfloat);
+        i2 := cast(in2, outfloat);
+    }
+
+    // Input swapper.
+    // Swap if necesssary to ensure 1st operand is
+    // the larger.
+    value(e1_lt_e2, "log", i1.bexp < i2.bexp);
+    value(e1_eq_e2, "log", i1.bexp == i2.bexp);
+    value(f1_lt_f2, "log", i1.mant < i2.mant);
+    queue({ms1, ms2}, outfloat);
+    sync {
+        when (e1_lt_e2 || e1_eq_e2 && f1_lt_f2) par {
+            ms1.sign <<- i2.sign ^^ sub;
+            ms1.bexp <<- i2.bexp;
+            ms1.mant <<- i2.mant;
+            ms2 <<- i1;
+        } else par {
+            ms1 <<- i1;
+            ms2.sign <<- i2.sign ^^ sub;
+            ms2.bexp <<- i2.bexp;
+            ms2.mant <<- i2.mant;
+        }
+    }
+
+    // Denormalise both and right shift the 2nd mantissa by the
+    // difference in biased exponents.
+    value(fshift, "uint:"+size(msize), ms1.bexp - ms2.bexp);
+    queue({ss1, ss2}, mplus1type);
+    value({denorm1, denorm2}, mplus1);
+    value(ms1zero, "log", ms1.bexp == 0 && ms1.mant == 0);
+    value(ms2zero, "log", ms2.bexp == 0 && ms2.mant == 0);
+    denorm1 := ms1zero ? 0 : (1 << msize);
+    denorm2 := ms2zero ? 0 : (1 << msize);
+    sync {
+        ss1.sign <<- ms1.sign;
+        ss1.bexp <<- ms1.bexp;
+        ss1.mant <<- ms1.mant | denorm1;
+        ss2.sign <<- ms2.sign;
+        ss2.bexp <<- ms2.bexp;
+        ss2.mant <<- (ms2.mant | denorm2) >> fshift;
+    }
+    
+    // Add the mantissas.
+    value(carry, "log");
+    value(mant, mplus1);
+    queue(prenorm1, mplus2type);
+    sync {
+        prenorm1.sign <<- ss1.sign;
+        prenorm1.bexp <<- ss1.bexp + 1;    // pre-increment biased exponent
+        prenorm1.mant <<- addsub(ss1.mant, ss2.mant, !(ss1.sign ^^ ss2.sign));
+    }
+    
+    // Normalisation - 1st stage - eliminate leading zeros    
+    queue(prenorm2, mplus2type);
+    dlz(prenorm2 <- prenorm1, topbit(msize+2));
+    
+    // Normalisation - 2nd stage -  adjust the exponent and delete the top bit
+    value(vout, floatstruct(type(out)));
+    vout.mant := prenorm2.mant >> 1; // truncation will drop off left 1 bit
+    vout.bexp := (prenorm2.mant == 0) ? 0 : prenorm2.bexp - prenorm2.shift; // previously incremented
+    vout.sign := prenorm2.sign;
+    out <<- cast(vout, type(out));
+}
+
+module
+dlz (queue(out) <- queue(in), int(w)) {
+    value(topzeros, "log", !ortop(in.mant, w));
+    if (w == 1) {
+        if (hasfield(in, sign)) out.sign <<- in.sign;
+        if (hasfield(in, bexp)) out.bexp <<- in.bexp;
+        out.mant <<- topzeros ? in.mant << w : in.mant;
+        out.shift <<- (in.shift << 1) | cast(topzeros, "uint:1");
+    } else {
+        queue(p, type(in));
+        if (hasfield(in, sign)) p.sign <<- in.sign;
+        if (hasfield(in, bexp)) p.bexp <<- in.bexp;
+        p.mant <<- topzeros ? in.mant << w : in.mant;
+        p.shift <<- (in.shift << 1) | cast(topzeros, "uint:1");
+        dlz(out <- p, w/2);
+    }
+}
+
+function
+ortop (value(in), int(w)) {
+    value(res, "log", false);
+    for (int(i, width(in)-1) ; w!=0 ; w--) {
+        res := res || cast(getbit(in, i), "log");
+        i--;
+    }
+    return(res);
+}
+
+function
+topbit (int(i)) {
+    int(j, 1);
+    while (i > 1) {
+        i = i >> 1;
+        j = j << 1;
+    }
+    return(j);
+}
+
+function
+floatstruct (type(t)) {
+    struct(s,
+        mant,   "uint:"+mantissawidth(t),
+        bexp,   "uint:"+biasedexponentwidth(t),
+        sign,   "log"
+    );
+    return(s);
+}

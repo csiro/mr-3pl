@@ -1,0 +1,337 @@
+\pagebreak
+
+\chapter{Coding Recommendations}
+
+
+    \section{minimising variable assignments}
+
+        Assignments to a static or queue variable should be kept to a minimum. It
+        is preferable to use different variables where possible rather than
+        re-use the same variable. The more assignments a variable has the more
+        delay is incurred in its input logic and hence the more likely it is
+        that the logic will not meet timing constraints. In general flip-flops
+        are in excess in FPGAs and it is better to use many variables with few
+        assignments each rather than a few variables with many assignments each.
+    
+    \section{reset() better than assignment}
+
+        It is better to use the {\bf reset()} inbuilt procedure rather than
+        re-assigning the initial value (usually zero) to a static variable. The
+        reset does not require the input multiplexing logic used by
+        assignments, has a separate input to the flip-flops, has precedence
+        over assignment in a clash should that prove useful and multiple
+        resets in the code are simply ORed which is much simpler than
+        assignment multiplexing. Note: the compiler now recognises when
+        an assignment of a constant to a static variable returns it to its
+        initial state and generates a reset instead of an assignment. In view
+        of the priority of a reset over an assignment should they clash it may
+        still enhance readability to use reset() explicitly.
+    
+    \section{queue subsets of structs}
+    
+        Where a processing pipeline has more fields in the queue structs as one
+        progresses along the pipeline it is better to use one struct type
+        containing all the necessary fields for every intermediate queue, rather
+        than giving each queue its own struct, each a superset of the previous.
+        This simplifies the source code while not affecting the logic resources
+        used as queue (and static) elements which are not referenced are removed
+        during netlist optimisation.
+    
+    \section{queue writes exclusivity}
+
+        Writes to a queue must be mutually exclusive (simultaneous writes to
+        component array members or fields is OK). In order to control writes
+        to a queue it is usually best to restrict writing to any one queue to a
+        single module.
+    
+    \section{nesting of target control structures}
+    
+        Nesting of target control structures ({\bf when}, {\bf branch}, {\bf seq
+        while }, {\bf par while}, {\bf sync while}, {\bf do seq while}, {\bf do
+        par while}, {\bf do sync while}) should be minimised. For example it is
+        better to use independent wider {\bf when}s than to nest them. For
+        example if the following is at the top level (not nested in any other
+        control structures) -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            when (l1) par {
+                when (l2)
+                    a <- b;
+                c <- d;
+            }
+        \end{lstlisting}
+        it would be better written as -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           when (l1 & l2)
+               a <- b;
+           when (l1)
+               c <- d;
+        \end{lstlisting}
+        Here the two {\bf when} statements are executed independently in
+        parallel since they are at the top level. If the example was not
+        at the top level then instead we could code it as -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            par {
+                when (l1 & l2)
+                    a <- b;
+                when (l1)
+                    c <- d;
+            }
+        \end{lstlisting}
+
+        In these sorts of transformations care must be taken to ensure that the
+        two forms are equivalent in execution since statements in a {\bf par} do
+        not necessarily execute the same as statements in separate top-level
+        infinite loops. for example -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            par {
+                seq {
+                    a <- x;
+                    b <- y;
+                }
+                c <- z;
+            }
+        \end{lstlisting}
+        executes differently to top-level -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            seq {
+                a <- x;
+                b <- y;
+            }
+            c <- z;
+        \end{lstlisting}
+        since the {\bf seq} will take 2 clock cycles to execute and thus
+        assignment to {\bf c} will occur every 2 clock cycles in the first
+        example but every clock cycle in the second.
+        
+        As another example -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            sync {
+                when (l1)
+                    a.f1 <<- 2;
+                else when (l2 && l3)
+                    a.f1 <<- 3;
+                else when (l2 && !l3)
+                    a.f1 <<- 4;
+                else
+                    a.f1 <<- 0;
+                a.f2 <<- b;
+            }
+        \end{lstlisting}
+        Note that a {\bf sync} is needed here to ensure that the queue is
+        available to write before testing {\bf l1}, {\bf l2} etc as these
+        variables could be changed by other code running in parallel while
+        execution here is waiting for queue availability. This code is valid but
+        will have long cascaded control logic. We could code this instead as -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            sync {           
+                when (l1 && !l2))
+                    a.f1 <<- 2;
+                when (!l1 && l2 && l3)
+                    a.f1 <<- 3;
+                when (!l1 && l2 && !l3)
+                    a.f1 <<- 4;
+                a.f2 <<- b;
+            }
+        \end{lstlisting}
+        as here the {\bf when} statements execute in parallel but with a
+        shallower depth of expressions to test. Note that we have been able to
+        eliminate the zero assignment case because a queue assignment will occur
+        because of {\bf \verb'a.f2 <<- b;'} and hence if none of the {\bf when}s
+        are true, field {\bf f1} will be assigned zero by default, so the {\bf
+        else} is not needed.
+        
+        \index{constraint!timing}
+        \index{timing constraint}
+        The following example illustrates ways of recoding to overcome
+        timing constraint problems. An input queue carries a struct with
+        two numeric fields {\bf f1} and {\bf f2} and a logical field
+        {\bf coord}. If {\bf coord} is true the input queue is to be copied
+        to the output queue. If {\bf coord} is false {\bf f1} is to be written
+        to the output queue a number of times where the count is given by
+        {\bf f2}. This can be neatly coded as -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(s,
+               f1,     "uint:12",
+               f2,     "uint:19",
+               coord,  "log"
+           );
+           queue({in, out}, s);
+           static(e, "uint:12");
+           static(count, "uint:19", 1);
+           when (in.coord)
+               out <<- in;
+           else seq {
+               sync {
+                   count <- in.f2;
+                   e <- in.f1;
+                   out.f1 <<- in.f1;
+               }
+               par while (count != 1) {
+                   out.f1 <<- e;
+                   count--;
+               }
+           }
+        \end{lstlisting}
+        This version is succinct but it did not meet a 10ns timing
+        constraint by 5ns. The main problem is a path from static variable
+        {\bf count} through the {\bf while()} test back through the containing
+        when and then through to one of the assignments to {\bf out}. We can
+        eliminate the {\bf while()} by realising that if we move to the top
+        level of the module we have an implied infinite loop. A {\bf when()}
+        at the top level therefore behaves like a {\bf while()} lower down.
+        With this in mind we can recode the example as follows -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           sync {
+               when (count == 1) {
+                   when (in.coord)
+                       out <<- in;
+                   else par {
+                       count <- in.f2;
+                       e <- in.f1;
+                       out.f1 <<- in.f1;
+                   }
+               }
+           }
+           when (count != 1) par {
+               out.f1 <<- e;
+               count--;
+           }
+        \end{lstlisting}
+        This code is perhaps less clear, but it is simpler than the previous
+        version and familiarity with the implied infinite loops of 3PL reduces
+        its apparent obscurity. This code still failed to meet a 10ns timing
+        constraint by 1ns. The 19 bit comparison introduces a delay of 3ns or
+        so and we could eliminate this by doing the comparison in parallel in
+        the previous iteration and storing the result in a static variable
+        as follows -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           static(counteq1, "log", true);
+           sync {
+               when (counteq1) {
+                   when (in.coord)
+                       out <<- in;
+                   else par {
+                       count <- in.f2;
+                       counteq1 <- (in.f2 == 1);
+                       e <- in.f1;
+                       out.f1 <<- in.f1;
+                   }
+               }
+           }
+           when (!counteq1) par {
+               out.f1 <<- e;
+               count--;
+               counteq1 <- (count == 2);
+           }
+        \end{lstlisting}
+        This version easily met the 10ns timing constraint but at the price
+        of more obscure coding.
+
+
+
+
+
+
+    \section{uncontrolled input sources}
+    
+        It is often the case that input data is from a source that has no
+        flow control, for example a video camera. In that case pipeline
+        signalling cannot extend back past the input module. This is a
+        problem if any module in the processing pipeline fails to read an
+        input queue in the cycle it becomes available. Buffering does not help
+        as any pipeline delays accumulate. It is preferable to use a
+        processing pipeline with a higher clock frequency than the input
+        data. The pipelines are connected by means of an asynchronous queue
+        variable which provides a FIFO between modules whose clock
+        frequencies may differ.
+
+    \section{bit access}
+
+        There is usually no reason to access individual bits in a word. If a
+        word represents flags then it should be an array of {\bf log}. If
+        there are packed fields then it should be a {\bf struct}. If data is
+        being handled on a word basis but a single bit is to be examined at
+        one point in the code one method is to cast the word into an
+        array of single bits and then reference the required bit directly,
+        e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           static(a, "uint:8");
+           value(b, "[8]bits:1");
+
+           b := cast(a, "[8]bits:1");
+
+           .
+           ... <- .. b[3] ..;  // the 4th bit of 'a'
+           .
+        \end{lstlisting}
+        The alternative is to use masking and shifting in order to access bit
+        fields. If the mask word and shift count are constant then the two forms
+        will generate equivalent code and are efficient. There are functions in
+        stdlib.3pl called getbit(), isset() and isclear() which already do this
+        and can be used for single bit access. Note that there is no way to
+        assign a single bit of a multibit primitive - the whole datum must be
+        assigned with the selected bit changed. If single bits are to be
+        assigned the type should be declared as an array of type {\bf log} or of
+        {\bf bits:1} and later cast to the primitive multibit type required.
+    
+    \section{pipeline resets}
+
+        Many library modules have optional reset inputs, which are usually
+        value mode. These reset inputs are usually intended for recovery from
+        error conditions. It must be recognised that the use of these inputs
+        will usually destroy the current state of the pipeline. Modules along
+        a pipeline may be buffering zero, one or more data and the exact
+        position of successive data in the pipeline is usually not known. If
+        an asynchronous reset is to be used it is usually necessary to reset
+        the entire pipeline to an initial (empty) state and restart it from
+        the input end.
+
+
+
+    \section{pipeline conflicts}
+
+        There are two pipeline topological features which have the potential
+        to cause trouble. The first is alternate queue paths between a source
+        and destination module. The second is queue loops.
+
+        \subsection{alternate queue paths}
+
+            When there are two or more queue paths from a source module to a
+            destination module there is the potential for the queues to interact. In
+            the simple case where the destination module waits on both inputs and
+            then reads both, problems arise if the latency through the paths
+            differs. Data in the shorter path will reach the destination module
+            first and that path will then block. The point of the block will move
+            back until all the queue buffers in the path are full. The longer path
+            will in the meantime be flowing but not blocking. When the short path
+            fills and blocks the source the longer path will cease to read any more
+            data from the source and so will start to empty from the input end.
+            Eventually data in the longer path will reach the destination module at
+            which point the destination will start to read both queues. After a while
+            the short path will unblock the source so that data flows again into
+            both paths, but soon the data gap in the long path will reach the
+            destination which will block again. This is an oversimplified view and
+            in practice the queue interactions can lead to a complicated disjointed
+            data flow. The data will always be correct and in step and the pipeline
+            will not deadlock, but data processing will be sporadic and the
+            throughput will be less than it could be.
+
+            The simple solution is to put a buffer (queue) in the shorter
+            path. This will take up the excess data and keep the source
+            module from blocking, thus maintaining the flow to the longer
+            path. The minimum buffer size should be the difference in latency
+            between the two paths. A queue variable whose buffer size has been
+            increased by setting attribute {\bf depth()} or
+            {\bf mindepth()} can be used for this purpose.
+
+            This phenomenon has not been analysed. It can probably be
+            modelled using Petri nets.
+
+        \subsection{queue loops}
+
+            A closed queue loop should only be used after careful
+            consideration as it can easily lead to deadlock. It is possible
+            to set up a loop if either reading of the inputs is conditional
+            at the point at which the loop feeds back, or else if modules
+            in the loop are initialised so that the pipeline starts already
+            in the steady state condition.

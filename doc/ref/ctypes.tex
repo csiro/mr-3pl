@@ -1,0 +1,221 @@
+\pagebreak
+
+\section{Conversion of 3PL struct and enum types to C types - ctypes.3pl}\label{chap:ctypes}
+
+    \index{library!ctypes.3pl}
+    This library contains two functions. The first takes a 3PL struct or
+    enumerated type and generates an equivalent C type as a string.
+    The second function creates a string array of identifiers from an
+    enumerated type.
+    
+    This library must be incorporated by using a {\bf module} statement, i.e.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "ctypes.3pl"
+    \end{lstlisting}
+
+
+
+    \subsection{library modules}
+    
+    
+        None.
+
+
+    \subsection{library procedures}
+    
+        None.
+
+
+
+
+    \subsection{library functions}
+    
+
+
+
+        \subsubsection{ctypes - converts 3PL types to C types}\label{sec:lfctypes}
+
+            {\bf Library: ctypes.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               ctypes (type(t), str(name), str(prefix, "")) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, "str"
+
+            {\bf Input parameters:} \\            
+            {\bf t} is the type to be converted. \\
+            {\bf name} is the identifier to be used in the C type.\\
+            {\bf prefix} is an optional string prefix to prepend to enum
+            identifiers.
+
+            {\bf description:} \\
+            This function takes a 3PL variable of type {\bf type} and
+            returns a string representing the equivalent C type. It is
+            intended to allow non-primitive data to be passed between an FPGA and
+            a CPU via a 32 bit port. The conversion allows types declared in 3PL
+            to be converted to C types for inclusion and compilation.
+            
+            The only types converted are {\bf struct} and {\bf enum}. A struct may
+            contain enums but must not contain nested structs. Any enums contained
+            within a struct must have been previously converted by this function.
+            Enums where the ordinals have been specified explicitly and
+            non-sequentially are converted correctly.
+            
+            The second argument is the identifier to be given to the enum or
+            struct. Since the type is passed by value from the argument there is
+            no type identifier available, so one must be provided.
+            
+            3PL structs are converted to C bit field structs with an additional
+            field to pack the struct to 32 bits if necessary. If the total
+            number of bits is greater than 32 an error exit occurs. The packed
+            bit fields are in reverse order as required.
+
+            As an example, the following 3PL code -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               type(grptype, "[16]log");
+               enum(src_type,
+                       TIME,
+                       PIXEL,
+                       CPU
+               );
+               enum(subj_type,
+                       NONE,
+                       LINEARISE,
+                       GAINTRIM,
+                       GROUP,
+                       PILEUP,
+                       THROTTLE,
+                       ENERGY,
+                       DACOLMAP,
+                       TIMER,
+                       TIMER_IM 
+               );
+               struct(command,
+                   src,        src_type,
+                   subject,    subj_type,
+                   index,      "uint:4",
+                   groups,     grptype, 
+                   pileup,     "log",
+                   discard,    "log"
+               );
+               file(tf, open("fpga_types.h", "w"));
+               writeln(tf, ctypes(src_type, "src_type", "SRC_"));
+               writeln(tf, ctypes(subj_type, "subj_type"));
+               writeln(tf, ctypes(command, "command"));
+               close(tf);
+            \end{lstlisting}
+            
+            would create file fpga\_types.h and write the following to it -
+            \begin{lstlisting}[gobble=12, language=C]
+                   enum src_type {
+                       SRC_TIME = 0,
+                       SRC_PIXEL = 1,
+                       SRC_CPU = 2
+                   };
+
+                   enum subj_type {
+                       NONE = 0,
+                       LINEARISE = 1,
+                       GAINTRIM = 2,
+                       GROUP = 3,
+                       PILEUP = 4,
+                       THROTTLE = 5,
+                       ENERGY = 6,
+                       DACOLMAP = 7,
+                       TIMER = 8,
+                       TIMER_IM = 9
+                   };
+
+                   typedef union {
+                       struct {
+                           unsigned   packing: 4;
+                           unsigned   discard: 1;
+                           unsigned   pileup: 1;
+                           unsigned   groups: 16;
+                           unsigned   index: 4;
+                           unsigned   subject: 4;
+                           unsigned   src: 2;
+                       } bits;
+                       uint32_t word;
+                   } command;
+            \end{lstlisting}
+
+            To allow structs packed into 32 bit words to be both transmitted
+            and received as words and also accessed via struct fields it is
+            best to declare a suitable union, e.g.
+            \begin{lstlisting}[gobble=12, language=C]
+                   typedef union {
+                       struct command  assign;
+                       uint32_t        word;
+                   } COMMAND;
+                   
+                   COMMAND     c;
+                   
+                   c.assign.subject = ENERGY;  /* assign using fields */
+                       .
+                       .
+                   c.assign.src = CPU;
+                   
+                   transmit_to_fpga(c.word);   /* transmit as 32 bit word */
+            \end{lstlisting}
+
+
+
+
+
+
+
+
+        \subsubsection{cdatas - generate a C name array for 3PL enum type}\label{sec:lfcdatas}
+
+            {\bf Library: ctypes.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               cdatas (type(t), str(name)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, "str"
+
+            {\bf Input parameters:} \\            
+            {\bf t} is the enum type. \\
+            {\bf name} is the identifier to be used for the C string array.
+
+            {\bf description:} \\
+            This function takes a 3PL variable of type {\bf type} whose value is
+            type {\bf enum} and returns a string defining a C data object that
+            matches the given type. The object has the C name given by {\bf
+            name}. Presently this function only operates on enum types, where
+            the C object is a NULL-terminated string table formed from the enum
+            values. The string array can be indexed by an enum ordinal
+            to get the associated identifier string.
+            
+            The following 3PL code -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               enum(e, V1, V2, V3);
+               println(cdatas(e, "vname"));
+            \end{lstlisting}
+            would print -
+
+            \begin{lstlisting}[gobble=12, language=C]
+               static const char *vname[] __attribute((unused)) = {
+                   "V1",
+                   "v2",
+                   "V3",
+                   NULL
+               };
+            \end{lstlisting}
+
+
+
+    \subsection{library classes}
+    
+        None.

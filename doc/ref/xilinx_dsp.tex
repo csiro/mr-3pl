@@ -1,0 +1,980 @@
+\pagebreak
+
+\section{Spartan6, Virtex4, Virtex5, Virtex6 and series 7 DSP48 block Library File - xilinx/dsp48.3pl}
+
+    \index{library!xilinx/dsp48.3pl}
+    This library creates a DSP48 block for Spartan6, Virtex4, Virtex5, Virtex6
+    and series 7 FPGAs.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/dsp48.3pl"
+    \end{lstlisting}
+
+
+
+    \subsection{library modules}
+
+        \subsubsection{dspaddsub - DSP add/subtract}\label{sec:lmdspaddsub}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspaddsub (
+                   value(out),
+                   value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   value(add, "log", true),
+                   value(gate, "log", true),
+                   int(areg, breg, preg),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} result.\\
+            {\bf pat} pattern matched.\\
+
+
+            {\bf Input parameters:} \\
+            {\bf a} first operand.\\
+            {\bf b} second operand.\\
+            {\bf add} add or subtract.\\
+            {\bf gate} gate second operand.\\
+            {\bf areg} number of registers in A input.\\
+            {\bf breg} number of registers in B input.\\
+            {\bf preg} number of registers on DSP48E output.\\
+            {\bf pattern} pattern to match against result.\\
+            {\bf mask} mask to select pattern bits.\\
+
+            {\bf description:} \\
+            This module uses the DSP48 to add or subtract two operands. The
+            operands may be immediate, input, value, static or queue mode and may
+            be of type "uint:", "int:", "ufixed:", or "fixed:". The types may be
+            mixed. The operands may be up to 48 bits signed or 47 bits unsigned
+            and need not be the same size. The output result type is given by
+            the following table -
+
+            \begin{tabular}{| l || r | r | r | r |}
+            \hline
+                    & uint:   & int:   & ufixed: & fixed: \\
+            \hline
+            \hline
+            uint:   & uint:   & int:   & ufixed: & fixed: \\
+            \hline
+            int:    & int:    & int:   & fixed:  & fixed: \\
+            \hline
+            ufixed: & ufixed: & fixed: & ufixed: & fixed: \\
+            \hline
+            fixed:  & fixed:  & fixed: & fixed:  & fixed: \\
+            \hline
+            \end{tabular}
+
+            The output result binary point offset, i.e. number of fraction
+            bits, is equal to the largest binary point offset of the two
+            operands. The output result integer part width is equal to the
+            largest integer part width of the two operands plus one. The
+            full width of the result cannot exceed 48 bits. The result will
+            be cast to fit the type of the argument passed to the first
+            output parameter {\bf out}.
+
+            The argument supplied to the first output parameter, {\bf out}, is a
+            value mode variable which should have the type "empty" to allow it
+            to take the result type.
+
+            The third input argument {\bf add} is type "log" and is true for
+            addition and false for subtraction. If omitted, the operation is
+            addition. An immediate mode argument may be supplied for a
+            fixed operator or a target value may be used to select the
+            operator dynamically.
+
+            The fourth input argument {\bf gate} is type "log" and is true for
+            addition or subtraction of the second operand and false to pass the
+            first operand, i.e. add or subtract 0. If omitted, the operation is
+            addition/subtraction. An immediate mode argument may also be
+            supplied.
+
+            The fifth and sixth input parameters {\bf areg} and {\bf breg} 
+            are type "int" and specify the number of registers to insert
+            in the {\bf a} and {\bf b} inputs respectively. Allowed
+            values for {\bf areg} are 0 (default), 1 and 2 and for
+            {\bf breg} 0 (default), and 1.
+
+            The seventh input parameter{\bf preg} specifies the number of
+            registers on the result and pattern match outputs. Allowed values
+            are 0 (default) or 1. If {\bf preg} is 0 and the outputs are
+            assigned to static variables those variables may be subsumed into
+            the DSP48 output register.\footnote{this will only be done if the
+            static variables are not initialised (0 is allowed), are not
+            assigned any other value but a DSP48 output (can be assigned 0/false
+            or reset) and if both outputs are used are assigned (or reset) in
+            the same way (have a common clock-enable and reset). This is because
+            the DSP48 output registers for the arithmetic output and
+            the pattern match output share a clock enable and reset and they
+            cannot be initialised). An assignment of 0/false to these static
+            variables becomes a reset since by default it is the assignment of
+            the initial values. Any other assignments would require an input
+            multiplexer between the DSP48 output and the registers.}
+
+            The eigth parameter {\bf pattern} is an optional bit pattern to
+            match against the arithmetic result. If they are identical the
+            second output argument {\bf pat} will be true. The last parameter
+            {\bf mask} selects which bits from ANDing the result and the pattern
+            are to be used. All bits passed by the mask must be true for the
+            match result to be true. If {\bf mask} is not passed an argument
+            then all bits are matched to the pattern.
+
+            The second output parameter {\bf pat} provides the result of the
+            pattern match, if used.
+
+            If no internal registers are used the input arguments may contain
+            queue reads, in which case the arguments to output parameters {\bf
+            out} and {\bf pat} will be available for reading when all input
+            arguments are available. If any inserted registers are specified
+            ({\bf areg}, {\bf breg}, {\bf creg} or {\bf preg} are
+            non-zero) the inputs cannot contain queue reads and the code will
+            exit with a fatal error.
+
+
+
+
+        \subsubsection{dspcounter - DSP counter}\label{sec:lmdspcounter}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspcounter (
+                   value(out),
+                   value(pat, "log")
+                   <-
+                   value(step, "log", true),
+                   value(reset, "log", false),
+                   value(pattern, "bits:48", 0),
+                   int(mask, 0xffffffffffff),
+                   value(up, "log", true)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} counter value.\\
+            {\bf pat} pattern matched.\\
+
+
+            {\bf Input parameters:} \\
+            {\bf step} advance the count.\\
+            {\bf reset} clear the count.\\
+            {\bf pattern} pattern to match against count.\\
+            {\bf mask} mask to select pattern bits.\\
+            {\bf up} up or down.\\
+
+            {\bf description:} \\
+            This module uses the DSP48 as a 48 bit counter. The count will
+            be cast to fit the type of the argument passed to the first
+            output parameter {\bf out}.
+
+            The first input parameter, {\bf step}, is a boolean which will
+            advance the count when true. If it is not passed an argument
+            then by default the counter will advance on every clock cycle.
+
+            The second input parameter, {\bf reset}, is a boolean which will
+            synchronously reset the counter to zero when true.
+
+            The third parameter {\bf pattern} is an optional bit pattern to
+            match against the count. If they are identical the second output
+            argument {\bf pat} will be true. The pattern may be either immediate
+            mode (constant) or target mode to compare against a target variable
+            or expression. The fourth parameter {\bf mask} selects which bits
+            from ANDing the count and the pattern are to be used. All bits
+            passed by the mask must be true for the match result to be true. If
+            {\bf mask} is not passed an argument then all bits are matched to
+            the pattern.
+
+            The last input parameter determines the count direction, true for
+            up and false for down. It may of course have an immediate or
+            target argument depending on whether the count direction is to
+            be changed dynamically or fixed. If the argument is omitted
+            the direction is up.
+
+            The second output parameter {\bf pat} provides the result of the
+            pattern match, if used.
+
+            The input arguments must not contain queue reads.
+
+
+
+
+        \subsubsection{dsplog - DSP logical operation}\label{sec:lmdsplog}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dsplog (
+                   value(out),
+                   value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   value(op, "uint:3"),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} counter value.\\
+            {\bf pat} pattern matched.\\
+
+
+            {\bf Input parameters:} \\
+            {\bf a} first input operand.\\
+            {\bf b} second input operand.\\
+            {\bf op} operator.\\
+            {\bf pattern} pattern to match against result.\\
+            {\bf mask} mask to select pattern bits.\\
+
+            {\bf description:} \\
+            This module uses the DSP48 as a 48 bit counter. The result
+            is a logical operation on the two input operands.
+
+            Input parameters {\bf a} and {\bf b} are the operands and
+            {\bf op} is an operation code. The operation codes are -
+
+            \begin{tabular}{| r r r |}
+            \hline
+            4   & 0b000100    & \verb'  a ^ b ' \\
+            5   & 0b000101    & \verb'~(a ^ b)' \\
+            6   & 0b000110    & \verb'~(a ^ b)' \\
+            7   & 0b000111    & \verb'  a ^ b ' \\
+            12  & 0b001100    & \verb'  a & b ' \\
+            13  & 0b001010    & \verb'  a & ~b' \\
+            14  & 0b001110    & \verb'~(a & b)' \\
+            15  & 0b001111    & \verb' ~a | b ' \\
+            36  & 0b100100    & \verb'~(a ^ b)' \\
+            37  & 0b100101    & \verb'  a ^ b ' \\
+            38  & 0b100110    & \verb'  a ^ b ' \\
+            39  & 0b100111    & \verb'~(a ^ b)' \\
+            44  & 0b101100    & \verb'  a | b ' \\
+            45  & 0b101101    & \verb'  a | ~b' \\
+            46  & 0b101110    & \verb'~(a ^ b)' \\
+            47  & 0b101111    & \verb' ~a & b ' \\
+            \hline
+            \end{tabular}
+
+            The argument to {\bf op} may be immediate mode for a fixed
+            operation or may be target mode to dynamically select the
+            operation.
+
+            The operands can be any width up to 48 bits and can be any type.
+
+            The fourth parameter {\bf pattern} is an optional bit pattern to
+            match against the result. If they are identical the second
+            output argument {\bf pat} will be true. The last parameter
+            {\bf mask} selects which bits from ANDing the result and the pattern
+            are to be used. All bits passed by the mask must be true for the
+            match result to be true. If {\bf mask} is not passed an argument
+            then all bits are matched to the pattern.
+
+            The second output parameter {\bf pat} provides the result of the
+            pattern match, if used.
+
+            The input arguments may contain queue reads in which case the
+            arguments to output parameters {\bf out} and {\bf pat} will
+            be available for reading when all input arguments are
+            available.
+
+
+
+
+        \subsubsection{dspmul - DSP multiply}\label{sec:lmdspmul}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspmul (
+                   value(out), value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   int(areg, breg, mreg, preg),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} result.\\
+            {\bf pat} pattern matched.\\
+
+
+            {\bf Input parameters:} \\
+            {\bf a} first operand.\\
+            {\bf b} second operand.\\
+            {\bf areg} number of registers in A input.\\
+            {\bf breg} number of registers in B input.\\
+            {\bf mreg} number of registers on multiplier output.\\
+            {\bf preg} number of registers on DSP48 output.\\
+            {\bf pattern} pattern to match against result.\\
+            {\bf mask} mask to select pattern bits.\\
+
+            {\bf description:} \\
+            These modules use the DSP48 to multiply two signed operands. The
+            operands may be immediate, input, value, static or queue mode and may
+            be of type "uint:", "int:", "ufixed:", or "fixed:". The types may be
+            mixed. The result type is determined by the input operand type
+            nearest the top of the following table -
+
+            \begin{tabular}{| l |}
+            \hline
+            fixed   \\ \hline
+            ufixed  \\ \hline
+            int     \\ \hline
+            uint    \\ \hline
+            \end{tabular}
+
+            The first operand, {\bf a}, is 25 bits maximum (24 bits if unsigned)
+            and the second operand, {\bf b}, is 18 bits maximum (17 bits if
+            unsigned).
+
+            The output result binary point offset, i.e. number of fraction bits,
+            is equal to the sum of the offsets of the operands. The product
+            integer part width is equal to the sum of the integer widths of its
+            two operands. The result will be cast to fit the type of the
+            argument passed to the first output parameter {\bf out}.
+
+            The argument supplied to the first output parameter, {\bf out}, is a
+            value mode variable which may have the type "empty" to allow it
+            to take the result type without casting.
+
+            The third and fourth input parameters {\bf areg} and {\bf breg}
+            are type "int" and specify the number of registers to insert
+            in the {\bf a} and {\bf b} inputs respectively. Allowed
+            values for {\bf areg} and {\bf breg} are 0 (default), 1 and 2.
+
+            The fifth input parameter {\bf mreg} is type "int" and specifies the
+            number of registers to insert between the multiplier and the
+            adder/subtracter which in this case simply passes the product.
+            Allowed values are 0 (default) or 1.
+
+            The sixth input parameter{\bf preg} specifies the number of
+            registers on the result and pattern match outputs. Allowed values
+            are 0 (default) or 1. If {\bf preg} is 0 and the outputs are
+            assigned to static variables those variables may be subsumed into
+            the DSP48 output register.\footnote{this will only be done if the
+            static variables are not initialised (0 is allowed), are not
+            assigned any other value but a DSP48 output (can be assigned 0/false
+            or reset) and if both outputs are used are assigned (or reset) in
+            the same way (have a common clock-enable and reset). This is because
+            the DSP48 output registers for the arithmetic output and
+            the pattern match output share a clock enable and reset and they
+            cannot be initialised). An assignment of 0/false to these static
+            variables becomes a reset since by default it is the assignment of
+            the initial values. Any other assignments would require an input
+            multiplexer between the DSP48 output and the registers.}
+
+            The seventh parameter {\bf pattern} is an optional bit pattern to
+            match against the arithmetic result. If they are identical the
+            second output argument {\bf pat} will be true. The last input
+            parameter {\bf mask} selects which bits from ANDing the result and
+            the pattern are to be used. All bits passed by the mask must be true
+            for the match result to be true. If {\bf mask} is not passed an
+            argument then all bits are matched to the pattern.
+
+            The second output parameter {\bf pat} provides the result of the
+            pattern match, if used.
+
+            If no internal registers are used the input arguments may contain
+            queue reads, in which case the arguments to output parameters {\bf
+            out} and {\bf pat} will be available for reading when all input
+            arguments are available. If any inserted registers are specified
+            ({\bf areg}, {\bf breg}, {\bf mreg} or {\bf preg} are non-zero) the
+            inputs cannot contain queue reads and the code will exit with a fatal
+            error.
+
+
+
+
+        \subsubsection{dspmuladd - DSP multiply and add}\label{sec:lmdspmuladd}
+        \subsubsection{dspmulsub - DSP multiply and subtract}\label{sec:lmdspmulsub}
+        \subsubsection{dspsubmul - DSP subtract and multiply}\label{sec:lmdspsubmul}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspmuladd (
+                   value(out), value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   value(c),
+                   int(areg, breg, creg, mreg, preg),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspmulsub (
+                   value(out), value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   value(c),
+                   int(areg, breg, creg, mreg, preg),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               dspsubmul (
+                   value(out), value(pat, "log")
+                   <-
+                   value(a),
+                   value(b),
+                   value(c),
+                   int(areg, breg, creg, mreg, preg),
+                   int(pattern),
+                   int(mask, 0xffffffffffff)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} result.\\
+            {\bf pat} pattern matched.\\
+
+
+            {\bf Input parameters:} \\
+            {\bf a} first operand.\\
+            {\bf b} second operand.\\
+            {\bf c} third operand.\\
+            {\bf areg} number of registers in A input.\\
+            {\bf breg} number of registers in B input.\\
+            {\bf creg} number of registers in A input.\\
+            {\bf mreg} number of registers on multiplier output.\\
+            {\bf preg} number of registers on DSP48 output.\\
+            {\bf pattern} pattern to match against result.\\
+            {\bf mask} mask to select pattern bits.\\
+
+            {\bf description:} \\
+            These modules use the DSP48 to combine three operands. The
+            operands may be immediate, input, value, static or queue mode and may
+            be of type "uint:", "int:", "ufixed:", or "fixed:". The types may be
+            mixed. The result type is determined by the input operand type
+            nearest the top of the following table -
+
+            \begin{tabular}{| l |}
+            \hline
+            fixed   \\ \hline
+            ufixed  \\ \hline
+            int     \\ \hline
+            uint    \\ \hline
+            \end{tabular}
+
+            The operations performed are -
+
+            \begin{tabular}{| l l |}
+            \hline
+            dspmuladd & $ a * b + c$ \\
+            \hline
+            a & 25 bits signed \\
+            b & 18 bits signed \\
+            c & 48 bits signed \\
+            \hline
+            \end{tabular}
+
+            \begin{tabular}{| l l |}
+            \hline
+            dspmulsub & $ a * b - c $ \\
+            \hline
+            a & 25 bits signed \\
+            b & 18 bits signed \\
+            c & 48 bits signed \\
+            \hline
+            \end{tabular}
+
+            \begin{tabular}{| l l |}
+            \hline
+            dspsubmul & $ a - b * c $ \\
+            \hline
+            a & 48 bits signed \\
+            b & 25 bits signed \\
+            c & 18 bits signed \\
+            \hline
+            \end{tabular}
+
+            Unsigned arguments must be 1 bit smaller.
+
+            The output result binary point offset, i.e. number of fraction bits,
+            is equal to the sum of the offsets of the operands to the
+            multiplier; if the remaining operand has a larger offset it is
+            trimmed at the least significant end. This differs from the way 3PL
+            normally handles expressions where significant bits are retained.
+            The product integer part width is equal to the sum of the integer
+            widths of its two operands. The output result integer part width is
+            equal to the largest integer part width of the product and the
+            remaining operand plus one. The full width of the result cannot
+            exceed 48 bits. The result will be cast to fit the type of the
+            argument passed to the first output parameter {\bf out}.
+
+            The argument supplied to the first output parameter, {\bf out}, is a
+            value mode variable which may have the type "empty" to allow it
+            to take the result type without casting.
+
+            The fourth to sixth input parameters {\bf areg}, {\bf breg} and {\bf
+            creg} are type "int" and specify the number of registers to insert
+            in the {\bf a}, {\bf b} and {\bf c} inputs respectively. Allowed
+            values for {\bf areg} and {\bf breg} are 0 (default), 1 and 2.
+            {\bf creg} may be 0 (default) or 1.
+
+            The seventh input parameter {\bf mreg} is type "int" and specifies
+            the number of registers to insert between the multiplier and the
+            adder/subtracter. Allowed values are 0 (default) or 1.
+
+            The eighth input parameter{\bf preg} specifies the number of
+            registers on the result and pattern match outputs. Allowed values
+            are 0 (default) or 1. If {\bf preg} is 0 and the outputs are
+            assigned to static variables those variables may be subsumed into
+            the DSP48 output register.\footnote{this will only be done if the
+            static variables are not initialised (0 is allowed), are not
+            assigned any other value but a DSP48 output (can be assigned 0/false
+            or reset) and if both outputs are used are assigned (or reset) in
+            the same way (have a common clock-enable and reset). This is because
+            the DSP48 output registers for the arithmetic output and
+            the pattern match output share a clock enable and reset and they
+            cannot be initialised). An assignment of 0/false to these static
+            variables becomes a reset since by default it is the assignment of
+            the initial values. Any other assignments would require an input
+            multiplexer between the DSP48 output and the registers.}
+
+            The ninth parameter {\bf pattern} is an optional bit pattern to
+            match against the arithmetic result. If they are identical the
+            second output argument {\bf pat} will be true. The last input
+            parameter {\bf mask} selects which bits from ANDing the result and
+            the pattern are to be used. All bits passed by the mask must be true
+            for the match result to be true. If {\bf mask} is not passed an
+            argument then all bits are matched to the pattern.
+
+            The second output parameter {\bf pat} provides the result of the
+            pattern match, if used.
+
+            If no internal registers are used the input arguments may contain
+            queue reads, in which case the arguments to output parameters {\bf
+            out} and {\bf pat} will be available for reading when all input
+            arguments are available. If any inserted registers are specified
+            ({\bf areg}, {\bf breg}, {\bf creg}, {\bf mreg} or {\bf preg} are
+            non-zero) the inputs cannot contain queue reads and the code will
+            exit with a fatal error.
+
+
+    \subsection{library procedures}
+
+        \subsubsection{dsp48 - create a DSP48 block for Virtex4 FPGAs}\label{sec:lpdsp48}
+
+            {\bf Library: xilinx/dsp48.3pl}
+            
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               dsp48 (
+                   value(bcout, "bits:18"),
+                   value(pcout, "bits:48"),
+                   value(p, "bits:48")
+                   <-   
+                   str({loc, b_input}),
+                   int({areg, breg, creg, mreg, preg, opmodereg,
+                        carryinreg, subtractreg, carryinselreg}),
+
+                   clock(clk),
+                   value(a, "bits:18"),
+                   value(b, "bits:18"),
+                   value(c, "bits:48"),
+                   value(opmode, "uint:7"),
+                   value(subtract, "log"),
+                   value(carryinsel, "uint:2"),
+                   value(bcin, "bits:18"),
+                   value(pcin, "bits:48"),
+                   value({carryin, cea, ceb, cec, cem, cep,
+                          cectrl, ceinsub, cecarryin, rsta, rstb, rstc, rstm,
+                          rstp, rstctrl, rstcarryin}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf bcout} - 18 bit B carry out   \\
+            {\bf pcout} - 48 bit P carry out  \\
+            {\bf p} - 48 bit P out    \\
+
+            {\bf Input parameters:} \\
+            {\bf AttributesS -} \\
+            {\bf loc} - optional location. \\
+            {\bf b\_input} - select B input cascade. \\
+            {\bf areg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf breg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf creg} - 0 or 1 for number of pipeline registers. \\
+            {\bf mreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf preg} - 0 or 1 for number of pipeline registers. \\
+            {\bf opmodereg} - 0 or 1 for number of pipeline registers. \\
+            {\bf carryinreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf subtractreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf carryinselreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf Input signals -} \\
+            {\bf clk} - clock input. \\
+            {\bf a} - 18 bit a input.\\
+            {\bf b} - 18 bit b input.\\
+            {\bf c} - 48 bit c input.\\
+            {\bf opmode} - 7 bit operation mode. \\
+            {\bf subtract} - select add or subtract. \\
+            {\bf carryinsel} - select carry source. \\
+            {\bf bcin} - 18 bit B carry in. \\
+            {\bf pcin} - 48 bit P carry in. \\
+            {\bf carryin} - carry input. \\
+            {\bf cea} - A register clock enable. \\
+            {\bf ceb} - B register clock enable. \\
+            {\bf cec} - C register clock enable. \\
+            {\bf cem} - M register clock enable. \\
+            {\bf cep} - P register clock enable. \\
+            {\bf cectrl} - opmodereg and carryinreg clock enable. \\
+            {\bf ceinsub} - subtract input register clock enable. \\
+            {\bf cecarryin} - carry input register clock enable. \\
+            {\bf rsta} - reset A register. \\
+            {\bf rstb} - reset B register. \\
+            {\bf rstc} - reset C register. \\
+            {\bf rstm} - reset M register. \\
+            {\bf rstp} - reset P register. \\
+            {\bf rstctrl} - reset control register. \\
+            {\bf rstcarryin} - reset carryin register. \\
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a Virtex4 DSP48 block. The first 11 input
+            parameters are attributes, the remaining inputs being input signals.
+
+
+
+        \subsubsection{dsp48a - create a DSP48A block for Spartan6 FPGAs}\label{sec:lpdsp48a}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               dsp48a (
+                   value(bcout, "bits:18"),
+                   value(pcout, "bits:48"),
+                   value(m, "bits:36"),
+                   value(p, "bits:48"),
+                   value(carryout, "bits:1"),
+                   value(carryoutf, "bits:1")
+                   <-   
+                   str(loc),
+                   str(carryinsel, "CARRYIN"),
+                   str(rsttype, "SYNC"),
+                   int({a0reg, b0reg, }, 0),
+                   int({a1reg, b1reg, creg, dreg, mreg, preg, opmodereg,
+                        carryinreg, carryoutreg}, 1)
+
+                   clock(clk),
+                   value(a, "bits:18"),
+                   value(b, "bits:18"),
+                   value(c, "bits:48"),
+                   value(d, "bits:18"),
+                   value(opmode, "uint:7"),
+                   value(pcin, "bits:48"),
+                   value(carryin, "bits:1"),
+                   value({cea, ceb, cec, ced, cem, cep, ceopmode,
+                          cecarryin, rsta, rstb, rstc, rstd, rstm,
+                          rstp, rstopmode, rstcarryin}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+
+            {\bf Input parameters:} \\
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a Spartan6 DSP48A block. The first 14 input
+            parameters are attributes, the remaining inputs being input signals.
+
+
+        \subsubsection{dsp48e - create a DSP48E block for Virtex5 FPGAs}\label{sec:lpdsp48e}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               dsp48e (
+                   value(acout, "bits:30"),
+                   value(bcout, "bits:18"),
+                   value(pcout, "bits:48"),
+                   value(p, "bits:48"),
+                   value(carryout, "[4]log"),
+                   value({carrycascout, multsignout, patterndetect, patternbdetect,
+                           overflow, underflow}, "log")
+                   <-   
+                   str(loc, a_input, b_input, use_mult, use_simd, sel_pattern, sel_mask,
+                       sel_rounding_mask, autoreset_pattern_detect_optinv, use_pattern_detect),
+                   int(areg, acascreg, breg, bcascreg, creg, mreg, preg, opmodereg,
+                       alumodereg, carryinreg, multcarryinreg, carryinselreg,
+                       pattern, mask),
+                   log(autoreset_pattern_detect),
+                   clock(clk),
+                   value(a, "bits:30"),
+                   value(b, "bits:18"),
+                   value(c, "bits:48"),
+                   value(opmode, "uint:7"),
+                   value(alumode, "uint:4"),
+                   value(carryinsel, "uint:3"),
+                   value(acin, "bits:30"),
+                   value(bcin, "bits:18"),
+                   value(pcin, "bits:48"),
+                   value({carryin, cea1, cea2, ceb1, ceb2, cec, cem, cep, cealumode,
+                          cectrl, cemultcarryin, cecarryin, rsta, rstb, rstc, rstm,
+                          rstp, rstctrl, rstallcarryin, rstalumode, carrycascin,
+                          multsignin}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf acout} - 30 bit A carry out   \\
+            {\bf bcout} - 18 bit B carry out   \\
+            {\bf pcout} - 48 bit P carry out  \\
+            {\bf p} - 48 bit P out    \\
+            {\bf carryout} -   \\
+            {\bf carrycascout} -   \\
+            {\bf multsignout} -   \\
+            {\bf patterndetect} -   \\
+            {\bf patternbdetect} -   \\
+            {\bf overflow} -   \\
+            {\bf underflow} -   \\
+
+            {\bf Input parameters:} \\
+            {\bf AttributesS -} \\
+            {\bf loc} - optional location. \\
+            {\bf a\_input} - select A input cascade. \\
+            {\bf b\_input} - select B input cascade. \\
+            {\bf use\_mult} -  \\
+            {\bf use\_simd} -  \\
+            {\bf sel\_pattern} -  \\
+            {\bf sel\_mask} -  \\
+            {\bf sel\_rounding\_mask} -  \\
+            {\bf autoreset\_pattern\_detect\_optinv} -  \\
+            {\bf use\_pattern\_detect     } -  \\       
+            {\bf areg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf acascreg} -  \\
+            {\bf breg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf bcascreg} -  \\
+            {\bf creg} - 0 or 1 for number of pipeline registers. \\
+            {\bf mreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf preg} - 0 or 1 for number of pipeline registers. \\
+            {\bf opmodereg} - 0 or 1 for number of pipeline registers. \\
+            {\bf alumodereg} -  \\
+            {\bf carryinreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf multcarryinreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf carryinselreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf pattern} -  \\
+            {\bf mask} -  \\
+            {\bf Input signals -} \\
+            {\bf clk} - clock input. \\
+            {\bf a} - 18 bit a input.\\
+            {\bf b} - 18 bit b input.\\
+            {\bf c} - 48 bit c input.\\
+            {\bf opmode} - 7 bit operation mode. \\
+            {\bf alumode} - 7 bit operation mode. \\
+            {\bf carryinsel} - select carry source. \\
+            {\bf acin} - 30 bit B carry in. \\
+            {\bf bcin} - 18 bit B carry in. \\
+            {\bf pcin} - 48 bit P carry in. \\
+            {\bf carryin} - carry input. \\            
+            {\bf cea1} - A register clock enable. \\
+            {\bf cea2} - A register clock enable. \\
+            {\bf ceb1} - B register clock enable. \\
+            {\bf ceb2} - B register clock enable. \\
+            {\bf cec} - C register clock enable. \\
+            {\bf cem} - M register clock enable. \\
+            {\bf cep} - P register clock enable. \\
+            {\bf cealumode} -  \\
+            {\bf cectrl} -  \\
+            {\bf cemultcarryin} -  \\
+            {\bf cecarryin} - carry input register clock enable. \\
+            {\bf rsta} - reset A register. \\
+            {\bf rstb} - reset B register. \\
+            {\bf rstc} - reset C register. \\
+            {\bf rstm} - reset M register. \\
+            {\bf rstp} - reset P register. \\
+            {\bf rstctrl} -  \\
+            {\bf rstallcarryin} -  \\
+            {\bf rstalumode} -  \\
+            {\bf carrycascin} -  \\
+            {\bf multsignin} -    \\       
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a Virtex5 DSP48E block. The first 24 input
+            parameters are attributes, the remaining inputs being input signals.
+
+
+        \subsubsection{dsp48e1 - create a DSP48E1 block for Virtex6 and series 7 FPGAs}\label{sec:lpdsp48e1}
+
+            {\bf Library: xilinx/dsp48.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               dsp48e1 (
+                   value(acout, "bits:30"),
+                   value(bcout, "bits:18"),
+                   value(pcout, "bits:48"),
+                   value(p, "bits:48"),
+                   value(carryout, "[4]log"),
+                   value({carrycascout, multsignout, patterndetect, patternbdetect,
+                           overflow, underflow}, "log")
+                   <-   
+                   str(loc, a_input, b_input, use_mult, use_simd, sel_pattern, sel_mask,
+                       sel_rounding_mask, autoreset_pattern_detect_optinv, use_pattern_detect),
+                   int(areg, acascreg, breg, bcascreg, creg, mreg, preg, opmodereg,
+                       alumodereg, carryinreg, multcarryinreg, carryinselreg,
+                       pattern, mask),
+                   log(autoreset_pattern_detect),
+                   clock(clk),
+                   value(a, "bits:30"),
+                   value(b, "bits:18"),
+                   value(c, "bits:48"),
+                   value(d, "bits:25"),
+                   value(opmode, "uint:7"),
+                   value(alumode, "uint:4"),
+                   value(carryinsel, "uint:3"),
+                   value(acin, "bits:30"),
+                   value(bcin, "bits:18"),
+                   value(pcin, "bits:48"),
+                   value({carryin, cea1, cea2, ceb1, ceb2, cec, cem, cep, cealumode,
+                          cectrl, cemultcarryin, cecarryin, rsta, rstb, rstc, rstm,
+                          rstp, rstctrl, rstallcarryin, rstalumode, carrycascin,
+                          multsignin}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf acout} - 30 bit A carry out   \\
+            {\bf bcout} - 18 bit B carry out   \\
+            {\bf pcout} - 48 bit P carry out  \\
+            {\bf p} - 48 bit P out    \\
+            {\bf carryout} -   \\
+            {\bf carrycascout} -   \\
+            {\bf multsignout} -   \\
+            {\bf patterndetect} -   \\
+            {\bf patternbdetect} -   \\
+            {\bf overflow} -   \\
+            {\bf underflow} -   \\
+
+            {\bf Input parameters:} \\
+            {\bf AttributesS -} \\
+            {\bf loc} - optional location. \\
+            {\bf a\_input} - select A input cascade. \\
+            {\bf b\_input} - select B input cascade. \\
+            {\bf use\_mult} -  \\
+            {\bf use\_simd} -  \\
+            {\bf sel\_pattern} -  \\
+            {\bf sel\_mask} -  \\
+            {\bf sel\_rounding\_mask} -  \\
+            {\bf autoreset\_pattern\_detect\_optinv} -  \\
+            {\bf use\_pattern\_detect     } -  \\       
+            {\bf areg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf acascreg} -  \\
+            {\bf breg} - 0, 1 or 2 for number of pipeline registers. \\
+            {\bf bcascreg} -  \\
+            {\bf creg} - 0 or 1 for number of pipeline registers. \\
+            {\bf mreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf preg} - 0 or 1 for number of pipeline registers. \\
+            {\bf opmodereg} - 0 or 1 for number of pipeline registers. \\
+            {\bf alumodereg} -  \\
+            {\bf carryinreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf multcarryinreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf carryinselreg} - 0 or 1 for number of pipeline registers. \\
+            {\bf pattern} -  \\
+            {\bf mask} -  \\
+            {\bf Input signals -} \\
+            {\bf clk} - clock input. \\
+            {\bf a} - 18 bit a input.\\
+            {\bf b} - 18 bit b input.\\
+            {\bf c} - 48 bit c input.\\
+            {\bf d} - 25 bit c input.\\
+            {\bf opmode} - 7 bit operation mode. \\
+            {\bf alumode} - 7 bit operation mode. \\
+            {\bf carryinsel} - select carry source. \\
+            {\bf acin} - 30 bit B carry in. \\
+            {\bf bcin} - 18 bit B carry in. \\
+            {\bf pcin} - 48 bit P carry in. \\
+            {\bf carryin} - carry input. \\            
+            {\bf cea1} - A register clock enable. \\
+            {\bf cea2} - A register clock enable. \\
+            {\bf ceb1} - B register clock enable. \\
+            {\bf ceb2} - B register clock enable. \\
+            {\bf cec} - C register clock enable. \\
+            {\bf cem} - M register clock enable. \\
+            {\bf cep} - P register clock enable. \\
+            {\bf cealumode} -  \\
+            {\bf cectrl} -  \\
+            {\bf cemultcarryin} -  \\
+            {\bf cecarryin} - carry input register clock enable. \\
+            {\bf rsta} - reset A register. \\
+            {\bf rstb} - reset B register. \\
+            {\bf rstc} - reset C register. \\
+            {\bf rstm} - reset M register. \\
+            {\bf rstp} - reset P register. \\
+            {\bf rstctrl} -  \\
+            {\bf rstallcarryin} -  \\
+            {\bf rstalumode} -  \\
+            {\bf carrycascin} -  \\
+            {\bf multsignin} -    \\       
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a Virtex6 DSP48E1 block. The first 24 input
+            parameters are attributes, the remaining inputs being input signals.
+
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+
+
+
+

@@ -1,0 +1,44 @@
+The NET class represents a net. It will usually be linked from more than one
+instance of class Net. Class Net represents a particular net identifier.
+Class NET represents a net of multiple connected net identifiers.
+
+Class NET has the following variables -
+
+\blist
+\item   {\bf ArrayList\verb'<'String\verb'>'} idents - a list of all identifiers associated
+        with this net, i.e. which are in the linked Net class instances
+\item   {\bf ArrayList\verb'<'Net\verb'>'} nets - a list of the linked Net class instances
+\item   {\bf String} prefident - the prefered identifier, selected from the
+        associated identifiers
+\item   {\bf ArrayList\verb'<'Element\verb'>'} elements - an ordered list of Element class
+        instances to which this net is connected
+\item   {\bf ArrayList\verb'<'String\verb'>'} ports - an ordered list of port names corresponding
+        to the elements above
+\item   {\bf ArrayList\verb'<'PortType\verb'>'} porttypes - an ordered list of port types
+        corresponding to the elements above (INPORT, OUTPORT, TSPORT)
+\item   {\bf int} inports - the number of input ports to which this net is connected
+\item   {\bf int} outports - the number of output ports to which this net is connected
+\item   {\bf int} tsoutports - the number of 3-state output ports to which this net is connected
+\item   {\bf public  TreeMap\verb'<'String,String\verb'>'} properties = new TreeMap\verb'<'String,String\verb'>'() -
+        a map of XDC properties for this net; actually only PULLUP and PULLDOWN
+\item   {\bf public  TDEVPtype} extport = TDEVPtype.NONE - the port type if
+        an EDIF external port - one of NONE, INPUT, OUTPUT or INOUT
+\item   {\bf public  String} extportname - the port name if an external EDIF port
+\blend
+
+Methods for this class are -
+
+public void setPrefIdent () - traverse the list of equivalent identifiers for this net
+and select the most "convenient" to appear in the EDIF netlist, copying it to
+field prefident. GND and VCC are obvious, and any starting with PORT or glob. are
+also desirable.
+
+public String getEDIFIdent () - return the prefered identifier modified for
+EDIF syntax, removing a leading underscors and replacing '[' and ']' with an
+underscore.
+
+public Net getNet () - get the first class Net from the list of linked Net class
+instances.
+
+public boolean isExtOutPort () - return true if this is an EDIF output or 3-state
+output port.

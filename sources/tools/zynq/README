@@ -1,0 +1,13 @@
+fpga_py_exension.c
+    A C extension to Python3 for low level functions and for
+    links to others in fpga.c.
+
+fpga.c
+fpga.h
+    low level functions for AXI/FPGA access.
+
+mk_setup
+    Script to execute setup.py and to compile fpga.c
+
+setup.py
+    links fpga_py_extension.c into the python3 library.

@@ -1,0 +1,228 @@
+\pagebreak
+
+\chapter{Specific Limitations}
+
+    \section{multiply, divide and remainder operators}
+    
+        \subsection{Virtex-E}
+
+            In the Virtex-E there are no hardware multiply or
+            divide functions. The multiply, divide and remainder operators
+            carry out these operations using cascaded adders or subtractors.
+            Since these are expression operators they cannot be pipelined. The
+            result is that these operations have a large data delay, typically
+            30ns to 40ns.
+            
+            \index{constraint!timing}
+            \index{timing constraint}
+            If the operation can be allowed to take place over several
+            clock cycles between static variables then the timing constraints
+            can be changed to suit, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               static(a, "uint:8"); attribute(a, {tnm="SRC"});
+               static(b, "uint:8"); attribute(b, {tnm="SRC"});
+               static(c, "uint:16"); attribute(c, {tnm="DEST"});
+               maxdelay("SRC", "DEST", 40.0e-9); // 40ns path constraint
+
+               c <- a * b;     // slow operation!
+            \end{lstlisting}
+            
+            If the operation must be at clock rate then pipelined 3PL library
+            modules should be used for multiply, divide and remainder.
+    
+        \subsection{Virtex-II or Virtex-II Pro}
+
+            In the Virtex-II or Virtex-II Pro there are hardware multipliers
+            but no hardware dividers.
+
+            The multiply operator uses one hardware multiplier for operands up
+            to 18 bits if signed, 17 bits if unsigned. If one operand is between
+            19 and 35 bits signed, or 18 to 34 bits unsigned, then two hardware
+            multipliers plus an adder are used. If both operands are between 19
+            and 35 bits signed, or 18 to 34 bits unsigned, then four hardware
+            multipliers plus two adders are used.
+            
+            No attempt has been made to share hardware multipliers between
+            products of small operands. Hardware multipliers are a limited
+            resource and care must be taken not to exceed the number available
+            in the particular FPGA being used.
+                       
+            There are no hardware dividers and divide and remainder operators
+            carry out these operations using cascaded adders and subtractors.
+            Since these are expression operators they cannot be pipelined. The
+            result is that these operations have a large data delay, typically
+            30ns to 40ns. For approaches to this see the previous subsection
+            above (Virtex-E).
+    
+        \subsection{Virtex-5}
+
+            In the Virtex-5 there are hardware multipliers but no hardware
+            dividers. The multipliers are contained in the DSP48E blocks.
+
+            The multiply operator uses one hardware multiplier for operands up
+            to 25 bits by 18 bits signed. Unsigned operands have a 0 sign bit
+            appended at the most significant end and thus become one bit
+            larger.
+            
+            Selectvalue, static and queue mode variables which are assigned
+            arithmetic or logical expressions can employ DSP blocks implicitly
+            by setting the DSP attribute. In the case of static variables this
+            will also use the DSP block output register rather than using
+            flip-flops (but not if the variable is initialised to a value other
+            than zero since the DSP block output register cannot be
+            initialised). Selectvalue, static and queue mode variables can
+            have the ALU attribute (and not the DSP attribute) in which case
+            additions and subtractions in assigned expressions will be
+            combined in a common ALU implemented in CLBs.
+            
+            To take advantage of the detailed architecture of the DSP blocks
+            they can be instantiated directly by calling
+            {\bf DSP48E()} \autorefph{sec:lpdsp48e} in library xc5v.3pl.
+            Alternatively there are some useful modules providing a simpler
+            interface in that library - \\
+            adder/subtracter - {\bf dspaddsub} \autorefph{sec:lmdspaddsub} \\
+            counter - {\bf dspcounter} \autorefph{sec:lmdspcounter} \\
+            logical functions - {\bf dsplog} \autorefph{sec:lmdsplog} \\
+            multiplier - {\bf dspmuladd} \autorefph{sec:lmdspmul} \\
+            multiplier adder - {\bf dspmuladd} \autorefph{sec:lmdspmuladd} \\
+            multiplier subtracter - {\bf dspmulsub} \autorefph{sec:lmdspmulsub} \\
+            subtracter multiplier - {\bf dspsubmul} \autorefph{sec:lmdspsubmul} \\
+            
+            If these modules are used with no DSP48E registers then the
+            blocks can be used as a combinatorial elements in simple
+            static and queue variable assignments. If DSP48E internal
+            pipeline registers are used then the pipeline delays must
+            be taken into account. This complicates the programming style
+            considerably and is a tradeoff for the performance and resource
+            usage advantages gained.
+
+    
+        \subsection{Virtex-6}
+        
+            At the moment the support is identical to that for virtex-5 -
+            see above.
+
+
+
+
+    \section{registered output memory}
+    
+        Registered output memory in Xilinx FPGAs is block RAM. These are a
+        limited resource.
+    
+        \subsection{XCV300E}
+        
+            Block RAMs in the XCV3 have 4,096 bits which
+            can be configured as -
+            
+            \begin{tabular}{l l l}
+            \hline
+            data width & address width & depth \\
+            \hline
+            1  & 12 & 4096 \\
+            2  & 11 & 2048 \\
+            4  & 10 & 1024 \\
+            8  & 9  & 512  \\
+            16 & 8  & 256  \\
+            \hline
+            \end{tabular}
+
+            i.e. anywhere from 8 bit address to 12 bit address.
+            
+            The 3PL compiler will select blocks of appropriate size
+            and configuration to provide depths of 256 to 4096, using as
+            many blocks as required to match the data width.
+    
+        \subsection{XCV3, XC2VP}
+        
+            Block RAMs in the XCV3 have 8,432 bits which
+            can be configured as -
+            
+            \begin{tabular}{l l l}
+            \hline
+            data width & address width & depth \\
+            \hline
+            1  & 14 & 16384 \\
+            2  & 13 & 8192  \\
+            4  & 12 & 4096  \\
+            9  & 11 & 2048  \\
+            18 & 10 & 1024  \\
+            36 & 9  & 512   \\
+            \hline
+            \end{tabular}
+
+            i.e. anywhere from 9 bit address to 14 bit address
+            (the unusual data widths result from the use of extra 'parity'
+            bits at the wider configurations).
+            
+            The 3PL compiler will select blocks of appropriate size
+            and configuration to provide depths of 512 to 16384, using as
+            many blocks as required to match the data width.
+    
+        \subsection{Virtex-5, Virtex-6}
+        
+            Block RAM elements are grouped in pairs, each block containing
+            18Kbits. The pair can be configured as a single 36Kbit block.
+            18K blocks can be configured as - 
+            
+            \begin{tabular}{l l l}
+            data width & address width & depth \\
+            \hline
+            1  & 14 & 16384 \\
+            2  & 13 & 8192 \\
+            4  & 12 & 4096 \\
+            9  & 11 & 2048 \\
+            18 & 10 & 1024 \\
+            \end{tabular}
+
+            36K blocks can be configured as - 
+            
+            \begin{tabular}{l l l}
+            data width & address width & depth \\
+            \hline
+            1  & 15 & 32768 \\
+            2  & 14 & 16384 \\
+            4  & 13 & 8192  \\
+            9  & 12 & 4096  \\
+            18 & 11 & 2048  \\
+            36 & 10 & 1024  \\
+            \end{tabular}
+            
+            The 3PL compiler will select blocks of appropriate size and
+            configuration to provide depths of 1024 to 32768, using as many
+            blocks as required to match the data width.
+
+            Block RAM is also used to implement deep queues. For queues whose
+            depth is 512, 1024, 2048, 4096 or 8192 a FIFO primitive element is
+            used. This uses a block RAM with inbuilt FIFO control logic, saving
+            considerable external CLB logic and probably giving improved
+            performance (but note that the clock to output time of nearly 2nS
+            still persists). The hardware FIFO is not used in the case of
+            asynchronous queues on which the queuereadstatus() and
+            queuewritestatus() have been used.
+
+    \section{selectvalue variables}
+
+        Selectvalue variables implement buses using CLB logic unless explicitly
+        directed to use 3-state buffers driving partitionable 'long lines'. This
+        is done by setting attribute "threestate" on individual selectvalue
+        variables. These are only available on older FPGAs such as
+        Virtex-E, Virtex-II and Virtex-II Pro.
+        
+
+    \section{high speed serial}
+    
+    
+        \subsection{Virtex-II Pro}
+        
+            MGT high speed serial ports are interfaced using library {\bf
+            gt\_custom\_16()} \autorefph{sec:lmgtcustom16} in library {\bf
+            xilinx/mgt.3pl}.
+    
+        \subsection{Virtex-5, Virtex-6}
+        
+            GTP high speed serial ports are interfaced using library
+            module {\bf gtp\_dual\_16()} \autorefph{sec:lmgtpdual16} in
+            library {\bf xilinx/gtp\_dual.3pl}.
+            
+            GTX high speed serial ports are not yet supported.

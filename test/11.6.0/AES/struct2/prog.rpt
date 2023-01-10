@@ -1,0 +1,296 @@
+Directives - initial values.
+----------------------------
+
+	ALU              = false
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	compileOnly      = false
+	compilerMakeDate = 2022-08-24 14:24:48 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2
+	date             = 2022-10-05 11:14:43 +1100
+	designName       = prog
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	unassOut         = fatal
+	version          = 11.7.0M (devel svn 10083:10129M, dun202)
+
+
+Memory requested 746061824 bytes
+3PL version 11.7.0M (devel svn 10083:10129M, dun202).
+Source file /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.3pl
+command line options - rntfs
+2022-10-05 11:14:43 +1100
+
+Parsing source.
+---------------
+
+
+    source files
+    ------------
+
+       prog.3pl
+        FMOD1    /Users/dun202/src/mine/3pl/sources/include/boards/avnet   aes_sp3a_eval400.3pl
+            FMOD2    /Users/dun202/src/mine/3pl/sources/include/xilinx   xc3s.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   common.3pl
+                FMOD3    /Users/dun202/src/mine/3pl/sources/include/xilinx   postprocess.3pl
+                FMOD4    /Users/dun202/src/mine/3pl/sources/include   stdlib.3pl
+                FMOD5    /Users/dun202/src/mine/3pl/sources/include/xilinx   clocks.3pl
+                FMOD6    /Users/dun202/src/mine/3pl/sources/include/xilinx   io.3pl
+            FMOD7    /Users/dun202/src/mine/3pl/sources/include/xilinx   uart_cpu.3pl
+                FMOD8    /Users/dun202/src/mine/3pl/sources/include   jsontype.3pl
+                FMOD9    /Users/dun202/src/mine/3pl/sources/include   uarts.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   cpu.3pl
+
+
+Immediate execution.
+--------------------
+
+
+Executing leader modules.
+-------------------------
+
+	module "attributes" order 100
+	-----------------------------
+
+
+
+
+Executing main module.
+----------------------
+
+
+
+
+Executing trailer modules.
+--------------------------
+
+	class CPU_API order 1
+	---------------------
+
+
+	CPU interfaces
+	--------------
+
+	infoword_read_value                    uint:32
+	inforeset_write_static                 
+	SW_write_static                        (f1, uint:9, f2, int:12, f3, log, f4, (ff1, uint:12, ff2, log), f5, [3]uint:16)
+	SR_read_value                          (f1, uint:9, f2, int:12, f3, log, f4, (ff1, uint:12, ff2, log), f5, [3]uint:16)
+
+	CPU interrupts
+	--------------
+
+
+
+
+	uart_cpu.3pl:681:21:  - WARNING
+	'par' block at uart_cpu.3pl:681:21:  has mixture of statements with and without queue accesses
+
+	module "constraints" order 100
+	------------------------------
+
+
+
+
+Creating target-mode variable logic.
+------------------------------------
+
+	static variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.read_0.case_21.read_value_0.access' unused - deleted
+	static variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.write_0.if_340.write_static_0.out' unused - deleted
+	static variable 'prog.write_1.if_341.write_static_1.access' unused - deleted
+	static variable 'prog.read_1.access' unused - deleted
+	static variable 'prog.read_1.case_25.read_value_1.access' unused - deleted
+	queue variable 'FMOD7/uart_cpu.iq' unused - deleted
+	static variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.cpu_interface_0.uart_rx_0.perr' unused - deleted
+	static variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.cpu_interface_0.uart_rx_0.parity' unused - deleted
+	queue variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_432.read_value_gen_0.read_2.out' unused - deleted
+	queue variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_435.read_value_gen_1.read_3.out' unused - deleted
+
+Queue variables with multiple sink modules
+------------------------------------------
+
+
+
+
+Clock variables driving clocked logic.
+-------------------------------------
+
+	glob:c16
+
+Clock variables not driving clocked logic.
+------------------------------------------
+
+	FMOD1/aes_sp3a_eval400:c16_in
+	FMOD1/aes_sp3a_eval400:c16_raw
+	clkdcm/psclk
+	clkdcm/dclk
+	clkdcm/clk90
+	clkdcm/clk180
+	clkdcm/clk270
+	clkdcm/clk2x
+	clkdcm/clk2x180
+	clkdcm/clkdv
+	clkdcm/clkfx
+	clkdcm/clkfx180
+
+
+Directives - final values.
+-------------------------
+
+	ALU              = false
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	comms_baud_rate  = 53475
+	compileOnly      = false
+	compilerMakeDate = 2022-08-24 14:24:48 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2
+	date             = 2022-10-05 11:14:43 +1100
+	designName       = prog
+	family           = XC3S
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/
+	part             = xc3s400aft256-4
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	srlAddrWidth     = 4
+	tlimit           = 1016
+	uart_cpu         = true
+	unassOut         = fatal
+	version          = 11.7.0M (devel svn 10083:10129M, dun202)
+
+
+Optimising intermediate code.
+-----------------------------
+
+	optimisation passes: 8
+	Platform-specific optimisation pass.
+	Intermediate code cleanup optimisation.
+	cleanup optimisation passes: 1
+
+	clock variables - 
+
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkin' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_in'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfb' is linked to clock variable 'glob.c16'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.psclk' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.dclk' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk0' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_raw'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk90' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk270' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk2x' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clk2x180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkdv' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfx' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clkdcm_0.clkfx180' not used
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clockbufg_0.in' is linked to clock variable 'prog.FMOD1/aes_sp3a_eval400.c16_raw'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.clockbufg_0.out' is linked to clock variable 'glob.c16'
+		clock variable 'prog.FMOD1/aes_sp3a_eval400.FMOD7/uart_cpu.bus_clk' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.cpu_interface_0.uart_rx_0.brc16_0.cc' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.cpu_interface_0.if_345.uart_tx_0.brc16_1.cc' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_432.read_value_gen_0.arg_domain' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_433.write_static_gen_0.arg_domain' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_434.write_static_gen_1.arg_domain' is linked to clock variable 'glob.c16'
+		clock variable 'FMOD7/uart_cpu.trailermodule_0.create_bus_interfaces_0.if_397.forvar_245.for_435.read_value_gen_1.arg_domain' is linked to clock variable 'glob.c16'
+
+Printing TDE list to .icl file
+------------------------------
+
+Generating EDIF code.
+---------------------
+
+	generating netlist from intermediate code
+	intermediate list elements - 995
+	convert intermediate list to netlist
+		converting logic
+		converting static and queue variables
+	Elements before optimisation - 2134
+	Net IDs before optimisation - 6764
+	Nets before optimisation - 2698
+	checking net and element validity before optimisation
+	optimising netlist gates
+		optimisation passes: 5
+	checking net and element validity after optimisation
+	Elements after optimisation - 1924
+	Net IDs after optimisation - 7288
+	Nets after optimisation - 2973
+	resolving net identifiers
+	writing netlist to .edn file
+	writing ise constraints file /Users/dun202/src/mine/3PL/test/11.6.0/AES/struct2/prog.ncf
+	writing list of equivalent nets
+
+	cell occurrences -
+
+		OBUF                1
+		AND3                8
+		AND4               15
+		MUXCY              50
+		LUT2               42
+		AND2              601
+		IBUF                1
+		BUFG                1
+		XORCY              42
+		OR2               328
+		RAM16X1D           16
+		DCM                 1
+		INV               126
+		OR4                13
+		OR3                14
+		VCC                 1
+		MUXF5               5
+		SRL16E             17
+		FDRSE             629
+		GND                 1
+		XOR2               10
+		IBUFG               1
+		RAMB16_S36          1
+
+Parse time                                  0.674s
+Immediate execution time                    0.582s
+Intermediate code list optimisation time    0.052s
+Netlist generation time                     0.121s
+Netlist optimisation time                   0.048s
+Netlist output time                         0.106s
+Total elapsed time                          1.584s
+Memory usage: max 746061824 total 447741952 free 387106048
+-s option - skipping post-processing

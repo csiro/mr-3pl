@@ -1,0 +1,164 @@
+nosource
+
+var(enum_map, "map");
+
+// Return a JSON string defining the given 3pl type 't'.
+// 'indent' is the initial indentation (multiples of 4 spaces).
+global function
+jsontype (type(t), int(indent)) {
+    str(s, typevalstring(t));   // 3PL type as a string
+    return(jt(s, indent));
+
+    function
+    jt (str(s), int(indent)) {
+        str(baseindent, tab(indent));
+        str(curindent, baseindent + "    ");
+        str(newindent, curindent + "    ");
+        str(rs);                    // JSON result string for type
+        switch (head(s, 1)) {
+        case "{":   // enum
+            int(max);
+            //rs = baseindent + "{\n";
+            s = tail(s, strlen(s)-1); // remove leading "{"
+            s = head(s, strlen(s)-1); // remove trailing "{"
+            var(l, "[]str", split(s, ","));
+            rs += curindent + "\"type\": \"enum\",\n";
+            for (int(i) ; i<dimension(l) ; i+=2) {
+                int(n, strtoint(l[i+1]));
+                if (n > max)
+                    max = n;
+            }
+            rs += curindent + "\"bits\": " + size(max) + ",\n";
+            rs += curindent + "\"values\": {\n";
+            for (int(i) ; i<dimension(l) ; i+=2) {
+                rs += newindent + "\"" + l[i] + "\": " + l[i+1];
+                if (i != (dimension(l) - 2))
+                    rs += ",\n";
+                else
+                    rs += "\n";
+            }
+            rs += curindent + "}\n";
+            //rs += baseindent + "}\n";
+            return(rs);
+
+        case "[":   // array
+            //rs = baseindent + "{\n";
+            s = tail(s, strlen(s)-1);   // remove leading "["
+            int(l, strpos(s, "]")-1);  // string up to (but not incl) leftmost "]"
+            str(ds, substring(s, 0, l+1));
+            var(dims, "[]str", split(ds, "\\D"));  // dimension string array
+            str(st, substring(s, l+2));
+            //str(jsts, jsontype(st, indent));    XXXXXXXXX jsts not used!!
+            int(abits, 1);
+            rs += curindent + "\"type\": \"array\",\n";
+            rs += curindent + "\"dimension\": ";
+            for (int(i) ; i<dimension(dims) ; i++) {
+                rs += dims[i];
+                abits *= strtoint(dims[i]);
+            }//XXXXXXXXX abits should be multiplied by data bits!!
+             // or omit it from the .info
+            rs += ",\n";
+            //rs += curindent + "\"bits\": " + abits + ",\n";
+            s = substring(s, l+2);       
+            rs += curindent + "\"arraytype\": {\n";
+            rs += jt(s, indent+1) + "\n";
+            rs += curindent + "}\n";
+            //rs += baseindent + "}\n";
+            return(rs);
+        case "(":   // struct
+            //rs = baseindent + "{\n";
+            s = tail(s, strlen(s)-1); // remove leading "("
+            s = head(s, strlen(s)-1); // remove trailing ")"
+            rs += curindent + "\"type\": \"struct\",\n";
+            rs += curindent + "\"fields\": [\n";
+
+            var(tokens, "list");
+                        
+            for (;;) {
+                int(p, cpos(s));
+                if (p >= 0) {
+                    append(tokens,, substring(s, 0, p));
+                    s = substring(s, p+2);
+                } else {
+                    append(tokens,, s);
+                    break;
+                }
+            }
+
+            int(n, entries(tokens));
+
+            for(int(i) ; i<n ; i+=2) {
+                rs += newindent + "{\n";
+                rs += newindent + "    \"name\": \"" + get(tokens, i) + "\",\n";
+                str(ss, get(tokens, i+1));
+                rs += jt(ss, indent+2) + "\n";
+                rs += newindent + "}";
+                if (i != n - 2)
+                    rs += ",";
+                rs += "\n";
+            }
+            rs += curindent + "]\n";
+            //rs += baseindent + "}\n";
+            return(rs);
+
+        default:    // simple target types
+            indent++;
+            str(curindent, tab(indent));
+            int(colpos, strpos(s, ":"));
+            if (colpos >= 0)
+                str(ht, substring(s, 0, colpos));
+            else
+                str(ht, s);
+            rs += curindent + "\"type\": \"" + ht + "\"";
+            if (ht == "log") {
+		rs += ",\n" + curindent + "\"bits\": 1";
+                return(rs);
+	    }
+            rs += ",\n";
+            str(h2, head(s, 2));
+            if (h2 == "in" || h2 == "ui" || h2 == "bi") {
+                rs += curindent + "\"bits\": " + substring(s, colpos+1)/* + "\n"*/;
+            } else if (h2 == "fi" || h2 == "uf") {
+                int(ppos, strpos(s, "."));
+                rs += curindent + "\"int_bits\": " + substring(s, colpos+1, ppos-colpos-1) + ",\n";
+                rs += curindent + "\"frac_bits\": " + substring(s, ppos+1)/* + "\n"*/;
+            } else if (h2 == "fl") {
+                int(ppos, strpos(s, "."));
+                rs += curindent + "\"mant_bits\":" + substring(s, colpos+1, ppos-colpos-1) + ",\n";
+                rs += curindent + "\"exp_bits\":" + substring(s, ppos+1)/* + "\n"*/;
+            }
+            return(rs);
+        }
+    }
+    
+    // Find the position in a string of a comma that is not enclosed
+    // in parentheses. Return -1 if none.
+    function
+    cpos (str(s)) {
+        var(is, "[]uint", strtoarray(s));
+        int(n, strlen(s));
+        int(pcount);
+        int(lpar, 0x28);
+        int(rpar, 0x29);
+        int(lbra, 0x7b);
+        int(rbra, 0x7d);
+        int(comma, 0x2c);
+        for (int(i) ; i<n ; i++) {
+            if (pcount == 0 && is[i] == comma)
+                return(i);
+            else if (is[i] == lpar || is[i] == lbra)
+                pcount++;
+            else if (is[i] == rpar || is[i] == rbra)
+                pcount--;
+        }
+        return(-1);
+    }
+
+    function
+    tab (int(n)) {
+        str(s);
+        for (; n>0 ; n--)
+            s += "    ";
+        return(s);
+    }
+}

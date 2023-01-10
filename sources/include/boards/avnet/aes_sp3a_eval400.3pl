@@ -1,0 +1,108 @@
+nosource
+
+// 3pl board support for Avnet aes_sp3a_eval400 board
+
+// Initial setup
+part("XC3S400AFT256-4");
+
+module "xilinx/xc3s.3pl"
+
+// all IO is 3.3V on this board
+addncfline("CONFIG VCCAUX=\"3.3\";");
+str(lvcmos33, "LVCMOS33");
+
+iopins(c12_pin, "str", "N9", iostandard=lvcmos33, ibufg=true, frequency=12.0e6);
+iopins(c16_pin, "str", "C10", iostandard=lvcmos33, ibufg=true, frequency=16.0e6);
+iopins(c32_pin, "str", "T7", iostandard=lvcmos33, ibufg=true, frequency=32.0e3);
+
+// 43 I/O pins across J4 (4), J6 (4) and J7 (35)
+iopins(global.j6_pins, "[4]str", {"N1", "M1", "K1", "G1"}, iostandard=lvcmos33);
+iopins(global.j7_pins, "[4]str", {"R1", "P2", "P1", "N2"}, iostandard=lvcmos33);
+
+iopins(global.j4_r0_pins, "[17]str",
+            { "A14", "A13", "C13", "A12", "B12", "A11", "A10", "A9",
+               "C9",  "A8",  "B8",  "A7",  "C7",  "A6",  "B6", "A5",
+              "E13"                                                   }, iostandard=lvcmos33
+);
+iopins(global.j4_r1_pins, "[18]str",
+            { "C4", "B14", "D13", "C12", "D11", "C11", "D10", "E10",
+              "D9",  "C8",  "E7",  "D8",  "D7",  "C6",  "C5",  "D4",
+              "B4",  "D3"                                              }, iostandard=lvcmos33
+);
+
+iopins(flash_ce_pin, "str", "P15", iostandard=lvcmos33);
+iopins(flash_oe_pin, "str", "R15", iostandard=lvcmos33);
+iopins(flash_we_pin, "str", "N13", iostandard=lvcmos33);
+iopins(flash_ry_by_pin, "str", "A4", iostandard=lvcmos33);
+iopins(flash_word_pin, "str", "N14", iostandard=lvcmos33);
+iopins(flash_reset_pin, "str", "T10", iostandard=lvcmos33);
+iopins(flash_addr_8, "[22]str",
+            { "P16", "N16", "L13", "K13", "M15", "M16", "L14", "L16",
+              "J12", "J13", "G16", "F16", "H13", "G14", "E16", "F15",
+              "G13", "F14", "E14", "F13", "D16", "D15"                }, iostandard=lvcmos33
+);
+iopins(flash_data_8, "[8]str",
+            { "T14", "R13", "T13", "P12", "N8", "P7", "T6", "T5"      }, iostandard=lvcmos33
+);
+iopins(flash_addr_16, "[21]str",
+            { "N16", "L13", "K13", "M15", "M16", "L14", "L16", "J12",
+              "J13", "G16", "F16", "H13", "G14", "E16", "F15", "G13",
+              "F14", "E14", "F13", "D16", "D15"                       }, iostandard=lvcmos33
+);
+iopins(flash_data_16, "[16]str",
+            { "T14", "R13", "T13", "P12", "N8", "P7", "T6", "T5",
+              "P11",  "R3", "N11",  "N7", "R5", "T4", "P6", "P16"       }, iostandard=lvcmos33
+);
+
+iopins(global.cap_button_pins, "[4]str", {"K3", "H5", "L3", "H4"}, iostandard=lvcmos33);
+
+iopins(global.led_pins, "[4]str", {"D14", "C16", "C15", "B15"}, iostandard=lvcmos33);
+
+// Note that 'tx' and 'rx' here have been interchanged from the schematic
+// as 'tx' is output from the Cypress chip and input to the FPGA
+// and 'rx' is the input to the Cypres chip and output from the FPGA,
+// i.e. tx and rx on the schematic are relative to the Cypress chip,not
+// the FPGA.
+//iopins(global.serial_txd_pin, "str", "B3", iostandard=lvcmos33);
+//iopins(global.serial_rxd_pin, "str", "A3", iostandard=lvcmos33);
+//
+// Change comms pin specs so as to use an external
+// serial interface rather than the one built into the board.
+// The default interface will not accept binary data!
+//
+iopins(global.serial_txd_pin, "str", "D3", iostandard=lvcmos33);
+iopins(global.serial_rxd_pin, "str", "E13", iostandard=lvcmos33);
+
+
+
+// 32KHz clock from PSoC - doesn't seem to work!
+/*
+clock(c32_in, loc=c32_pin);
+*/
+
+// 16MHz clock from Maxim chip.
+// Actual frequency is about 15.924MHz with +- 1KHz short term variation!
+// FIXME could use simpleclock() here
+clock(c16_in, loc=c16_pin);
+clock(global.c16, tnm="C16");
+clock(c16_raw);
+
+clkdcm(clk0=c16_raw <- clkin=c16_in, clkfb=c16);
+clockbufg(global.c16 <- c16_raw);
+attributes(c16, frequency=16e6, tnm="C16");
+useclock(c16);
+
+
+// 12MHz clock from PSoC - seems to be 3MHz!
+/*
+clock(c12_in, loc=c12_pin);
+clock({global.c12, c12_raw});
+clkdcm(clk0=c12_raw <- clkin=c12_in, clkfb=c12);
+clockbufg(c12 <- c12_raw);
+attributes(c12, tnm="C12");
+*/
+
+directive("comms_baud_rate", 115200); // serial device nominal baud rate
+//directive("comms_baud_rate", 53475);    // baud rate empirically determined!
+module "xilinx/uart_cpu.3pl"
+

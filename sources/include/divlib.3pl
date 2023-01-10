@@ -1,0 +1,495 @@
+// Pipelined integer division library
+nosource
+
+global module
+divide (queue(quot), queue(rem) <- value(num), value(denom), value(reset, "log")) {
+    if ((primtypestring(num) == "int" || primtypestring(num) == "uint") &&
+        (primtypestring(denom) == "int" || primtypestring(denom) == "uint")) {
+        divide_(quot, rem <- num, denom, nullarg(reset));
+        return;
+    }
+    
+    if (matched(rem))
+        texit("module divide(): cannot have rem output with fixed or ufixed inputs");
+
+    int(num_width, size(num));
+    int(denom_width, size(denom));
+    int(num_offset, offset(num));
+    int(denom_offset, offset(denom));
+    log(signed);
+    int(result_width, num_width + denom_width);
+    int(result_offset, num_width + denom_width - denom_offset);
+    int(ls, denom_width);
+
+    switch (primtypestring(num)) {
+    case "fixed":
+        value(local.n, "int:"+(num_width+ls), cast(cast(num, "bits:"+num_width) << ls, "int:"+(num_width+ls)));
+        signed = true;
+    case "ufixed":
+        value(local.n, "uint:"+(num_width+ls), cast(cast(num, "bits:"+num_width) << ls, "uint:"+(num_width+ls)));
+    case "int":
+        signed = true;
+    case "uint":
+    default:
+        texit("module divide(): 1st input argument not int, uint, fixed or ufixed");
+    }
+
+    switch (primtypestring(denom)) {
+    case "fixed":
+        value(local.d, "int:"+denom_width, cast(cast(denom, "bits:"+denom_width), "int:"+denom_width));
+        signed = true;
+    case "ufixed":
+        value(local.d, "uint:"+denom_width, cast(cast(denom, "bits:"+denom_width), "uint:"+denom_width));
+    case "int":
+        signed = true;
+    case "uint":
+    default:
+        texit("module divide(): 2nd input argument not int, uint, fixed or ufixed");
+    }
+
+    int(quot_width, num_width + denom_width);
+    int(quot_offset, num_offset + denom_width - denom_offset);
+    queue(iquot, (signed ? "int:" : "uint:")+result_width);
+    type(quot_type, (signed ? "fixed:" : "ufixed:")+(result_width-result_offset)+"."+result_offset);
+    divide_(iquot <- n, d, nullarg(reset));
+    if (offset(quot) == quot_offset)
+        quot <<- cast(cast(iquot, "bits:"+quot_width), type(quot));
+    else if (offset(quot) < quot_offset)
+        quot <<- cast(cast(iquot, "bits:"+quot_width) >> (quot_offset - offset(quot)), type(quot));
+    else
+        quot <<- cast(cast(iquot, "bits:"+quot_width) << (qoffset(quot) - uot_offset), type(quot));
+}
+
+global module
+divide_ (queue(quot), queue(rem) <- value(num), value(denom), value(reset, "log")) {
+    log({num_signed, denom_signed});
+    switch (primtypestring(num)) {
+    case "uint": // do nothing
+    case "int":
+        if (istargconst(num)) {
+            if (targconsttoimmed(num) < 0)
+                num_signed = true;
+        } else
+            num_signed = true;
+    default:
+        texit("module divide(): 1st input argument not int or uint");
+    }
+    switch (primtypestring(denom)) {
+    case "uint": // do nothing
+    case "int":
+        if (istargconst(denom)) {
+            if (targconsttoimmed(denom) < 0)
+                denom_signed = true;
+        } else
+            denom_signed = true;
+    default:
+        texit("module divide(): 2nd input argument not int or uint");
+    }
+    if (primtypestring(quot) != "uint" && primtypestring(quot) != "int")
+        texit("module divide(): quotient argument not int or uint");
+    if (matched(rem) &&
+        primtypestring(rem) != "uint" &&
+        primtypestring(rem) != "int") {
+        texit("module divide(): remainder argument not int or uint");
+    }
+    int(num_width, width(num));
+    int(denom_width, width(denom));
+
+    if (num_signed || denom_signed) {
+        if (matched(quot) && primtypestring(quot) != "int")
+            texit("module divide(): quotient unsigned with signed input arg");
+        if (matched(rem) && primtypestring(rem) != "int")
+            texit("module divide(): remainder unsigned with signed input arg");
+        if (!istargconst(num) && !num_signed) {
+            num_width++;
+            num := cast(num, "int:"+num_width);
+            value(local.num_,, cast(num, "int:"+num_width));
+        } else
+            value(num_,, num);
+        if (!istargconst(denom) && !denom_signed) {
+            denom_width++;
+            value(local.denom_,, cast(denom, "int:"+denom_width));
+        } else
+            value(denom_,, denom);
+
+        if (istargconst(num)) {
+            int(cnum, targconsttoimmed(num));
+            quotremscn(nullarg(quot), nullarg(rem) <- cnum, denom_, nullarg(reset));
+        } else if (istargconst(denom)) {
+            int(cdenom, targconsttoimmed(denom));
+            quotremscd(nullarg(quot), nullarg(rem) <- num_, cdenom, nullarg(reset));
+        } else
+            quotrems(nullarg(quot), nullarg(rem) <- num_, denom_, nullarg(reset));
+    } else {
+        if (istargconst(denom)) {
+            int(cdenom, targconsttoimmed(denom));
+            quotremucd(nullarg(quot), nullarg(rem) <- num, cdenom, nullarg(reset));
+        } else
+            quotremu(nullarg(quot), nullarg(rem) <- num, denom, nullarg(reset));
+    }
+
+    if (matched(reset)) {
+        if(matched(quot))
+            when(reset)
+                reset(quot);
+        if (matched(rem))
+            when(reset)
+                reset(rem);
+    }
+
+
+    //
+    // Unsigned divide with variable numerator and denominator.
+    //
+    module
+    quotremu (queue(quot), queue(rem) <- value(num), value(denom), value(reset, "log")) {
+        int(numwid, width(num));
+        int(denwid, width(denom));
+        int(shift, numwid - 1);
+        int(rbits, numwid + denwid);
+        value(diff, "uint:"+rbits);
+        diff := num - (denom << shift);
+        struct(s,
+            top,    "bits:1",
+            rem,    "uint:"+(rbits-1),
+            den,    "uint:"+denwid
+        );
+        queue(next, s);
+        if (matched(reset))
+            when (reset)
+                reset(next);
+        sync {
+            next.top <<- getbit(diff, rbits - 1);
+            next.rem <<- diff;
+            next.den <<- denom;
+        }
+
+        part_udiv(nullarg(quot), nullarg(rem) <- 1, rbits-1, denwid, shift-1, next, nullarg(reset));
+    }
+
+    module
+    part_udiv (queue(quot), queue(rem) <- int({qbits, rbits, dbits, shift}), queue(prev), value(reset, "log")) {
+        int(nextrbits, rbits-((shift==0)?0:1));
+        if (shift != -1) {
+            struct(s,
+                top,    "bits:"+(qbits+1),
+                rem,    "uint:"+nextrbits,
+                den,    "uint:"+dbits
+            );
+            queue(next, s);
+            if (matched(reset))
+                when (reset)
+                    reset(next);
+            value(sumdiff, "uint:"+rbits);
+            sumdiff := addsub(prev.rem, prev.den << shift, getbit(prev.top, 0)!=0);
+            sync {
+                next.top <<- (prev.top << 1) | getbit(sumdiff, rbits-1);
+                next.rem <<- sumdiff;
+                next.den <<- prev.den;
+            }    
+            part_udiv(nullarg(quot), nullarg(rem) <- qbits+1, nextrbits, dbits, shift-1, next, nullarg(reset));
+        } else {
+            sync {
+                if (matched(quot))
+                    quot <<- cast(~prev.top, type(quot));
+                if (matched(rem))
+                    rem <<- cast(prev.rem + (getbit(prev.top, 0)!=0 ? prev.den : 0), "uint:"+dbits);
+            }
+        }
+    }
+
+    //
+    // Signed divide with variable numerator and denominator.
+    //
+    module
+    quotrems (queue(quot), queue(rem) <- value(num), value(denom), value(reset, "log")) {
+        int(numwid, width(num));
+        int(denwid, width(denom));
+        int(shift, numwid - 1);
+        int(rbits, numwid + denwid);
+        value(sumdiff, "int:"+rbits);
+        sumdiff := addsub(num,  denom << shift, (num < 0) ^^ (denom < 0));
+        struct(s,
+            top,    "bits:1",
+            rem,    "int:"+(rbits-1),
+            den,    "int:"+denwid,
+            numneg, "log"
+        );
+        queue(next, s);
+        if (matched(reset))
+            when (reset)
+                reset(next);
+        value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (denom < 0)), "bits:1"));
+        sync {
+            next.top <<- newquotbit;
+            next.rem <<- sumdiff;
+            next.den <<- denom;
+            next.numneg <<- num < 0;
+        }
+
+        part_sdiv(nullarg(quot), nullarg(rem) <- 1, rbits-1, denwid, shift-1, next, nullarg(reset));
+    }
+
+    module
+    part_sdiv (queue(quot), queue(rem) <- int({qbits, rbits, dbits, shift}), queue(prev), value(reset, "log")) {
+        int(nextrbits, rbits-((shift==0)?0:1));
+        value(add, "log", getbit(prev.top, 0)==0);
+        value(sumdiff, "int:"+rbits);
+        if (shift != -1) {
+            struct(s,
+                top,    "bits:"+(qbits+1),
+                rem,    "int:"+nextrbits,
+                den,    "int:"+dbits,
+                numneg, "log",
+                remzero, "log"
+            );
+            queue(next, s);
+            if (matched(reset))
+                when (reset)
+                    reset(next);
+            sumdiff := addsub(prev.rem, prev.den << shift, add);
+            value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (prev.den < 0)), "bits:1"));
+            sync {
+                next.top <<- (prev.top << 1) | newquotbit;
+                next.rem <<- sumdiff;
+                next.den <<- prev.den;
+                next.numneg <<- prev.numneg;
+                if (qbits==1)
+                    next.remzero <<- (prev.rem == 0);
+                else
+                    next.remzero <<- (prev.rem == 0) || prev.remzero;
+            }    
+            part_sdiv(nullarg(quot), nullarg(rem) <- qbits+1, nextrbits, dbits, shift-1, next, nullarg(reset));
+        } else {
+            sumdiff := addsub(prev.rem, prev.den, add);
+            type(topitype, "int:"+width(prev.top));
+            value(topint, topitype, cast(prev.top, topitype));
+            value(q, type(quot), cast(topint, type(quot)));
+            value({lastop, incrquot}, "log");
+            value(remz, "log", prev.rem == 0);
+            lastop := ((prev.rem < 0) ^^ prev.numneg) && !remz || prev.remzero;
+            incrquot := (remz && prev.numneg || prev.remzero) && (prev.den < 0) ||
+                        !prev.remzero && getbit(prev.top, qbits-1)==1 && !(remz && prev.numneg);
+            sync {
+                if (matched(quot))
+                    quot <<- q + (incrquot ? 1 : 0);
+                if (matched(rem))
+                    rem <<- lastop ? sumdiff : prev.rem;
+            }
+        }
+    }
+
+    //
+    // Unsigned divide with variable numerator and constant denominator.
+    //
+    module
+    quotremucd (queue(quot), queue(rem) <- value(num), int(denom), value(reset, "log")) {
+        int(numwid, width(num));
+        int(denwid, width(denom));
+        int(shift, numwid - 1);
+        int(rbits, numwid + denwid);
+        value(diff, "uint:"+rbits);
+        diff := num - (denom << shift);
+        struct(s,
+            top,    "bits:1",
+            rem,    "uint:"+(rbits-1)
+        );
+        queue(next, s);
+        if (matched(reset))
+            when (reset)
+                reset(next);
+        sync {
+            next.top <<- getbit(diff, rbits - 1);
+            next.rem <<- diff;
+        }
+
+        part_udivcd(nullarg(quot), nullarg(rem) <- denom, 1, rbits-1, shift-1, next, nullarg(reset));
+    }
+
+    module
+    part_udivcd (queue(quot), queue(rem) <- int({denom, qbits, rbits, shift}), queue(prev), value(reset, "log")) {
+        int(nextrbits, rbits-((shift==0)?0:1));
+        if (shift != -1) {
+            struct(s,
+                top,    "bits:"+(qbits+1),
+                rem,    "uint:"+nextrbits
+            );
+            queue(next, s);
+            if (matched(reset))
+                when (reset)
+                    reset(next);
+            value(sumdiff, "uint:"+rbits);
+            sumdiff := addsub(prev.rem, denom << shift, getbit(prev.top, 0)!=0);
+            sync {
+                next.top <<- (prev.top << 1) | getbit(sumdiff, rbits-1);
+                next.rem <<- sumdiff;
+            }    
+            part_udivcd(nullarg(quot), nullarg(rem) <- denom, qbits+1, nextrbits, shift-1, next, nullarg(reset));
+        } else {
+            sync {
+                if (matched(quot))
+                    quot <<- cast(~prev.top, type(quot));
+                if (matched(rem))
+                    rem <<- prev.rem + (getbit(prev.top, 0)!=0 ? denom : 0);
+            }
+        }
+    }
+
+    //
+    // Signed divide with constant numerator and variable denominator.
+    //
+    module
+    quotremscn (queue(quot), queue(rem) <- int(num), value(denom), value(reset, "log")) {
+        int(numwid, width(num));
+        if (num >= 0)
+            numwid++;
+        int(denwid, width(denom));
+        int(shift, numwid - 1);
+        int(rbits, numwid + denwid);
+        value(sumdiff, "int:"+rbits);
+        sumdiff := addsub(num,  denom << shift, (num < 0) ^^ (denom < 0));
+        struct(s,
+            top,    "bits:1",
+            rem,    "int:"+(rbits-1),
+            den,    "int:"+denwid
+        );
+        queue(next, s);
+        if (matched(reset))
+            when (reset)
+                reset(next);
+        value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (denom < 0)), "bits:1"));
+        sync {
+            next.top <<- newquotbit;
+            next.rem <<- sumdiff;
+            next.den <<- denom;
+        }
+
+        part_sdivcn(nullarg(quot), nullarg(rem) <- num, 1, rbits-1, denwid, shift-1, next, nullarg(reset));
+    }
+
+    module
+    part_sdivcn (queue(quot), queue(rem) <- int({num, qbits, rbits, dbits, shift}), queue(prev), value(reset, "log")) {
+        int(nextrbits, rbits-((shift==0)?0:1));
+        value(add, "log", getbit(prev.top, 0)==0);
+        value(sumdiff, "int:"+rbits);
+        if (shift != -1) {
+            struct(s,
+                top,    "bits:"+(qbits+1),
+                rem,    "int:"+nextrbits,
+                den,    "int:"+dbits,
+                remzero, "log"
+            );
+            queue(next, s);
+            if (matched(reset))
+                when (reset)
+                    reset(next);
+            sumdiff := addsub(prev.rem, prev.den << shift, add);
+            value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (prev.den < 0)), "bits:1"));
+            sync {
+                next.top <<- (prev.top << 1) | newquotbit;
+                next.rem <<- sumdiff;
+                next.den <<- prev.den;
+                if (qbits==1)
+                    next.remzero <<- (prev.rem == 0);
+                else
+                    next.remzero <<- (prev.rem == 0) || prev.remzero;
+            }    
+            part_sdivcn(nullarg(quot), nullarg(rem) <- num, qbits+1, nextrbits, dbits, shift-1, next, nullarg(reset));
+        } else {
+            sumdiff := addsub(prev.rem, prev.den, add);
+            type(topitype, "int:"+width(prev.top));
+            value(topint, topitype, cast(prev.top, topitype));
+            value(q, type(quot), cast(topint, type(quot)));
+            value({lastop, incrquot}, "log");
+            value(remz, "log", prev.rem == 0);
+            lastop := ((prev.rem < 0) ^^ (num < 0)) && !remz || prev.remzero;
+            incrquot := (remz && (num < 0) || prev.remzero) && (prev.den < 0) ||
+                        !prev.remzero && getbit(prev.top, qbits-1)==1 && !(remz && (num < 0));
+            sync {
+                if (matched(quot))
+                    quot <<- q + (incrquot ? 1 : 0);
+                if (matched(rem))
+                    rem <<- lastop ? sumdiff : prev.rem;
+            }
+        }
+    }
+
+    //
+    // Signed divide with variable numerator and constant denominator.
+    //
+    module
+    quotremscd (queue(quot), queue(rem) <- value(num), int(denom), value(reset, "log")) {
+        int(numwid, width(num));
+        int(denwid, width(denom));
+        if (denom >= 0)
+            denwid++;
+        int(shift, numwid - 1);
+        int(rbits, numwid + denwid);
+        value(sumdiff, "int:"+rbits);
+        sumdiff := addsub(num,  denom << shift, (num < 0) ^^ (denom < 0));
+        struct(s,
+            top,    "bits:1",
+            rem,    "int:"+(rbits-1),
+            numneg, "log"
+        );
+        queue(next, s);
+        if (matched(reset))
+            when (reset)
+                reset(next);
+        value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (denom < 0)), "bits:1"));
+        sync {
+            next.top <<- newquotbit;
+            next.rem <<- sumdiff;
+            next.numneg <<- num < 0;
+        }
+
+        part_sdivcd(nullarg(quot), nullarg(rem) <- denom, 1, rbits-1, shift-1, next, nullarg(reset));
+    }
+
+    module
+    part_sdivcd (queue(quot), queue(rem) <- int({denom, qbits, rbits, shift}), queue(prev), value(reset, "log")) {
+        int(nextrbits, rbits-((shift==0)?0:1));
+        value(add, "log", getbit(prev.top, 0)==0);
+        value(sumdiff, "int:"+rbits);
+        if (shift != -1) {
+            struct(s,
+                top,    "bits:"+(qbits+1),
+                rem,    "int:"+nextrbits,
+                numneg, "log",
+                remzero, "log"
+            );
+            queue(next, s);
+            if (matched(reset))
+                when (reset)
+                    reset(next);
+            sumdiff := addsub(prev.rem, denom << shift, add);
+            value(newquotbit, "bits:1", cast(!((sumdiff < 0) ^^ (denom < 0)), "bits:1"));
+            sync {
+                next.top <<- (prev.top << 1) | newquotbit;
+                next.rem <<- sumdiff;
+                next.numneg <<- prev.numneg;
+                if (qbits==1)
+                    next.remzero <<- (prev.rem == 0);
+                else
+                    next.remzero <<- (prev.rem == 0) || prev.remzero;
+            }    
+            part_sdivcd(nullarg(quot), nullarg(rem) <- denom, qbits+1, nextrbits, shift-1, next, nullarg(reset));
+        } else {
+            sumdiff := addsub(prev.rem, denom, add);
+            type(topitype, "int:"+width(prev.top));
+            value(topint, topitype, cast(prev.top, topitype));
+            value(q, type(quot), cast(topint, type(quot)));
+            value({lastop, incrquot}, "log");
+            value(remz, "log", prev.rem == 0);
+            lastop := ((prev.rem < 0) ^^ prev.numneg) && !remz || prev.remzero;
+            incrquot := (remz && prev.numneg || prev.remzero) && (denom < 0) ||
+                        !prev.remzero && getbit(prev.top, qbits-1)==1 && !(remz && prev.numneg);
+            sync {
+                if (matched(quot))
+                    quot <<- q + (incrquot ? 1 : 0);
+                if (matched(rem))
+                    rem <<- lastop ? sumdiff : prev.rem;
+            }
+        }
+    }
+}

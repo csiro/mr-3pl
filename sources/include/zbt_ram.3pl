@@ -1,0 +1,365 @@
+// HYMOD external ZBT RAM
+nosource
+
+
+global class
+zbt_ram (
+    var(addr_pins, "[]str"),
+    var(data_pins, "[]str"),
+    str(_we_pin),
+    str(_wea_pin),
+    str(_web_pin),
+    str(_wec_pin),
+    str(_wed_pin),
+    str(_cke_pin),
+    clock(clk),         // optional clock domain
+    str(slew, "fast"),  // output pad slew rate
+    int(drive, 12),     // output pad drive current
+    str(tnm, "ZBTPAD")  // pad timing group name
+) {
+    int(awidth, dimension(addr_pins));
+    int(dwidth, dimension(data_pins));
+    type(addr_t,   "bits:"+awidth);
+    type(data_t,   "bits:"+dwidth);
+    type(addrdata, "bits:"+max(awidth, dwidth));
+
+    var(read_used,      "log");
+    var(write_used,     "log");
+    var(in,             "list");
+    var(out,            "list");
+    var(fifo_full,      "list");
+    var(fifo_pre_push,  "list");
+    var(iswrite,        "list");
+    str(out_struct);
+    var(ram_pri,        "list");
+    enum(pritype, NONE, FAIR, PRI);
+    var(use_mode,       "pritype");
+
+    static(a,          addr_t);                                            
+    static(d,          data_t);                                            
+    static(d_o,        data_t);                                            
+    static(d_o_del1,   data_t); attributes(d_o_del1, continuous=true);     
+    static(d_o_del2,   data_t); attributes(d_o_del2, continuous=true);     
+    static(_we,        "log", true);                                       
+    value( _wea,       "log", false);                                      
+    value( _web,       "log", false);                                      
+    value( _wec,       "log", false);                                      
+    value( _wed,       "log", false);                                      
+    static(oe,         "log");                                             
+    static(oe_del1,    "log"); attributes(oe_del1, continuous=true);       
+    static(oe_del2,    "log", true); attributes(oe_del2, continuous=true); 
+    var(   index,      "int");                                             
+    value( wes,        "log");                                             
+    value( oes,        "log");                                             
+
+    struct(in_struct,
+        address,    addr_t,
+        data,       data_t,
+        write,      "log"
+    );
+
+    type(read_write_in_struct);
+    type(read_write_out_struct);
+
+    //------------------------------------------------------------------
+    // External ZBT RAM trailer code
+    //
+    trailermodule ("ZBT RAM") {
+        if (matched(clk))
+            useclock(clk);
+
+        log (has_ce, exists(ce_pins) == 1);
+        if (has_ce)
+            var(ce_init, "log");
+        var(_cke_init, "log");
+        input(d_i, data_t, loc=data_pins, tnm=tnm);
+
+
+        // connect up the external ZBT RAM
+        if (read_used || write_used) {
+            output(,, _we, loc=_we_pin, slew=slew, drive=drive, tnm=tnm);
+            output(,, _wea, loc=_wea_pin, slew=slew, drive=drive, tnm=tnm);
+            output(,, _web, loc=_web_pin, slew=slew, drive=drive, tnm=tnm);
+            if (dwidth > 18) {
+                output(,, _wec, loc=_wec_pin, slew=slew, drive=drive, tnm=tnm);
+                output(,, _wed, loc=_wed_pin, slew=slew, drive=drive, tnm=tnm);
+            }
+
+            output(,, a, loc=addr_pins, slew=slew, drive=drive, tnm=tnm);
+            _cke_init = false;
+            if (has_ce)
+                ce_init = true;
+        } else {
+            _cke_init = true;
+            if (has_ce)
+                ce_init = false;
+        }
+        if (write_used) {
+            output(dout, data_t,, loc=data_pins, slew=slew, drive=drive, tnm=tnm, direct=true);
+            when (oe_del2)
+                dout |- d_o_del2;            
+            _we <- !wes;
+            oe <- oes;
+            oe_del1 <- oe;
+            oe_del2 <- oe_del1;
+            d_o_del1 <- d_o;
+            d_o_del2 <- d_o_del1;
+        }
+        if (read_used)
+            d <- d_i;
+
+        int(ports, entries(in));
+        if (ports == 0)
+            return;
+
+        writeln(rpt, "\tzbt_ram ports " + ports + "\n");
+        read_write_in_struct = multiplex_struct_l(in_struct, ports);
+        read_write_out_struct = multiplex_struct_l(addrdata, ports);
+
+        // insert fifo control logic for requests that have an output
+        for (int(i) ; i<entries(in) ; i++) {
+            if (get(out, i) == null) {
+                append(fifo_full,, null);
+                append(fifo_pre_push,, null);
+            } else {
+                value({full, pre_write}, "log");
+                append(fifo_full,, &full);
+                append(fifo_pre_push,, &pre_write);
+                queue(p, in_struct);
+                sync when (!full) {
+                    p <<- get(in, i)->;
+                    assert(pre_write <-);
+                    in[i] = &p;
+                }
+            }
+        }
+        // multiplex input queues
+        queue({qin, qin_}, read_write_in_struct);
+        if (use_mode == pritype.FAIR) {
+            multiplext_l(qin_ <- in);
+            qin <<- qin_; // extra queue needed to meet timing constraints!
+            read_write(qin);
+        } else {
+            sort_priorities();
+            multiplexp_l(qin <- in);
+            read_write(qin);
+        }
+        
+        static(_cke, "log", _cke_init);
+        output(,, _cke, loc=_cke_pin);
+        if (has_ce) {
+            static(ce, "log", ce_init);
+            output(,, ce, loc=ce_pin);
+        }
+
+        if (matched(clk))
+            useclock();
+
+        procedure
+        sort_priorities () {
+            int(n, entries(pri));
+            int(pri);
+            var({p1, p2, p3, p4}, "->");
+
+            for (int(i, 1) ; i<n ; i++)
+                for (int(j, i) ; j<n ; j++)
+                    if (get(pri, j) > get(pri, j-1)) {
+                        pri = pri[j];
+                        p1 = in[j];
+                        p2 = out[j];
+                        p3 = fifo_full[j];
+                        p4 = fifo_pre_push[j];
+                        pri[j]              = pri[j-1];
+                        in[j]               = in[j-1];
+                        out[j]              = out[j-1];
+                        fifo_full[j]        = fifo_full[j-1];
+                        fifo_pre_push[j]    = fifo_pre_push[j-1];
+                        pri[j-1]            = pri;
+                        in[j-1]             = p1;
+                        out[j-1]            = p2;
+                        fifo_full[j-1]      = p3;
+                        fifo_pre_push[j-1]  = p4;
+                    }
+        }
+    }
+
+    module
+    read_write (queue(in, read_write_in_struct)) {
+        value(push, "log", del(<in, 4));
+        value(in_del, read_write_in_struct, del(?in, 4));
+        value(write, "log");
+
+        sync {
+            a <- in.body.address;
+            d_o <- in.body.data;
+            when (in.body.write)
+                assert(write <-);
+        }
+
+        for (int(i) ; i<entries(out) ; i++) {
+            if (get(out, i) != null) {
+                value(v,, get(iswrite, i) ? in_del.body.address : d);
+                pfifo(
+                    get(out, i)->,
+                    get(fifo_full, i)->
+                    <-
+                    v,
+                    get(fifo_pre_push, i)->,
+                    push && in_del.port[i]
+                );
+            }
+        }
+
+        wes := write;
+        oes := write;
+
+        module
+        pfifo (
+            queue(out),
+            value(fullout, "log")
+            <-
+            value(in),
+            value({prewrite, write}, "log")
+        ) {
+            log(is_null_out, typestring(out) == "null");
+            int(depth, 16);
+            int(dwidth, size(in));
+            int(awidth, size(depth-1));
+            int(cwidth, size(depth));
+            static({waddr, raddr}, "uint:"+awidth);
+            static({wcount, rcount}, "uint:"+cwidth);
+            static(empty, "log", true);
+            static(full, "log");
+            if (!is_null_out)
+                cmemory(mem, 2, "uint:"+awidth, type(in));
+            value(read, "log");
+
+            fullout := full;
+            when (write) {
+                par {
+                    if (!is_null_out)
+                        cmemorywrite(mem, 0, waddr, in);
+                    waddr++;
+                }
+            }
+
+            sync when (!empty) {
+                if (is_null_out)
+                    out <<- null;
+                else
+                    out <<- cast(cmemoryread(mem, 1, raddr), type(out));
+                raddr++;
+                assert(read <-);
+            }
+
+            rcount <- addsub(rcount, 1, write, read ^^ write);
+            wcount <- addsub(wcount, 1, prewrite, read ^^ prewrite);
+            when (read && !prewrite && (wcount == depth))
+                full <- false;
+            when (read && !write && (rcount == 1))
+                empty <- true;
+            when (!read && prewrite && (wcount == (depth-1)))
+                full <- true;
+            when (!read && write && (rcount == 0))
+                empty <- false;
+        }
+    }
+
+    module
+    write (queue(addrout) <- varargs) {
+        write_(nullarg(addrout) <- , inargs);
+    }
+
+    module
+    writep (queue(addrout) <- int(pri), varargs) {
+        write_(nullarg(addrout) <- pri, inargs);
+    }
+
+    module
+    write_ (queue(addrout) <- int(pri), var(inargs, "[]->")) {
+        value(v, in_struct);
+        v.write := true;
+
+        switch (dimension(inargs)) {
+        case 1:
+            // single argument to both indicates combined address/data in struct
+            if (!hasqueuereads(inargs[0]->))
+                texit("write(); input argument does not contain queue reads");
+            v.address := cast(inargs[0]->.address, addr);
+            v.data := cast(inargs[0]->.data, data);
+        case 2:
+            // Separate address and data - both not necessarily queues.
+            // Combine into a single queue.
+            if (!hasqueuereads(inargs[0]->) && !hasqueuereads(inargs[1]->))
+                texit("write(); neither input arguments contains queue reads");
+            queue(pin, in_struct);
+            sync {
+                pin.address <<- cast(inargs[0]->, addr_t);
+                pin.data <<- cast(inargs[1]->, data_t);
+            }
+            v.address := cast(pin.address, addr_t);
+            v.data := cast(pin.data, data_t);
+        default:
+            texit("write(): wrong number of input arguments");
+        }
+        if (matched(pri)) {
+            switch (use_mode) {
+            case pritype.NONE:
+                use_mode = pritype.PRI;
+            case pritype.FAIR:
+                texit("writep(): already non-priority");
+            }
+            append(ram_pri,, pri);
+        } else {
+            switch (use_mode) {
+            case pritype.NONE:
+                use_mode = pritype.FAIR;
+            case pritype.PRI:
+                texit("write(): already priority");
+            }
+        }
+        append(in,, &v);
+        append(out,,  matched(addrout) ? &addrout : null);
+        append(iswrite,, true);
+        write_used = true;
+    }
+
+    module
+    read (queue(data) <- queue(address)) {
+        switch (use_mode) {
+        case pritype.NONE:
+            use_mode = pritype.FAIR;
+        case pritype.PRI:
+            texit("read(): already priority");
+        }
+        value(v, in_struct);
+        v.write := false;
+
+        v.address := cast(address, addr_t);
+        v.data := 0;
+        append(in,, &v);
+        append(out,, &data);
+        append(iswrite,, false);
+        read_used = true;
+    }
+
+    module
+    readp (queue(data) <- int(pri), queue(address)) {
+        switch (use_mode) {
+        case pritype.NONE:
+            use_mode = pritype.PRI;
+        case pritype.FAIR:
+            texit("readp(): already non-priority");
+        }
+        value(v, in_struct);
+        v.write := false;
+
+        v.address := cast(address, addr);
+        v.data := 0;
+        append(pri,, pri);
+        append(in,, &v);
+        append(out,, &data);
+        append(iswrite,, false);
+        read_used = true;
+    }
+}

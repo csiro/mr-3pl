@@ -1,0 +1,66 @@
+\pagebreak
+
+\section{AVNET Microzed Evaluation Board Header File - boards/avnet/microzed\_70x0.3pl}
+
+    
+    These library must be incorporated by using a {\bf module} statements -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/avnet/microzed_7010.3pl"
+    \end{lstlisting}
+    or
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/avnet/microzed_7020.3pl"
+    \end{lstlisting}
+    
+    The following is included -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       source "boards/avnet/microzed_base.3pl"
+    \end{lstlisting}
+    which in turn includes -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/xc7.3pl"
+       source "xilinx/zynq_axi.3pl"
+    \end{lstlisting}
+    
+    Module zynq\_ps() is called as a trailer module (defined in
+    xilinx/zynq\_axi.3pl). It instantiates the Zynq CPU and connects up the DDR
+    RAM and some general purpose I/O pins. It also derives a 100MHz clock from
+    the CPU which is the bus clock and is available as {\bf c100}.
+    
+    The following are defined as I/O pins with standard "LVCMOS33" -
+    
+    Test pins tp6\_pin to tp20\_pin("str").
+    
+    The 50 pins on each of connector 1 and connector 2,
+    con1\_pins and con2\_pins ("[50]str").
+    
+    The I/O pins on each connector are grouped with GND and VCC pins between
+    groups. For convenience the pin groups are also defined separately
+    as con1\_3\_16\_pins, con1\_19\_38\_pins etc., each being an array of "str".
+    
+
+
+
+
+    \subsection{library modules}
+    
+        None.
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

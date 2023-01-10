@@ -1,0 +1,429 @@
+\pagebreak
+
+\section{External QDR II memory Library - qdr2\_ram.3pl}
+
+    \index{library!qdr2\_ram.3pl}
+    This library provides read and write interfaces for quad data rate (QDR II)
+    synchronous static RAM.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "qdr2_ram.3pl"
+    \end{lstlisting}
+
+    
+    The RAM address and data dimensions are inferred from the dimensions
+    of the address and data FPGA pin arguments supplied to the class
+    call.
+
+    Multiple read and write ports are allowed. Addresses and data are
+    transferred using queue mode variables and simultaneous requests are handled
+    by arbitration based on fair access or priority - see below.
+    
+    The interfaces to a single external RAM chip are incorporated in
+    an instance of a class. Reads and writes are provided by modules in
+    that class.
+
+
+    \subsection{library modules}
+    
+        None.
+
+    \subsection{library procedures}
+    
+        None.
+
+    \subsection{library functions}
+    
+        None.
+
+    
+    
+    \subsection{library classes}
+    
+    
+        \subsubsection{class qdr2\_ram\label{sec:lcqdr2ram}}
+        
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                global class
+                qdr2_ram (
+                    var(addr\_pins, "[]str"),
+                    var(data\_pins, "[]str"),
+                    var(q_pins, "[]str"),
+                    str(_r_pin),
+                    str(_w_pin),
+                    str(_bw0_pin),
+                    str(_bw1_pin),
+                    str(_doff_pin),
+                    str(cq_pin),
+                    str(_cq_pin),
+                    str(k_pin),
+                    str(_k_pin),
+                    clock(clk_0),       // clock domain for the interface
+                    clock(clk_90),      // clk_0 delayed 90 degrees
+                    clock(del_clk),     // nominally 200MHz clock for IDELAY timing
+                    str(slew, "slow"),  // output pad slew rate
+                    int(drive, 2),      // output pad drive current - 2mA
+                    str(tnm, "QDRPAD")  // pad timing group name
+                    int(  qdel, 0),     // Q input delay
+                    int( cqdel, 12),    // CQ input delay
+                    int(_cqdel, 12),    //_CQ input delay
+                    str(cqbufloc),      // CQ inut buffer location - probably not necessary
+                    str(_cqbufloc)      // _CQ inut buffer location - probably not necessary
+                ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            {\bf addr\_pins} are the RAM address FPGA output pins \\
+            {\bf data\_pins} are the RAM write data FPGA output pins \\
+            {\bf q\_pins} are the RAM read data FPGA input pins \\
+            {\bf \_r\_pin} is 
+            {\bf \_w\_pin} is 
+            {\bf \_bw0\_pin} is 
+            {\bf \_bw1\_pin} is 
+            {\bf \_doff\_pin} is the \\
+            {\bf cq\_pin} is 
+            {\bf \_cq\_pin} is 
+            {\bf k\_pin} is 
+            {\bf \_k\_pin} is 
+            {\bf clk\_0} is the clock domain of the RAM interface \\
+            {\bf clk\_90} is the clock domain of the RAM interface \\
+            {\bf del\_clk} is the clock domain of the RAM interface \\
+            {\bf slew} is the output pad slew rate \\
+            {\bf drive} is the output pad drive current in mA \\
+            {\bf tnm} is a timing group name applied to all pads
+            connected to this interface. \\
+            {\bf qdel} is the default input delay for the Q input \\
+            {\bf cqdel} is the default input delay for the CQ input \\
+            {\bf \_cqdel} is the default input delay for the \_CQ input \\
+            {\bf cqbufloc} is an optional location for the CQ input buffer -
+            probably not necessary.
+            {\bf \_cqbufloc} is an optional location for the \_CQ input buffer -
+            probably not necessary.
+                       
+            It is presumed that the external RAM chip has a clock source
+            which is also input to the FPGA and that argument {\bf clk\_0}
+            is the FPGA version of that clock. {\bf clk\_0} is the clock
+            domain in which the interface logic to the QDR II RAM is to
+            operate. If this argument is omitted the current clock domain is
+            assumed.
+            
+            Argument clk\_90 is a clock delayed 90 degrees from clk\_0 (or
+            from the current clock if clk\_0 is omitted).
+            
+            Argument del\_clk must be an approximately 200MHz clock to
+            control IDELAY element input signal delays. The {\bf clk\_0},
+            {\bf clk\_90} and {\bf del\_clk} arguments must be provided.
+            
+            Optional arguments {\bf slew} ("slow" or "fast" and {\bf drive}
+            (2, 4, 6, 8, 12, 16 or 24 mA) specify the slew rate and drive
+            current for FPGA output pads.
+            
+            Optional argument {\bf tnm} specifies a timing group name for
+            the pads of the interface (default "QDRPAD"),
+            
+            Optional arguments {\bf qdel}, {\bf cqdel} and {\bf \_cqdel}
+            specify input delays for the Q, CQ and \_CQ inputs from the QDR
+            RAMs. These can be adjusted from the default values to centre
+            the clocks in the data 'eyes' if need be - see class procedures
+            {\bf incr\_qdel()}, {\bf decr\_qdel()}, {\bf reset\_qdel()},
+            {\bf incr\_cqdel()}, {\bf decr\_cqdel()}, {\bf reset\_cqdel()},
+            {\bf incr\_\_cqdel()}, {\bf decr\_\_cqdel()}, {\bf
+            reset\_\_cqdel()} below.
+            
+            It is assumed that there is no data skew and hence all data
+            inputs have the same delay.
+            
+            Optional arguments{\bf cqbufloc} and {\bf \_cqbufloc} are location
+            strings for the CQ and \_CQ BUFIO input buffers but are probably
+            not necessary.
+            
+            There is no provision for digitally controlled impedance in this
+            interface. If this is necessary it must be provided separately.
+                        
+            It may prove advantageous to provide locations constraints for
+            clock BUFIOs but this is probably not necessary and has not.
+ 
+            The following is an example of creation of a class instance - 
+ 
+            \begin{lstlisting}[gobble=12, language=threepl]
+                class(qdr2);
+                qdr =   qdr2_ram(
+                            addr_pins=ext_ram_a_pins[0],
+                            data_pins=ext_ram_d_pins[0],
+                            q_pins=ext_ram_q_pins[0],
+                            _r_pin=_ext_ram_r_pins[0],
+                            _w_pin=_ext_ram_w_pins[0],
+                            _bw0_pin=_ext_ram_bw0_pins[0],
+                            _bw1_pin=_ext_ram_bw1_pins[0],
+                            _doff_pin=_ext_ram_doff_pins[0],
+                            cq_pin=ext_ram_cq_pins[0],
+                            _cq_pin=_ext_ram_cq_pins[0],
+                            k_pin=ext_ram_k_pins[0],
+                            _k_pin=_ext_ram_k_pins[0],
+                            clk_0_pin=ext_ram_clk_0,
+                            clk_90_pin=ext_ram_clk_90,
+                            del_clk=c200
+                        );
+            \end{lstlisting}
+
+
+
+        \subsubsection{class module read - read from external QDR2 memory\\
+                       class module readp - read from external QDR2 memory with priority}\label{sec:lcqdr2ramread}
+
+            {\bf Library: xilinx/hymod/qdr2\_ram.3pl}
+
+            {\bf Prototypes:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               read (queue(data) <- queue(address))) {}
+            \end{lstlisting}
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               readp (queue(data) <- int(pri), queue(address)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf data} is the queue receiving the data read from the memory.
+
+            {\bf Input parameters:} \\
+            {\bf pri} is the priority of the read request. \\
+            {\bf addr} is the address to be read.
+
+            {\bf description:} \\
+            When the output and input queues are available an external memory
+            read will be executed, subject to access arbitration. The address
+            input queue and the data output queue may be any type, but a
+            crude pad/truncate cast to the address and data primitive sizes
+            will be performed.
+            
+            The internal code of this module executes in clock domain {\bf clk\_0}
+            (but the call to the module returns with the current clock domain
+            restored). If the clock domains in which input queue {\em addr} is
+            written or output queue {\em data} is read are not the c166 clock
+            domain then these queues will be asynchronous, i.e. their read and
+            write clock domains will be different. Any other source to queue {\em
+            data} must be in the c166 clock domain.
+            
+            For {\bf read()} access arbitration among competing read
+            requests is based on a fair strategy. Read requests are funnelled to
+            a single queue via a binary tree of queues. At each node conflicting
+            requests are resolved in favour of one of the two inputs by a scheme
+            which alternates priority between the inputs based on the number of
+            tree leaves on each side.
+            
+            For {\bf readp()} access is subject to access priority, priority
+            order being given by input parameter {\bf pri}. Lower numbers are
+            higher priority. The priorities do not need to form a contiguous
+            set but the same priority must not be used on more than one call
+            to {\bf readp()}.
+            
+            For one bank of external RAM, calls to {\bf read()} and {\bf
+            write()} cannot be mixed with calls to {\bf readp()} and
+            {\bf writep()}.
+
+
+        \subsubsection{class module write - write to external QDR2 memory\\
+                       class module writep - write to external QDR2 memory with priority}\label{sec:lcqdr2ramwrite}
+
+            {\bf Library: xilinx/hymod/qdr2\_ram.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               write (queue(addrout) <- varargs) {}
+            \end{lstlisting}
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               writep (queue(addrout) <- int(pri), varargs) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf addrout} is optional and is the address of the datum that
+            has been written.
+
+            {\bf Input parameters:} \\
+            {\bf pri} is the priority of the write request. \\
+            {\bf varags} expects either two arguments, the address and the data,
+            or a single argument which is a struct containing both address and
+            data.
+
+            {\bf description:} \\
+            The two forms allow the address and data to be given in a single
+            queue or as two separate queues or expressions.
+            
+            For the first form the address and data are contained in a
+            struct with fields {\bf address} and {\bf data}.
+            
+            For the second form the address and data are separate arguments
+            which may be any type, but a crude pad/truncate cast to the
+            address and data primitive sizes will be performed. At least one of
+            the input arguments must contain a queue read.
+            
+            When the input queue or queues is/are available an external memory
+            write will be executed, subject to access arbitration.
+           
+            If the output parameter is passed a queue variable argument the
+            write address is written to the queue when the memory write occurs.
+            This can be used to verify that the write has occurred and at what
+            address. This might be used for example where the external
+            memory is being used as a FIFO and the read address must not
+            pass the write address. The output argument may be a queue of type
+            "null" if write notification is required but the address value is not
+            of interest.
+            
+            The internal code of this module executes in clock domain {\bf clk\_0}
+            (but the call to the module returns with the current clock domain
+            restored). If the clock domains in which input queues {\em addr} and
+            {\em data} are written are not the external memory clock domain then
+            these queues will be asynchronous, i.e. their read and write clock
+            domains will be different. Any other sinks to these queues must be in
+            the c166 clock domain.
+            
+            For {\bf write()} access arbitration among competing write
+            requests is based on a fair strategy. Access requests are funnelled
+            to a single queue via a binary tree of queues. At each node
+            conflicting requests are resolved in favour of one of the two inputs
+            by a scheme which alternates priority between the inputs based on
+            the number of tree leaves on each side.
+            
+            For {\bf writep()} access is subject to access priority,
+            priority order being given by input parameter {\bf pri}. Lower
+            numbers are higher priority. The priorities do not need to form a
+            contiguous set but the same priority must not be used on more than
+            one call {\bf writep()}.
+            
+            For one bank of external RAM, calls to {\bf read()} and {\bf
+            write()} cannot be mixed with calls to {\bf readp()} and
+            {\bf writep()}.
+
+
+
+        \subsubsection{ class procedure incr\_qdel - increment Q input delay\\
+                        class procedure decr\_qdel - decrement Q input delay\\
+                        class procedure reset\_qdel - reset Q input delay}\label{sec:lcqdr2ramqdel}
+        
+
+            {\bf Library: xilinx/hymod/qdr2\_ram.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               incr_qdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               decr_qdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               reset_qdel () {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            
+            none.
+
+            {\bf description:} \\
+            Increment, decrement or reset the input delay of the {\bf Q}
+            signal from the RAM. This procedure is provided to allow the Q
+            signal delay to be altered during execution of test code to
+            position data signals within the clock eye.
+            
+
+
+
+        \subsubsection{ class procedure incr\_cqdel - increment CQ input delay\\
+                        class procedure decr\_cqdel - decrement CQ input delay\\
+                        class procedure reset\_cqdel - reset CQ input delay}\label{sec:lcqdr2ramcqdel}
+        
+
+            {\bf Library: xilinx/hymod/qdr2\_ram.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               incr_cqdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               decr_cqdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               reset_cqdel () {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            
+            none.
+
+            {\bf description:} \\
+            Increment, decrement or reset the input delay of the {\bf CQ}
+            signal from the RAM. This procedure is provided to allow the CQ
+            signal delay to be altered during execution of test code to
+            position data signals within the clock eye.
+
+
+        \subsubsection{ class procedure incr\_\_cqdel - increment \_CQ input delay\\
+                        class procedure decr\_\_cqdel - decrement \_CQ input delay\\
+                        class procedure reset\_\_cqdel - reset \_CQ input delay}\label{sec:lcqdr2ramncqdel}
+        
+
+            {\bf Library: xilinx/hymod/qdr2\_ram.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               incr__cqdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               decr__cqdel () {}
+            \end{lstlisting}
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               reset__cqdel () {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            
+            none.
+
+            {\bf description:} \\
+            Increment, decrement or reset the input delay of the {\bf \_CQ}
+            signal from the RAM. This procedure is provided to allow the \_CQ
+            signal delay to be altered during execution of test code to
+            position data signals within the clock eye.

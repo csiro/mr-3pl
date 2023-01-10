@@ -1,0 +1,239 @@
+\pagebreak
+
+\section{Floating Point Library - float.3pl}\label{chap:fp}
+
+    \index{library!float.3pl}
+    This library provides floating point modules, procedures and functions for
+    all Xilinx FPGAs.
+    
+    This library must be incorporated by using a {\bf module} statement, i.e.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "float.3pl"
+    \end{lstlisting}
+    
+    This library was developed for a specific project, but it was soon determined
+    that fixed point operations were far better suited and used far fewer
+    logic resources. Hence a fixed point target type was incorporated fully
+    into 3PL and this floating point library has never been used in earnest.
+    It passed early testing but probably needs much more development.
+
+
+
+    \subsection{library modules}
+
+
+        \subsubsection{fadd - floating add}\label{sec:lmfadd}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fadd (queue(out) <- value(in1), value(in2)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in1} is the first input value. \\
+            {\bf in1} is the second input value.
+
+            {\bf description:} \\
+            This module adds the two input floating point values and assigns
+            the sum to the output queue. The input values and the output queue
+            must be type {\bf float}. The input exponent and mantissa widths
+            may differ from each other and from those of the output format. The
+            module will assign data to the output queue when both inputs and the
+            output are available.
+            
+            The latency through this module is $5 + \lceil \log_2 m \rceil + r$
+            where $m$ is the number of bits in the mantissa and $r$ is 1 if
+            either of the input formats differs to the output format and 0
+            otherwise.
+            
+            Overflow and underflow are not handled.
+
+
+        \subsubsection{fdiv - floating divide}\label{sec:lmfdiv}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fdiv (queue(out) <- value(in1), value(in2)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in1} is the first input value. \\
+            {\bf in1} is the second input value.
+
+            {\bf description:} \\
+            This module divides the first input floating point value by the
+            second and assigns the quotient to the output queue. The input
+            values and the output queue must be type {\bf float}. The input
+            exponent and mantissa widths may differ from each other and from
+            those of the output format. The module will assign data to the
+            output queue when both inputs and the output are available.        
+            
+            Overflow and underflow are not handled.
+            
+            {\bf {\large This module has not yet been written}}
+
+
+        \subsubsection{fmul - floating multiply}\label{sec:lmfmul}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fmul (queue(out) <- value(in1), value(in2)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in1} is the first input value. \\
+            {\bf in1} is the second input value.
+
+            {\bf description:} \\
+            This module multiplies the two input floating point values and
+            assigns the product to the output queue. The input values and the
+            output queue must be type {\bf float}. The input exponent and
+            mantissa widths may differ from each other and from those of the
+            output format. The module will assign data to the output queue when
+            both inputs and the output are available.
+            
+            The latency through this module is $2 + \lceil \log_2 m \rceil + r$
+            where $m$ is the number of bits in the mantissa and $r$ is 1 if
+            either of the input formats differs to the output format and 0
+            otherwise.
+            
+            Overflow and underflow are not handled.
+
+
+        \subsubsection{fneg - negate a floating point value}\label{sec:lmfneg}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fneg (queue(out) <- value(in)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input value.
+
+            {\bf description:} \\
+            This module negates the input floating point value and assigns the
+            result to the output queue. The input value and the output queue must
+            be type {\bf float}. The input exponent and mantissa widths may
+            differ from those of the output format. The module will assign data
+            to the output queue when both input and output are available.
+
+            The latency through this module is 2 if the input format
+            differs to that of the output and 1 otherwise.
+            
+            This module simply changes the sign bit, including the
+
+
+        \subsubsection{fsub - floating subtract}\label{sec:lmfsub}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               fsub (queue(out) <- value(in1), value(in2)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in1} is the first input value. \\
+            {\bf in1} is the second input value.
+
+            {\bf description:} \\
+            This module subtracts the second input floating point value
+            from the first and assigns the difference to the output queue.
+            The input values and the output queue must be type {\bf float}.
+            The input exponent and mantissa widths may differ from each other
+            and from those of the output format.
+            The module will assign data to the output queue when both
+            inputs and the output are available.
+            
+            The latency through this module is $5 + \lceil \log_2 m \rceil + r$
+            where $m$ is the number of bits in the mantissa and $r$ is 1 if
+            either of the input formats differs to the output format and 0
+            otherwise.
+            
+            Overflow and underflow are not handled.
+
+
+        \subsubsection{itof - convert an integer to a floating point value}\label{sec:lmitof}
+
+            {\bf Library: float.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               itof (queue(out) <- value(in)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the output queue variable.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the input queue variable.
+
+            {\bf description:} \\
+            This module converts the integer in the input argument to a floating
+            point value which is assigned to the output queue.
+            The input value must be type {\bf int} or {\bf uint} and the
+            output queue must be type {\bf float}.
+            The module will assign data to the output queue when both
+            input and output arguments are available.
+            
+            The latency through this module is $1 + \lceil \log_2 m \rceil$
+            where $m$ is the number of bits in the mantissa.
+            
+            Overflow is not handled, but is very unlikely to occur in converting
+            integer to floating point.
+
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+
+
+
+
+    \subsection{library functions}
+    
+
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

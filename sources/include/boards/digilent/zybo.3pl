@@ -1,0 +1,122 @@
+nosource
+
+part("xc7z010clg400-1");
+
+// DMA  initialbuffer locations and sizes.
+int(global.DMA_base_address_init, 0x2f000000);
+int(global.DMA_buffer_size_init,  0x1000000);
+
+module "xilinx/xc7.3pl"
+source "xilinx/zynq_axi.3pl"
+
+//addncf("CONFIG VCCAUX=\"3.3\";"); XDC equivalent?
+str(lvcmos33, "LVCMOS33");
+
+// pin definitions for devices connected to FPGA pads
+
+// HDMI port (4 pins, 5 pairs)
+iopins(global.hdmi_cec_pin, "str", "E19", iostandard=lvcmos33);
+iopins(global.hdmi_hpd_pin, "str", "E18", iostandard=lvcmos33);
+iopins(global.hdmi_out_en_pin, "str", "F17", iostandard=lvcmos33);
+iopins(global.hdmi_scl_pin, "str", "G17", iostandard=lvcmos33);
+iopins(global.hdmi_sda_pin, "str", "G18", iostandard=lvcmos33);
+
+iopins(global.hdmi_clk_pins, "[2]str", { "H16", "H17"} , iostandard="TMDS_33");
+iopins(global.hdmi_d0_pins, "[2]str", { "D19", "D20"} , iostandard="TMDS_33");
+iopins(global.hdmi_d1_pins, "[2]str", { "C20", "B20"} , iostandard="TMDS_33");
+iopins(global.hdmi_d2_pins, "[2]str", { "B19", "A20"} , iostandard="TMDS_33");
+
+// VGA port (18 pins)
+iopins(global.vga_red_pins, "[5]str",
+    { "M19", "L20", "J20", "G20", "F19" }, iostandard=lvcmos33);
+iopins(global.vga_green_pins, "[6]str",
+    { "H18", "N20", "L19", "J19", "H20", "F20" }, iostandard=lvcmos33);
+iopins(global.vga_blue_pins, "[5]str",
+    { "P20", "M20", "K19", "J18", "G19" }, iostandard=lvcmos33);
+iopins(global.vga_hsync_pin, "str", "P19", iostandard=lvcmos33);
+iopins(global.vga_vsync_pin, "str", "R19", iostandard=lvcmos33);
+
+// Ethernet PHY 125MHz clock and reset (2 pins)
+iopins(global.phy_clk125_pin, "str", "L16", iostandard=lvcmos33);
+iopins(global.phy_rstb_pin, "str", "E17", iostandard=lvcmos33);
+iopins(global.phy_intb_pin, "str", "F16", iostandard=lvcmos33);
+
+// User LEDs, buttons, slide switches (12 pins)
+// (buttons and switches are active low)
+iopins(global.led_pins, "[4]str",
+    { "M14", "M15", "G14", "D18" }, iostandard=lvcmos33);
+iopins(global.button_pins, "[4]str",
+    { "R18", "P16", "V16", "Y16" }, iostandard=lvcmos33);
+iopins(global.switch_pins, "[4]str",
+    { "G15", "P15", "W13", "T16" }, iostandard=lvcmos33);
+
+// Analog Devices SSM2603 Audio Codec (9 pins)
+// (directions WR to the Zynq)
+//
+//	BCLK	I2S (Serial Clock) Output
+//	PBDAT	I2S (Playback Data) Output
+//	PBLRC	I2S (Playback Channel Clock) Output
+//	RECDAT	I2S (Record Data) Input
+//	RECLRC	I2S (Record Channel Clock) Output
+//	SDIN	I2C (Data) Input/Output
+//	SCLK	I2C (Clock) Output
+//	MUTE	Digital Enable (Active Low) Output
+//	MCLK	Master Clock Output
+//
+iopins(global.ssm2603_bclk_pin, "str", "K18", iostandard=lvcmos33);
+iopins(global.ssm2603_pbdat_pin, "str", "M17", iostandard=lvcmos33);
+iopins(global.ssm2603_pblrc_pin, "str", "L17", iostandard=lvcmos33);
+iopins(global.ssm2603_recdat_pin, "str", "K17", iostandard=lvcmos33);
+iopins(global.ssm2603_reclrc_pin, "str", "M18", iostandard=lvcmos33);
+iopins(global.ssm2603_sdin_pin, "str", "N17", iostandard=lvcmos33);
+iopins(global.ssm2603_sclk_pin, "str", "N18", iostandard=lvcmos33);
+iopins(global.ssm2603_mute_pin, "str", "P18", iostandard=lvcmos33);
+iopins(global.ssm2603_mclk_pin, "str", "T19", iostandard=lvcmos33);
+
+// PMOD ports JA to JE (JF is only accessible to PS) (20 pins)
+//
+//	JA	XADC (analogue or digital, pairs)
+//	JB	Hi-Speed (0R series resistors, 100R pairs)
+//	JC	Hi-Speed (0R series resistors, 100R pairs)
+//	JD	Hi-Speed (0R series resistors, 100R pairs)
+//	JE	Standard (200R series resistors)
+//
+iopins(global.pmod_ja_pins, "[4][2]str", {
+	{ "N15", "N16" },
+	{ "L14", "L15"},
+	{ "K16", "J16"},
+	{ "K14", "J14"}
+    }, iostandard=lvcmos33);
+iopins(global.pmod_jb_pins, "[4][2]str", {
+	{ "T20", "U20" },
+	{ "V20", "W20" },
+	{ "Y18", "Y19" },
+	{ "W18", "W19" }
+    }, iostandard=lvcmos33);
+iopins(global.pmod_jc_pins, "[4][2]str", {
+	{ "V15", "W15" },
+	{ "T11", "T10" },
+	{ "W14", "Y14" },
+	{ "T12", "U12" }
+    }, iostandard=lvcmos33);
+iopins(global.pmod_jd_pins, "[4][2]str", {
+	{ "T14", "T15" },
+	{ "P14", "R14" },
+	{ "U14", "U15" },
+	{ "V17", "V18" }
+    }, iostandard=lvcmos33);
+iopins(global.pmod_je_pins, "[8]str",
+    { "V12", "W16", "J15", "H15", "V13", "U17", "T17", "Y17" }, iostandard=lvcmos33);
+
+// USB OTG over-current (1 pin)
+iopins(global.usb_otg_oc_pin, "str", "U13", iostandard=lvcmos33);
+
+
+// Connect the processor to DDR RAM, GP I/O and AXI buses.
+// Create bus interfaces in PL.
+//
+// Module zynq_ps() is defined in xilinx/zynq_axi.3pl
+//
+trailermodule ("zynq processor") {
+    zynq_ps();
+}

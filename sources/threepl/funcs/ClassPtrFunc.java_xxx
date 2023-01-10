@@ -1,0 +1,39 @@
+package threepl.funcs;
+
+import threepl.ThreePL;
+import threepl.exceptions.ExEx;
+import threepl.exec.Group;
+import threepl.exec.Val;
+import threepl.nodes.Ident;
+import threepl.nodes.NodeList;
+import threepl.parser.Constant;
+import threepl.parser.SrcLoc;
+
+/**
+ * Get a pointer to a class.
+ */
+public class ClassPtrFunc extends InbuiltFunc implements Constant {
+
+    /**
+     * Calling interface for the function.
+     * @param   args is a list of argument tree nodes
+     * @return  the pointer
+     */
+    public Val getVal (NodeList args) {
+        SrcLoc  loc = args.getCallLoc();
+
+        if (args.size() != 1)
+            throw new ExEx("classptr() must have a single argument", loc);
+
+        
+        Ident   id = args.getIdent(0, "classptr()");
+        String  name = id.getId();
+
+        // is it a user-defined group (3PL class)?
+        Group    g = ThreePL.findGroup(name);
+        if (g != null)
+            return(new Val(PtrType.UCPTR, g, loc));
+
+        throw new ExEx("classptr(): class '" + name + "' not found", loc);
+    }
+}

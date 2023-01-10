@@ -1,0 +1,9 @@
+#! /bin/bash -f
+ngdbuild $1
+map -detail -timing -k 6 -pr b -ol high -cm speed $1
+par -w -ol high $1 $1.ncd
+bitgen -w -g Persist:yes -g LCK_cycle:4 $1
+/bin/rm -f netlist.lst *.nav *.pad *pad.txt *.xpi *.xml *.xrpt *.twx *.ptwx *.unroutes smartpreview.twr
+/bin/rm -rf xlnx*
+/bin/rm -f *editor.log
+gzip -fk $1.bit

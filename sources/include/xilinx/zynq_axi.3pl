@@ -1,0 +1,2708 @@
+nosource
+
+module "jsontype.3pl"
+
+trailermodule ("zynq processor") {
+    zynq_ps();
+}
+
+// in general Zynq configurations should be compressed
+directive("postProcessCompress", true);
+// read/write transfer limit
+directive("tlimit", 256);
+
+//
+// CPU API code.
+//
+// An instance of class CPU_API is created when this current file module
+// is executed and is assigned to local variable 'cpu'. This class instance
+// is used within this current file module and is also passed back to the
+// application program by means of function cpu_api().
+// The local use is to create interfaces for the stored copy of the .info
+// JSON file (see 'infoword' and 'inforead' a few lines below).
+//
+source "xilinx/cpu.3pl"         // CPU API classes file
+class(cpu, CPU_API());          // Create API class here as used below
+
+// Make the API class available to application code via this function.
+// Assign pointers to DMA modules and interrupt module
+// to the cpu class so that the appropriate zynq modules
+// can be called indirectly.
+//
+global function cpu_api () {
+    cpu.dma_read_ptr = &dma_read;
+    cpu.dma_write_ptr = &dma_write;
+    cpu.sigint_ptr = &sigint;
+    return(cpu);
+}
+
+
+//
+// AXI HP buses
+//
+var(axi_hp_read_used, "[4]log");
+var(axi_hp_write_used, "[4]log");
+var({hp_wipp, hp_wapp, hp_wlpp}, "[4]->");
+queuearray(hp_wipp <- "bits:64");    // array of HP write data queues
+queuearray(hp_wapp <- "uint:32");    // array of HP write address queues
+queuearray(hp_wlpp <- "uint:4");     // array of HP write burst length queues
+
+var({hp_ripp, hp_rapp, hp_rlpp}, "[4]->");
+queuearray(hp_ripp <- "bits:64");    // array of HP read data queues
+queuearray(hp_rapp <- "uint:32");    // array of HP read address queues
+queuearray(hp_rlpp <- "uint:4");     // array of HP read burst length queues
+
+//
+// AXI GP buses
+//
+clock(global.c100, frequency=100.0e6, tnm="C100");
+clock(c100_in, frequency=100.0e6);
+/*
+ * Should use MMCM here to cancel out phase shift but Vivado will not allow
+ * MMCM input to be connected to PS7 clock output!
+ *
+clock({c100_in, c100_raw, fbc, fbcraw}, frequency=100.0e6);
+clkmmcm_base(
+    clkfbout=fbcraw,
+    clkout1=c100_raw
+    <-
+    clkin=c100_in,
+    clkfb=fbc,
+    clkfbout_mult_f=10.0,
+    divclk_divide=1,
+    clkout1_divide=10
+);
+clockbufg(fbc <- fbcraw);
+clockbufg(c100 <- c100_raw);
+*/
+clockbufg(c100 <- c100_in);
+clock(bus_clk);
+bus_clk := c100;
+useclock(c100);
+
+int(gp_addr_width, 22);
+int(gp_data_width, 32);
+var(gp_rd_used, "[2]log");
+var(gp_wr_used, "[2]log");
+
+value(gp_arready, "[2]log", false);
+value(gp_arvalid, "[2]log");
+value(gp_arid, "[2]uint:12");
+value(gp_arlen, "[2]uint:4");
+value(gp_araddr, "[2]uint:32");
+value(gp_arburst, "[2]uint:2");
+value(gp_arprot, "[2]uint:3");
+
+value(gp_rready, "[2]log");
+value(gp_rvalid, "[2]log", false);
+value(gp_rdata, "[2]bits:32", cast(0, "bits:32"));
+static(gp_rid, "[2]uint:12");
+value(gp_rlast, "[2]log", false);
+static(gp_rresp, "[2]uint:2", 0);
+
+value(gp_awready, "[2]log", false);
+value(gp_awvalid, "[2]log");
+value(gp_awid, "[2]uint:12");
+value(gp_awlen, "[2]uint:4");
+value(gp_awaddr, "[2]uint:32");
+value(gp_awburst, "[2]uint:2");
+value(gp_awprot, "[2]uint:3");
+value(gp_wstrb, "[2]["+(gp_data_width/8)+"]log");
+
+value(gp_wready, "[2]log", false);
+value(gp_wvalid, "[2]log");
+value(gp_wdata, "[2]bits:"+gp_data_width);
+value(gp_wlast, "[2]log", false);
+
+value(gp_bready, "[2]log");
+static(gp_bvalid, "[2]log");
+static(gp_bresp, "[2]uint:2");
+static(gp_bid, "[2]uint:12");
+
+value(gp_aresetn, "[2]log");
+
+var(gp_rda_p, "[2]->"); // read address queues pointer array
+var(gp_rdd_p, "[2]->"); // read data queues pointer array
+var(gp_wra_p, "[2]->"); // write address queues pointer array
+var(gp_wrd_p, "[2]->"); // write data queues pointer array
+var(gp_wrr_p, "[2]->"); // write response ID queues pointer array
+
+value(read_address_match, "[2]log", false);
+value(write_address_match, "[2]log", false);
+
+var(gp_raddr_width, "[2]int");      // read address width for each GP bus
+var(gp_waddr_width, "[2]int");      // write address width for each GP bus
+var(gp_raddr_type, "[2]type");      // read address type for each GP bus
+var(gp_waddr_type, "[2]type");      // write address type for each GP bus
+var(gp_ext_raddr_width, "[2]int");  // max read address width for GP bus memory
+var(gp_ext_waddr_width, "[2]int");  // max write address width for GP bus memory
+type(gp1_mem_raddr_type);           // read address type for GP bus memory
+type(gp1_mem_waddr_type);           // write address type for GP bus memory
+
+var(bus_list, "[2]list");
+
+int(raddrinit, 1);  // start read addresses at 1, not 0
+int(waddrinit, 2);  // start write addresses at 2 (even), not 0
+var(read_addr, "[2]uint", {raddrinit, raddrinit});
+var(write_addr, "[2]uint", {waddrinit, waddrinit});
+
+
+// DMA buffer locations and sizes, set in the board header.
+// Note that 'DMA_base_address' and 'DMA_available_pages' are modified
+// as port interfaces are created. 
+//
+// 'DMA_base_address_init' and 'DMA_buffer_size_init' are defined
+// in the board header file, e.g.
+// 3PL/sources/include/boards/avnet/microzed-7010.3pl.
+//
+int(DMA_base_address, DMA_base_address_init);   // DMA base address
+int(DMA_buffer_size, DMA_buffer_size_init);     // DMA total buffer size
+int(DMA_available_pages);                       // DMA buffer pages available
+int(hp_port);                                   // next available HP bus, 0 to 3
+DMA_available_pages = DMA_buffer_size / 4096;
+
+var(hp_base_address, "[4]uint");    // DMA port CPU physical base address
+var(hp_names, "[4]str");            // HP bus space names
+var(hp_blocks, "[4]uint");          // HP bus blocks in buffer space
+var(hp_blocksize, "[4]uint");       // HP block size in bytes
+var(hp_blockwords, "[4]uint");      // HP block length in data words
+var(hp_pages, "[4]uint");           // HP block allocated 4K pages
+var(hp_dtype_bits, "[4]int");       // HP bus data size in bits
+var(hp_dtype, "[4]str");            // HP bus data type
+enum(global.dma_block_term, none, ignore, first, last);
+
+
+int(hp_writes);
+
+//
+// Interrupts
+//
+value(irqf2p, "[20]log");           // CPU interrupt signal inputs
+
+// CPU interface for reading the compressed .info file
+// from block RAM. The read and write addresses will both be 1.
+// If subsequently not connected this interface will be deleted.
+// The .info file is compressed and stored in block RAM (rmemory)
+// so that it can be read and uncompressed by CPU code.
+// The compressed .info data is read from 'infoword' packed in 32 bit
+// words. The interface must be initialised by writing to 'inforeset'
+// (a zero width write).
+//
+// These interfaces are created here, prior to any others, to ensure that
+// the GP0 read and write addresses are both 1, i.e. the interfaces are
+// first in the GP0 list. If the interfaces are not used then the first two
+// list entries are removed later prior to generating the interface logic
+// and .info information.
+value(file.infoword, "uint:32");
+static({file.inforeset, file.inforead}, "log");
+cpu.read(access=inforead <- infoword, "infoword");
+cpu.write(, access=inforeset <- "inforeset");
+
+//
+// Add a new interface to the appropriate bus interface list.
+//
+// Note that for write_stat and write_q the address is incremented by the
+// number of 32-bit words in the transfer. This is because burst writes to
+// an address do not seem to be invoked and instead a number of single
+// word writes to successive word addresses are emitted. Thus write
+// interfaces longer than one word require an address range, hence the
+// address of the next interface is advanced by the number of words (and
+// hence addresses) required by the previous interface.
+// For burst writes the address must be even (provinence?).
+//
+procedure
+add_interface (var (v, "->")) {
+    switch (v->.interface_type) {
+    
+    // read value
+    case itype.read_val:
+        v->.addr = read_addr[0]++;
+        append(bus_list[0],, v);
+    
+    // write static
+    case itype.write_stat:
+        int(words, 2);
+        if (v->.var != null)
+            words = 2 * ((size(v->.var->) - 1)/32 + 1);
+        v->.addr = write_addr[0];
+        write_addr[0] += words;
+        append(bus_list[0],, v);
+    
+    // read queue
+    case itype.read_q:
+        v->.addr = read_addr[0]++;
+        if (v->.ilevel < 0) {
+            v->.laddr = write_addr[0];
+            write_addr[0] += 2;
+        }
+        if (v->.caddr < 0)
+            v->.caddr = read_addr[0]++;
+        append(bus_list[0],, v);
+    
+    // write queue
+    case itype.write_q:
+        int(words,(2 * ((size(v->.var->) - 1)/32 + 1)));
+        v->.addr = write_addr[0];
+        write_addr[0] += 2;        
+        if (v->.ilevel < 0) {
+            v->.laddr = write_addr[0];
+            write_addr[0] += words;        
+        } if (v->.caddr < 0)
+            v->.caddr = read_addr[0]++;
+        append(bus_list[0],, v);
+    
+    // read memory
+    case itype.read_mem:
+        v->.addr = read_addr[1]++;
+        int(mas, size(memoryaddresstype(v->.var->)));
+        if (mas > gp_ext_raddr_width[1])
+            gp_ext_raddr_width[1] = mas;
+        append(bus_list[1],, v);
+    
+    // write memory
+    case itype.write_mem:
+        int(words,(2 * ((size(memorydatatype(v->.var->)) - 1)/32 + 1)));
+        v->.addr = write_addr[1];
+        write_addr[1] += words;
+        int(mas, size(memoryaddresstype(v->.var->)));
+        if (mas > gp_ext_waddr_width[1])
+            gp_ext_waddr_width[1] = mas;
+        append(bus_list[1],, v);
+    }
+}
+
+//
+// ARM procecessor low-level interface.
+//
+module
+zynq_ps () {
+
+    // The GP and HP buses are to use c100.
+    //
+    clock(gp_aclk);
+    clock(hp_aclk);
+    gp_aclk := c100;
+    hp_aclk := c100;
+
+    //
+    // PS7 signals.
+    //
+    value({ DMA0DAVALID, DMA0DRREADY, DMA0RSTN, DMA1DAVALID, DMA1DRREADY, 
+            DMA1RSTN, DMA2DAVALID, DMA2DRREADY, DMA2RSTN, DMA3DAVALID, 
+            DMA3DRREADY, DMA3RSTN, EMIOCAN0PHYTX, EMIOCAN1PHYTX, 
+            EMIOENET0GMIITXEN, EMIOENET0GMIITXER, EMIOENET0MDIOMDC, 
+            EMIOENET0MDIOO, EMIOENET0MDIOTN, EMIOENET0PTPDELAYREQRX, 
+            EMIOENET0PTPDELAYREQTX, EMIOENET0PTPPDELAYREQRX, 
+            EMIOENET0PTPPDELAYREQTX, EMIOENET0PTPPDELAYRESPRX, 
+            EMIOENET0PTPPDELAYRESPTX, EMIOENET0PTPSYNCFRAMERX, 
+            EMIOENET0PTPSYNCFRAMETX, EMIOENET0SOFRX, EMIOENET0SOFTX, 
+            EMIOENET1GMIITXEN, EMIOENET1GMIITXER, EMIOENET1MDIOMDC, 
+            EMIOENET1MDIOO, EMIOENET1MDIOTN, EMIOENET1PTPDELAYREQRX, 
+            EMIOENET1PTPDELAYREQTX, EMIOENET1PTPPDELAYREQRX, 
+            EMIOENET1PTPPDELAYREQTX, EMIOENET1PTPPDELAYRESPRX, 
+            EMIOENET1PTPPDELAYRESPTX, EMIOENET1PTPSYNCFRAMERX, 
+            EMIOENET1PTPSYNCFRAMETX, EMIOENET1SOFRX, EMIOENET1SOFTX, 
+            EMIOI2C0SCLO, EMIOI2C0SCLTN, EMIOI2C0SDAO, EMIOI2C0SDATN, 
+            EMIOI2C1SCLO, EMIOI2C1SCLTN, EMIOI2C1SDAO, EMIOI2C1SDATN, 
+            EMIOPJTAGTDO, EMIOPJTAGTDTN, EMIOSDIO0BUSPOW, EMIOSDIO0CLK, 
+            EMIOSDIO0CMDO, EMIOSDIO0CMDTN, EMIOSDIO0LED, EMIOSDIO1BUSPOW, 
+            EMIOSDIO1CLK, EMIOSDIO1CMDO, EMIOSDIO1CMDTN, EMIOSDIO1LED, 
+            EMIOSPI0MO, EMIOSPI0MOTN, EMIOSPI0SCLKO, EMIOSPI0SCLKTN, 
+            EMIOSPI0SO, EMIOSPI0SSNTN, EMIOSPI0STN, EMIOSPI1MO, 
+            EMIOSPI1MOTN, EMIOSPI1SCLKO, EMIOSPI1SCLKTN, EMIOSPI1SO, 
+            EMIOSPI1SSNTN, EMIOSPI1STN, EMIOTRACECTL, EMIOUART0DTRN, 
+            EMIOUART0RTSN, EMIOUART0TX, EMIOUART1DTRN, EMIOUART1RTSN, 
+            EMIOUART1TX, EMIOUSB0VBUSPWRSELECT, EMIOUSB1VBUSPWRSELECT, 
+            EMIOWDTRSTO, EVENTEVENTO, MAXIGP0WLAST, MAXIGP1WLAST, 
+            SAXIACPARESETN, SAXIACPARREADY, SAXIACPAWREADY, SAXIACPBVALID, 
+            SAXIACPRLAST, SAXIACPRVALID, SAXIACPWREADY, SAXIGP0ARESETN, 
+            SAXIGP0ARREADY, SAXIGP0AWREADY, SAXIGP0BVALID, SAXIGP0RLAST, 
+            SAXIGP0RVALID, SAXIGP0WREADY, SAXIGP1ARESETN, SAXIGP1ARREADY, 
+            SAXIGP1AWREADY, SAXIGP1BVALID, SAXIGP1RLAST, SAXIGP1RVALID, 
+            SAXIGP1WREADY, SAXIHP0ARESETN, SAXIHP0ARREADY, SAXIHP0AWREADY, 
+            SAXIHP0BVALID, SAXIHP0RLAST, SAXIHP0RVALID, SAXIHP0WREADY, 
+            SAXIHP1ARESETN, SAXIHP1ARREADY, SAXIHP1AWREADY, SAXIHP1BVALID, 
+            SAXIHP1RLAST, SAXIHP1RVALID, SAXIHP1WREADY, SAXIHP2ARESETN, 
+            SAXIHP2ARREADY, SAXIHP2AWREADY, SAXIHP2BVALID, SAXIHP2RLAST, 
+            SAXIHP2RVALID, SAXIHP2WREADY, SAXIHP3ARESETN, SAXIHP3ARREADY, 
+            SAXIHP3AWREADY, SAXIHP3BVALID, SAXIHP3RLAST, SAXIHP3RVALID, 
+            SAXIHP3WREADY}, "log");
+    value(DMA0DATYPE, "uint:2");
+    value(DMA1DATYPE, "uint:2");
+    value(DMA2DATYPE, "uint:2");
+    value(DMA3DATYPE, "uint:2");
+    value(EMIOENET0GMIITXD, "uint:8");
+    value(EMIOENET1GMIITXD, "uint:8");
+    value(EMIOGPIOO, "bits:64");
+    value(EMIOGPIOTN, "bits:64");
+    value(EMIOSDIO0BUSVOLT, "uint:3");
+    value(EMIOSDIO0DATAO, "[4]log");
+    value(EMIOSDIO0DATATN, "[4]log");
+    value(EMIOSDIO1BUSVOLT, "uint:3");
+    value(EMIOSDIO1DATAO, "[4]log");
+    value(EMIOSDIO1DATATN, "[4]log");
+    value(EMIOSPI0SSON, "[3]log");
+    value(EMIOSPI1SSON, "[3]log");
+    value(EMIOTRACEDATA, "bits:32");
+    value(EMIOTTC0WAVEO, "uint:3");
+    value(EMIOTTC1WAVEO, "uint:3");
+    value(EMIOUSB0PORTINDCTL, "[2]log");
+    value(EMIOUSB1PORTINDCTL, "[2]log");
+    value(EVENTSTANDBYWFE, "[2]log");
+    value(EVENTSTANDBYWFI, "[2]log");
+    value(FCLKRESETN, "[4]log");
+    value(FTMTF2PTRIGACK, "[4]log");
+    value(FTMTP2FDEBUG, "bits:32");
+    value(FTMTP2FTRIG, "[4]log");
+    value(IRQP2F, "bits:29");
+    value(MAXIGP0ARBURST, "uint:2");
+    value(MAXIGP0ARCACHE, "uint:4");
+    value(MAXIGP0ARLEN, "uint:4");
+    value(MAXIGP0ARLOCK, "uint:2");
+    value(MAXIGP0ARQOS, "uint:4");
+    value(MAXIGP0ARSIZE, "uint:2");
+    value(MAXIGP0AWBURST, "uint:2");
+    value(MAXIGP0AWCACHE, "uint:4");
+    value(MAXIGP0AWLEN, "uint:4");
+    value(MAXIGP0AWLOCK, "uint:2");
+    value(MAXIGP0AWQOS, "uint:4");
+    value(MAXIGP0AWSIZE, "uint:2");
+    value(MAXIGP0WID, "uint:12");
+    value(MAXIGP1ARBURST, "uint:2");
+    value(MAXIGP1ARCACHE, "uint:4");
+    value(MAXIGP1ARLEN, "uint:4");
+    value(MAXIGP1ARLOCK, "uint:2");
+    value(MAXIGP1ARQOS, "uint:4");
+    value(MAXIGP1ARSIZE, "uint:2");
+    value(MAXIGP1AWBURST, "uint:2");
+    value(MAXIGP1AWCACHE, "uint:4");
+    value(MAXIGP1AWLEN, "uint:4");
+    value(MAXIGP1AWLOCK, "uint:2");
+    value(MAXIGP1AWQOS, "uint:4");
+    value(MAXIGP1AWSIZE, "uint:2");
+    value(MAXIGP1WID, "uint:12");
+    value(SAXIACPBID, "uint:3");
+    value(SAXIACPBRESP, "uint:2");
+    value(SAXIACPRDATA, "bits:64");
+    value(SAXIACPRID, "uint:3");
+    value(SAXIACPRRESP, "uint:2");
+    value(SAXIGP0BID, "uint:6");
+    value(SAXIGP0BRESP, "uint:2");
+    value(SAXIGP0RDATA, "bits:32");
+    value(SAXIGP0RID, "uint:6");
+    value(SAXIGP0RRESP, "uint:2");
+    value(SAXIGP1BID, "uint:6");
+    value(SAXIGP1BRESP, "uint:2");
+    value(SAXIGP1RDATA, "bits:32");
+    value(SAXIGP1RID, "uint:6");
+    value(SAXIGP1RRESP, "uint:2");
+    value(SAXIHP0BID, "uint:6");
+    value(SAXIHP0BRESP, "uint:2");
+    value(SAXIHP0RACOUNT, "uint:3");
+    value(SAXIHP0RCOUNT, "uint:8");
+    value(SAXIHP0RDATA, "bits:64");
+    value(SAXIHP0RID, "uint:6");
+    value(SAXIHP0RRESP, "uint:2");
+    value(SAXIHP0WACOUNT, "uint:6");
+    value(SAXIHP0WCOUNT, "uint:8");
+    value(SAXIHP1BID, "uint:6");
+    value(SAXIHP1BRESP, "uint:2");
+    value(SAXIHP1RACOUNT, "uint:3");
+    value(SAXIHP1RCOUNT, "uint:8");
+    value(SAXIHP1RDATA, "bits:64");
+    value(SAXIHP1RID, "uint:6");
+    value(SAXIHP1RRESP, "uint:2");
+    value(SAXIHP1WACOUNT, "uint:6");
+    value(SAXIHP1WCOUNT, "uint:8");
+    value(SAXIHP2BID, "uint:6");
+    value(SAXIHP2BRESP, "uint:2");
+    value(SAXIHP2RACOUNT, "uint:3");
+    value(SAXIHP2RCOUNT, "uint:8");
+    value(SAXIHP2RDATA, "bits:64");
+    value(SAXIHP2RID, "uint:6");
+    value(SAXIHP2RRESP, "uint:2");
+    value(SAXIHP2WACOUNT, "uint:6");
+    value(SAXIHP2WCOUNT, "uint:8");
+    value(SAXIHP3BID, "uint:6");
+    value(SAXIHP3BRESP, "uint:2");
+    value(SAXIHP3RACOUNT, "uint:3");
+    value(SAXIHP3RCOUNT, "uint:8");
+    value(SAXIHP3RDATA, "bits:64");
+    value(SAXIHP3RID, "uint:6");
+    value(SAXIHP3RRESP, "uint:2");
+    value(SAXIHP3WACOUNT, "uint:6");
+    value(SAXIHP3WCOUNT, "uint:8");
+    value({DMA0ACLK, DMA0DAREADY, DMA0DRLAST, DMA0DRVALID, DMA1ACLK,
+           DMA1DAREADY, DMA1DRLAST, DMA1DRVALID, DMA2ACLK,
+           DMA2DAREADY, DMA2DRLAST, DMA2DRVALID, DMA3ACLK,
+           DMA3DAREADY, DMA3DRLAST, DMA3DRVALID, EMIOCAN0PHYRX,
+           EMIOCAN1PHYRX, EMIOENET0EXTINTIN, EMIOENET0GMIICOL,
+           EMIOENET0GMIICRS, EMIOENET0GMIIRXCLK, EMIOENET0GMIIRXDV,
+           EMIOENET0GMIIRXER, EMIOENET0GMIITXCLK, EMIOENET0MDIOI,
+           EMIOENET1EXTINTIN, EMIOENET1GMIICOL, EMIOENET1GMIICRS,
+           EMIOENET1GMIIRXCLK, EMIOENET1GMIIRXDV, EMIOENET1GMIIRXER,
+           EMIOENET1GMIITXCLK, EMIOENET1MDIOI, EMIOI2C0SCLI,
+           EMIOI2C0SDAI, EMIOI2C1SCLI, EMIOI2C1SDAI, EMIOPJTAGTCK,
+           EMIOPJTAGTDI, EMIOPJTAGTMS, EMIOSDIO0CDN, EMIOSDIO0CLKFB,
+           EMIOSDIO0CMDI, EMIOSDIO0WP, EMIOSDIO1CDN, EMIOSDIO1CLKFB,
+           EMIOSDIO1CMDI, EMIOSDIO1WP, EMIOSPI0MI, EMIOSPI0SCLKI,
+           EMIOSPI0SI, EMIOSPI0SSIN, EMIOSPI1MI, EMIOSPI1SCLKI,
+           EMIOSPI1SI, EMIOSPI1SSIN, EMIOSRAMINTIN, EMIOTRACECLK,
+           EMIOUART0CTSN, EMIOUART0DCDN, EMIOUART0DSRN, EMIOUART0RIN,
+           EMIOUART0RX, EMIOUART1CTSN, EMIOUART1DCDN, EMIOUART1DSRN,
+           EMIOUART1RIN, EMIOUART1RX, EMIOUSB0VBUSPWRFAULT,
+           EMIOUSB1VBUSPWRFAULT, EMIOWDTCLKI, EVENTEVENTI, FPGAIDLEN,
+           FTMDTRACEINCLOCK, FTMDTRACEINVALID, MAXIGP0ACLK,
+           MAXIGP0ARREADY, MAXIGP0AWREADY, MAXIGP0BVALID,
+           MAXIGP0RVALID, MAXIGP0WREADY, MAXIGP1ACLK,
+           MAXIGP1ARREADY, MAXIGP1AWREADY, MAXIGP1BVALID,
+           MAXIGP1RVALID, MAXIGP1WREADY, SAXIACPACLK,
+           SAXIACPARVALID, SAXIACPAWVALID, SAXIACPBREADY,
+           SAXIACPRREADY, SAXIACPWLAST, SAXIACPWVALID, SAXIGP0ACLK,
+           SAXIGP0ARVALID, SAXIGP0AWVALID, SAXIGP0BREADY,
+           SAXIGP0RREADY, SAXIGP0WLAST, SAXIGP0WVALID, SAXIGP1ACLK,
+           SAXIGP1ARVALID, SAXIGP1AWVALID, SAXIGP1BREADY,
+           SAXIGP1RREADY, SAXIGP1WLAST, SAXIGP1WVALID, SAXIHP0ACLK,
+           SAXIHP0ARVALID, SAXIHP0AWVALID, SAXIHP0BREADY,
+           SAXIHP0RDISSUECAP1EN, SAXIHP0RREADY, SAXIHP0WLAST,
+           SAXIHP0WRISSUECAP1EN, SAXIHP0WVALID, SAXIHP1ACLK,
+           SAXIHP1ARVALID, SAXIHP1AWVALID, SAXIHP1BREADY,
+           SAXIHP1RDISSUECAP1EN, SAXIHP1RREADY, SAXIHP1WLAST,
+           SAXIHP1WRISSUECAP1EN, SAXIHP1WVALID, SAXIHP2ACLK,
+           SAXIHP2ARVALID, SAXIHP2AWVALID, SAXIHP2BREADY,
+           SAXIHP2RDISSUECAP1EN, SAXIHP2RREADY, SAXIHP2WLAST,
+           SAXIHP2WRISSUECAP1EN, SAXIHP2WVALID, SAXIHP3ACLK,
+           SAXIHP3ARVALID, SAXIHP3AWVALID, SAXIHP3BREADY,
+           SAXIHP3RDISSUECAP1EN, SAXIHP3RREADY, SAXIHP3WLAST,
+           SAXIHP3WRISSUECAP1EN, SAXIHP3WVALID}, "log", false);
+    value(DDRARB, "[4]log", false);
+    value(DMA0DRTYPE, "uint:2", 0);
+    value(DMA1DRTYPE, "uint:2", 0);
+    value(DMA2DRTYPE, "uint:2", 0);
+    value(DMA3DRTYPE, "uint:2", 0);
+    value(EMIOENET0GMIIRXD, "[8]log", false);
+    value(EMIOENET1GMIIRXD, "[8]log", false);
+    value(EMIOGPIOI, "bits:64", 0);
+    value(EMIOSDIO0DATAI, "[4]log", false);
+    value(EMIOSDIO1DATAI, "[4]log", false);
+    value(EMIOTTC0CLKI, "[3]log", false);
+    value(EMIOTTC1CLKI, "[3]log", false);
+    value(FCLKCLKTRIGN, "[4]log", false);
+    value(FTMDTRACEINATID, "[4]log", false);
+    value(FTMDTRACEINDATA, "uint:32", 0);
+    value(FTMTF2PDEBUG, "uint:32", 0);
+    value(FTMTF2PTRIG, "[4]log", false);
+    value(FTMTP2FTRIGACK, "[4]log", false);
+    value(IRQF2P, "[20]log", false);
+    value(MAXIGP0BRESP, "uint:2", 0);
+    value(MAXIGP0RDATA, "uint:32", 0);
+    value(MAXIGP0RRESP, "uint:2", 0);
+    value(MAXIGP1BRESP, "uint:2", 0);
+    value(MAXIGP1RDATA, "uint:32", 0);
+    value(MAXIGP1RRESP, "uint:2", 0);
+    value(SAXIACPARADDR, "uint:32", 0);
+    value(SAXIACPARBURST, "uint:2", 0);
+    value(SAXIACPARCACHE, "[4]log", false);
+    value(SAXIACPARID, "[3]log", false);
+    value(SAXIACPARLEN, "[4]log", false);
+    value(SAXIACPARLOCK, "uint:2", 0);
+    value(SAXIACPARPROT, "[3]log", false);
+    value(SAXIACPARQOS, "[4]log", false);
+    value(SAXIACPARSIZE, "uint:2", 0);
+    value(SAXIACPARUSER, "[5]log", false);
+    value(SAXIACPAWADDR, "uint:32", 0);
+    value(SAXIACPAWBURST, "uint:2", 0);
+    value(SAXIACPAWCACHE, "[4]log", false);
+    value(SAXIACPAWID, "[3]log", false);
+    value(SAXIACPAWLEN, "[4]log", false);
+    value(SAXIACPAWLOCK, "uint:2", 0);
+    value(SAXIACPAWPROT, "[3]log", false);
+    value(SAXIACPAWQOS, "[4]log", false);
+    value(SAXIACPAWSIZE, "uint:2", 0);
+    value(SAXIACPAWUSER, "[5]log", false);
+    value(SAXIACPWDATA, "bits:64", 0);
+    value(SAXIACPWID, "[3]log", false);
+    value(SAXIACPWSTRB, "[8]log", false);
+    value(SAXIGP0ARADDR, "uint:32", 0);
+    value(SAXIGP0ARBURST, "uint:2", 0);
+    value(SAXIGP0ARCACHE, "[4]log", false);
+    value(SAXIGP0ARID, "uint:6", 0);
+    value(SAXIGP0ARLEN, "[4]log", false);
+    value(SAXIGP0ARLOCK, "uint:2", 0);
+    value(SAXIGP0ARPROT, "[3]log", false);
+    value(SAXIGP0ARQOS, "[4]log", false);
+    value(SAXIGP0ARSIZE, "uint:2", 0);
+    value(SAXIGP0AWADDR, "uint:32", 0);
+    value(SAXIGP0AWBURST, "uint:2", 0);
+    value(SAXIGP0AWCACHE, "[4]log", false);
+    value(SAXIGP0AWID, "uint:6", 0);
+    value(SAXIGP0AWLEN, "[4]log", false);
+    value(SAXIGP0AWLOCK, "uint:2", 0);
+    value(SAXIGP0AWPROT, "[3]log", false);
+    value(SAXIGP0AWQOS, "[4]log", false);
+    value(SAXIGP0AWSIZE, "uint:2", 0);
+    value(SAXIGP0WDATA, "uint:32", 0);
+    value(SAXIGP0WID, "uint:6", 0);
+    value(SAXIGP0WSTRB, "[4]log", false);
+    value(SAXIGP1ARADDR, "uint:32", 0);
+    value(SAXIGP1ARBURST, "uint:2", 0);
+    value(SAXIGP1ARCACHE, "[4]log", false);
+    value(SAXIGP1ARID, "uint:6", 0);
+    value(SAXIGP1ARLEN, "[4]log", false);
+    value(SAXIGP1ARLOCK, "uint:2", 0);
+    value(SAXIGP1ARPROT, "[3]log", false);
+    value(SAXIGP1ARQOS, "[4]log", false);
+    value(SAXIGP1ARSIZE, "uint:2", 0);
+    value(SAXIGP1AWADDR, "uint:32", 0);
+    value(SAXIGP1AWBURST, "uint:2", 0);
+    value(SAXIGP1AWCACHE, "[4]log", false);
+    value(SAXIGP1AWID, "uint:6", 0);
+    value(SAXIGP1AWLEN, "[4]log", false);
+    value(SAXIGP1AWLOCK, "uint:2", 0);
+    value(SAXIGP1AWPROT, "[3]log", false);
+    value(SAXIGP1AWQOS, "[4]log", false);
+    value(SAXIGP1AWSIZE, "uint:2", 0);
+    value(SAXIGP1WDATA, "uint:32", 0);
+    value(SAXIGP1WID, "uint:6", 0);
+    value(SAXIGP1WSTRB, "[4]log", false);
+    value(SAXIHP0ARADDR, "uint:32", 0);
+    value(SAXIHP0ARBURST, "uint:2", 0);
+    value(SAXIHP0ARCACHE, "[4]log", false);
+    value(SAXIHP0ARID, "uint:6", 0);
+    value(SAXIHP0ARLEN, "[4]uint:4", 0);
+    value(SAXIHP0ARLOCK, "uint:2", 0);
+    value(SAXIHP0ARPROT, "[3]log", false);
+    value(SAXIHP0ARQOS, "[4]log", false);
+    value(SAXIHP0ARSIZE, "uint:2", 0);
+    value(SAXIHP0AWADDR, "uint:32", 0);
+    value(SAXIHP0AWBURST, "uint:2", 0);
+    value(SAXIHP0AWCACHE, "[4]log", false);
+    value(SAXIHP0AWID, "uint:6", 0);
+    value(SAXIHP0AWLEN, "[4]uint:4", 0);
+    value(SAXIHP0AWLOCK, "uint:2", 0);
+    value(SAXIHP0AWPROT, "[3]log", false);
+    value(SAXIHP0AWQOS, "[4]log", false);
+    value(SAXIHP0AWSIZE, "uint:2", 0);
+    value(SAXIHP0WDATA, "bits:64", 0);
+    value(SAXIHP0WID, "uint:6", 0);
+    value(SAXIHP0WSTRB, "[8]log", false);
+    value(SAXIHP1ARADDR, "uint:32", 0);
+    value(SAXIHP1ARBURST, "uint:2", 0);
+    value(SAXIHP1ARCACHE, "[4]log", false);
+    value(SAXIHP1ARID, "uint:6", 0);
+    value(SAXIHP1ARLEN, "[4]uint:4", 0);
+    value(SAXIHP1ARLOCK, "uint:2", 0);
+    value(SAXIHP1ARPROT, "[3]log", false);
+    value(SAXIHP1ARQOS, "[4]log", false);
+    value(SAXIHP1ARSIZE, "uint:2", 0);
+    value(SAXIHP1AWADDR, "uint:32", 0);
+    value(SAXIHP1AWBURST, "uint:2", 0);
+    value(SAXIHP1AWCACHE, "[4]log", false);
+    value(SAXIHP1AWID, "uint:6", 0);
+    value(SAXIHP1AWLEN, "[4]uint:4", 0);
+    value(SAXIHP1AWLOCK, "uint:2", 0);
+    value(SAXIHP1AWPROT, "[3]log", false);
+    value(SAXIHP1AWQOS, "[4]log", false);
+    value(SAXIHP1AWSIZE, "uint:2", 0);
+    value(SAXIHP1WDATA, "bits:64", 0);
+    value(SAXIHP1WID, "uint:6", 0);
+    value(SAXIHP1WSTRB, "[8]log", false);
+    value(SAXIHP2ARADDR, "uint:32", 0);
+    value(SAXIHP2ARBURST, "uint:2", 0);
+    value(SAXIHP2ARCACHE, "[4]log", false);
+    value(SAXIHP2ARID, "uint:6", 0);
+    value(SAXIHP2ARLEN, "[4]uint:4", 0);
+    value(SAXIHP2ARLOCK, "uint:2", 0);
+    value(SAXIHP2ARPROT, "[3]log", false);
+    value(SAXIHP2ARQOS, "[4]log", false);
+    value(SAXIHP2ARSIZE, "uint:2", 0);
+    value(SAXIHP2AWADDR, "uint:32", 0);
+    value(SAXIHP2AWBURST, "uint:2", 0);
+    value(SAXIHP2AWCACHE, "[4]log", false);
+    value(SAXIHP2AWID, "uint:6", 0);
+    value(SAXIHP2AWLEN, "[4]uint:4", 0);
+    value(SAXIHP2AWLOCK, "uint:2", 0);
+    value(SAXIHP2AWPROT, "[3]log", false);
+    value(SAXIHP2AWQOS, "[4]log", false);
+    value(SAXIHP2AWSIZE, "uint:2", 0);
+    value(SAXIHP2WDATA, "bits:64", 0);
+    value(SAXIHP2WID, "uint:6", 0);
+    value(SAXIHP2WSTRB, "[8]log", false);
+    value(SAXIHP3ARADDR, "uint:32", 0);
+    value(SAXIHP3ARBURST, "uint:2", 0);
+    value(SAXIHP3ARCACHE, "[4]log", false);
+    value(SAXIHP3ARID, "uint:6", 0);
+    value(SAXIHP3ARLEN, "[4]uint:4", 0);
+    value(SAXIHP3ARLOCK, "uint:2", 0);
+    value(SAXIHP3ARPROT, "[3]log", false);
+    value(SAXIHP3ARQOS, "[4]log", false);
+    value(SAXIHP3ARSIZE, "uint:2", 0);
+    value(SAXIHP3AWADDR, "uint:32", 0);
+    value(SAXIHP3AWBURST, "uint:2", 0);
+    value(SAXIHP3AWCACHE, "[4]log", false);
+    value(SAXIHP3AWID, "uint:6", 0);
+    value(SAXIHP3AWLEN, "[4]uint:4", 0);
+    value(SAXIHP3AWLOCK, "uint:2", 0);
+    value(SAXIHP3AWPROT, "[3]log", false);
+    value(SAXIHP3AWQOS, "[4]log", false);
+    value(SAXIHP3AWSIZE, "uint:2", 0);
+    value(SAXIHP3WDATA, "bits:64", 0);
+    value(SAXIHP3WID, "uint:6", 0);
+    value(SAXIHP3WSTRB, "[8]log", false);
+
+    selectvalue(DDR_addr, "uint:15");
+    selectvalue(DDR_ba, "uint:3");
+    selectvalue(DDR_cas_n, "log");
+    selectvalue(DDR_ck_n, "log");
+    selectvalue(DDR_ck_p, "log");
+    selectvalue(DDR_cke, "log");
+    selectvalue(DDR_cs_n, "log");
+    selectvalue(DDR_dm, "uint:4");
+    selectvalue(DDR_dq, "bits:32");
+    selectvalue(DDR_dqs_n, "bits:4");
+    selectvalue(DDR_dqs_p, "bits:4");
+    selectvalue(DDR_odt, "log");
+    selectvalue(DDR_ras_n, "log");
+    selectvalue(DDR_reset_n, "log");
+    selectvalue(DDR_we_n, "log");
+    selectvalue(FIXED_IO_ddr_vrn, "log");
+    selectvalue(FIXED_IO_ddr_vrp, "log");
+    selectvalue(FIXED_IO_mio, "bits:54");
+    selectvalue(FIXED_IO_ps_clk, "log");
+    selectvalue(FIXED_IO_ps_porb, "log");
+    selectvalue(FIXED_IO_ps_srstb, "log");
+
+    value(fclk, "[4]log");
+    
+    // Get fclk[0] from the CPU. It is 100MHz so equate it to
+    // clock c100.
+    //
+    // NOTE: c100 := clockfromexpr(fclk[0]); DOESN'T WORK!!!
+    clockfromexpr(c100_in <- fclk[0]);
+    
+    
+
+    //---------------------------------------------------------------------------
+    // AXI GP buses 0 and 1
+    // PS is bus master.
+    //
+    // For bus 0 or 1-
+    //
+    // gp_rda_p[bus]  points to the read address queue   - master -> slave
+    // gp_rdd_p[bus]  points to the read data queue      - master <- slave
+    //
+    // gp_wra_p[bus]  points to the write address queue  - master -> slave 
+    // gp_wrd_p[bus]  points to the write data queue     - master -> slave 
+    // gp_wrr_p[bus]  points to the write response queue - master <- slave
+    //
+
+    useclock(gp_aclk);    
+    
+    /*
+     * Can't think of much to reset!
+    for (int(bus) ; bus<2 ; bus++)
+        when (!gp_aresetn[bus])
+            reset(gp_bvalid[bus]);  // WHAT ELSE SHOULD BE RESET?
+    */
+    
+    // Determine bus address widths.
+    for (int(bus) ; bus<2 ; bus++) {
+        if (read_addr[bus] > raddrinit) {
+            gp_rd_used[bus] = true;
+            gp_raddr_width[bus] = size(read_addr[bus] - 1);
+            if (bus == 1)
+                gp_raddr_width[bus] += gp_ext_raddr_width[bus];
+            gp_raddr_type[bus] = "uint:"+gp_raddr_width[bus];
+        }
+        if (write_addr[bus] > waddrinit) {
+            gp_wr_used[bus] = true;
+            gp_waddr_width[bus] = size(write_addr[bus] - 1);
+            if (bus == 1)
+                gp_waddr_width[bus] += gp_ext_waddr_width[bus];
+            gp_waddr_type[bus] = "uint:"+gp_waddr_width[bus];
+        }
+    }
+    
+    if (gp_rd_used[1])
+        gp1_mem_raddr_type = "uint:"+gp_ext_raddr_width[1];
+    if (gp_wr_used[1])
+        gp1_mem_waddr_type = "uint:"+gp_ext_waddr_width[1];
+    
+    // Create GP bus read address queues.
+    // These are accessed via pointers.
+    for (int(bus) ; bus<2 ; bus++) {
+        if (gp_rd_used[bus]) {
+            struct(as,
+                addr,   "uint:"+gp_raddr_width[bus],
+                id,     "uint:12",
+                len,    "uint:4"
+            );
+            queue(gp_rda, as, mindepth=16, ignoremodules=true);
+            queue(gp_rdd, "uint:32", mindepth=256, ignoremodules=true);
+            gp_rda_p[bus] = &gp_rda;
+            gp_rdd_p[bus] = &gp_rdd;
+        }
+    }
+
+    
+    // Create GP bus write address, write data and write response queues.
+    // These are accessed via pointers.
+    for (int(bus) ; bus<2 ; bus++) {
+        if (gp_wr_used[bus]) {
+            struct(as,
+                addr,   "uint:"+gp_waddr_width[bus],
+                id,     "uint:12",
+                len,    "uint:4"
+            );
+            struct(wrs,
+                id, "uint:12",
+                ec, "uint:2"
+            );
+            queue(gp_wra, as, mindepth=16, ignoremodules=true);
+            queue(gp_wrd, "bits:32", mindepth=256, ignoremodules=true, ignoremodules=true);
+            queue(gp_wrr, wrs, mindepth=16, ignoremodules=true);
+            gp_wra_p[bus] = &gp_wra;
+            gp_wrd_p[bus] = &gp_wrd;
+            gp_wrr_p[bus] = &gp_wrr;
+        }
+    }
+    
+    // Instantiate GP bus read address bus and data bus logic where used.
+    for (int(bus) ; bus<2 ; bus++) {
+        if (gp_rd_used[bus]) {
+            m_axi_gp_read_address(
+                gp_arready[bus],
+                gp_rda_p[bus]->
+                <-
+                gp_addr_width,
+                gp_araddr[bus],
+                gp_arvalid[bus],
+                gp_arid[bus],
+                gp_arlen[bus]
+            );
+            m_axi_gp_read_data(
+                gp_rid[bus],
+                gp_rdata[bus],
+                gp_rvalid[bus],
+                gp_rresp[bus],
+                gp_rlast[bus]
+                <-
+                gp_rdd_p[bus]->,
+                gp_rready[bus]
+            );
+        }
+    }
+    
+    // Instantiate GP bus write address, data and response bus logic where used.
+    for (int(bus) ; bus<2 ; bus++) {
+        if (gp_wr_used[bus]) {
+            m_axi_gp_write_address(
+                gp_awready[bus],
+                gp_wra_p[bus]->
+                <-
+                gp_addr_width,
+                gp_awaddr[bus],
+                gp_awvalid[bus], gp_awid[bus], gp_awlen[bus]
+            );
+            m_axi_gp_write(
+                gp_wready[bus],
+                gp_wrd_p[bus]->
+                <-
+                gp_wvalid[bus],
+                gp_wdata[bus]
+            );
+            m_axi_gp_write_response(
+                gp_bid[bus],
+                gp_bresp[bus],
+                gp_bvalid[bus]
+                <-
+                gp_bready[bus],
+                gp_wrr_p[bus]->
+            );
+        }
+    }
+
+    // GP bus read address logic.
+    // This writes the address, read ID and burst length to the read address
+    // queue for GP0 or GP1 (via pointer to queue gp_rda_p[bus]).
+    // This queue is examined by all bus read interface instances
+    // and the one whose address matches the requested address will
+    // pop the read address queue and write data to the associated read data
+    // queue.
+    module
+    m_axi_gp_read_address(
+        value(arready, "log"),
+        queue(gp_rda)
+        <-
+        int(addr_width),
+        value(ARADDR, "uint:"+addr_width),
+        value(ARVALID, "log"),
+        value(ARID, "uint:12"),
+        value(ARLEN, "uint:4")
+    ) {
+        // ARREADY can be tied high as depth of queue gp_rda is greater
+        // than maximum number of queued requests from the bus master
+        // so it will never block.
+        arready := true;
+        
+        when (ARVALID) sync {
+            // Send read request to bus read interfaces via queue.
+            gp_rda.addr <<- ARADDR >> 2;
+            gp_rda.id <<- ARID;
+            gp_rda.len <<- ARLEN;
+        }
+    }
+    
+    // GP bus read data logic.
+    // This reads the read data queue. The first datum contains the ID,
+    // burst length and error code packed into one word. The burst length
+    // is actually the number of transfers - 1, so it is zero for a single
+    // transfer. Subsequent data from the queue contain the read data, the
+    // number of data words matching the burst length.
+    module
+    m_axi_gp_read_data(
+        static(gp_rid, "uint:12"),
+        value(gp_rdata, "bits:32"),
+        value(gp_rvalid, "log"),
+        static(gp_rresp, "uint:2"),
+        value(gp_rlast, "log")
+        <-
+        queue(gp_rdd),
+        value(gp_rready, "log")
+                
+    ) {
+        static(len, "int:5", -1);
+        
+        gp_rdata := ?gp_rdd;
+        gp_rvalid := len >= 0;
+        gp_rlast := len == 0;
+        
+        when (len < 0) sync {
+            // 1st datum on queue is burst length,  read ID and response code
+            gp_rid <- gp_rdd;           // ID is lower 12 bits
+            len <- gp_rdd >> 12;        // burst length is next 4 bits
+            gp_rresp <- gp_rdd >> 16;   // error code is next 2 bits
+        }
+        when (len >= 0 && gp_rready) par {
+            null <<- gp_rdd;
+            len--;
+        }
+    }
+
+    // GP bus write address logic.
+    module
+    m_axi_gp_write_address(
+        value(awready, "log"),
+        queue(gp_wra)
+        <-
+        int(addr_width),
+        value(AWADDR, "uint:"+addr_width),
+        value(AWVALID, "log"),
+        value(AWID, "uint:12"),
+        value(AWLEN, "uint:4")
+    ) {
+        // AWREADY can be tied high as depth of queue gp_awr is greater
+        // than maximum number of queued requests from the bus master
+        // so it will never block.
+        awready := true;
+        
+        when (AWVALID) sync {
+            // Send read request to bus write interfaces via queue.
+            gp_wra.addr <<- AWADDR >> 2;
+            gp_wra.id <<- AWID;
+            gp_wra.len <<- AWLEN;
+        }
+    }
+
+    module
+    m_axi_gp_write (
+        value(wready, "log"),
+        queue(gp_wrd)
+        <-
+        value(WVALID, "log"),
+        value(gp_wdata, "bits:32")
+    ) {
+        // Assume here that the write data queue is available,
+        // so tie WREADY high.
+        wready := true;
+        
+        when (WVALID) par {
+            gp_wrd <<- gp_wdata;
+        }
+    }
+
+    module
+    m_axi_gp_write_response (
+        static(bid, "uint:12"),
+        static(bresp, "uint:2"),
+        static(bvalid, "log")
+        <-
+        value(BREADY, "log"),
+        queue(gp_wrresp)
+    ) {
+        when (<gp_wrresp) par {
+            bid <- ?gp_wrresp.id;
+            bresp <- ?gp_wrresp.ec;
+        }
+        when (BREADY && <gp_wrresp) seq {
+            bvalid <- true;
+            par {
+                bvalid <- false;
+                null <<- gp_wrresp;
+            }
+        }
+    }
+
+
+    //---------------------------------------------------------------------------
+    // AXI HP busses 0 to 3
+    // PL is bus master.
+    //
+
+
+    // HP outputs from PS for write
+    value(hp_aresetn, "[4]log");
+    value(hp_awready, "[4]log");
+    value(hp_bvalid, "[4]log");
+    value(hp_wready, "[4]log");
+    value(hp_bid, "[4]uint:6");
+    value(hp_bresp, "[4]uint:2");
+    
+    // HP outputs from PS for read
+    value(hp_arready, "[4]log");
+    value(hp_rlast, "[4]log");
+    value(hp_rvalid, "[4]log");
+    value(hp_rdata, "[4]bits:64");
+    value(hp_rid, "[4]uint:6");
+    value(hp_rresp, "[4]uint:2");
+
+    // HP inputs to PS for write
+    value(hp_wdata, "[4]bits:64", cast(0, "bits:64"));
+    value(hp_awaddr, "[4]uint:32", 0);
+    value(hp_awlen, "[4]uint:4", 0);
+    value(hp_wlast, "[4]log", false);
+    static(hp_awvalid, "[4]log");
+    value(hp_wvalid, "[4]log", false);
+    value(hp_wrissuecap1en, "[4]log", false);
+    value(hp_bready, "[4]log", true);       // accept and ignore write response
+    value(hp_awburst, "[4]uint:2", 0b01);   // INCR mode
+    //value(hp_awcache, "[4]uint:4", 0b1011); // write-back, write-allocate
+    value(hp_awcache, "[4]uint:4", 0b0011); // normal, non-cacheable, bufferable
+    value(hp_awid, "[4]uint:6", 0);
+    value(hp_awlock, "[4]uint:2", 0);       // normal access
+    value(hp_awprot, "[4]uint:3", 0);       // not interpretted
+    value(hp_awqos, "[4]uint:4", 0);
+    value(hp_awsize, "[4]uint:2", 0b11);    // 8 bytes
+    value(hp_wid, "[4]uint:6", 0);
+    value(hp_wstrb, "[4][8]log", true);     // all write strobes high
+    
+    // HP inputs to PS for read
+    static(hp_arvalid, "[4]log");
+    value(hp_rready, "[4]log", false);
+    value(hp_araddr, "[4]uint:32", 0);
+    value(hp_arlen, "[4]uint:4", 0);
+    //value(hp_arcache, "[4]uint:4", 0b0111); // write-back, read-allocate
+    value(hp_arcache, "[4]uint:4", 0b0011); // normal, non-cacheable, bufferable
+    value(hp_arburst, "[4]uint:2", 0b01);   // INCR mode
+    value(hp_arid, "[4]uint:6", 0);
+    value(hp_arlock, "[4]uint:2", 0);       // normal access
+    value(hp_arprot, "[4]uint:3", 0);       // not interpretted
+    value(hp_arqos, "[4]uint:4", 0);
+    value(hp_arsize, "[4]uint:2", 0b11);    // 8 bytes
+    value(hp_rdissuecap1en, "[4]log", false);
+
+
+    for (int(bus) ; bus<4 ; bus++)
+        when (!hp_aresetn[bus])
+            reset(hp_arvalid[bus], hp_awvalid[bus]);
+
+    for (int(bus) ; bus<4 ; bus++) {
+        if (axi_hp_read_used[bus])
+            m_axi_hp_read (
+                hp_ripp[bus]->,
+                hp_arvalid[bus],
+                hp_rready[bus],
+                hp_araddr[bus],
+                hp_arlen[bus]
+                <-
+                hp_rapp[bus]->,
+                hp_rlpp[bus]->,
+                hp_arready[bus],
+                hp_rlast[bus],
+                hp_rvalid[bus],
+                hp_rdata[bus],
+                hp_rid[bus],
+                hp_rresp[bus]
+
+            );
+        if (axi_hp_write_used[bus])
+            m_axi_hp_write(
+                hp_awvalid[bus],
+                hp_wvalid[bus],
+                hp_wdata[bus],
+                hp_awaddr[bus],
+                hp_awlen[bus],
+                hp_wlast[bus]
+                <-
+                hp_wipp[bus]->,
+                hp_wapp[bus]->,
+                hp_wlpp[bus]->,
+                hp_awready[bus],
+                hp_wready[bus]
+            );
+    }
+    
+    //
+    // read
+    //
+    module
+    m_axi_hp_read (
+        queue(ip, "bits:64"),       // output data
+        static(arvalid, "log"),     // read address valid
+        value(rready, "log"),       // read ready
+        value(araddr, "uint:32"),   // read address
+        value(arlen, "uint:4")      // read burst length
+        <-
+        queue(addr, "uint:32"),     // address of 1st datum
+        queue(len, "uint:4"),       // burst length
+        value(arready, "log"),      // address read ready
+        value(rlast, "log"),        // read last datum
+        value(rvalid, "log"),       // read data valid
+        value(rdata, "bits:64"),    // read data
+        value(rid, "uint:6"),       // read ID
+        value(rresp, "uint:2")      // read response
+    ) {
+        static(raddr, "uint:32");
+        static(rlen, "uint:4");
+        static(reading, "log");
+        araddr := raddr;
+        arlen := rlen;
+        rready := reading && !arvalid && >ip;
+        
+        when (>ip && <addr && <len && !reading) par {
+            arvalid <- true;
+            reading <- true;
+            raddr <- addr;
+            rlen <- len;
+        }
+        when (arvalid && arready)
+            arvalid <- false;
+        when (rvalid && rready) sync {
+            ip <<- rdata;
+            reading <- !rlast;
+        }
+    }
+
+    //
+    // write
+    //
+    module
+    m_axi_hp_write(
+        static(awvalid, "log"),     // write address valid
+        value(wvalid, "log"),       // write data valid
+        value(wdata, "bits:64"),    // write data
+        value(awaddr, "uint:32"),   // write address
+        value(awlen, "uint:4"),     // write burst length
+        value(wlast, "log")         // write last datum
+        <-
+        queue(ip, "bits:64"),       // input data
+        queue(addr, "uint:32"),     // address of 1st datum
+        queue(len, "uint:4"),       // burst length
+        value(awready, "log"),      // address write slave ready
+        value(wready, "log")        // data write slave ready
+    ) {
+        static(waddr, "uint:32");
+        static({wlen, count}, "uint:4");
+        static(writing, "log");
+        wdata := ?ip;
+        awaddr := waddr;
+        awlen := wlen;
+        wvalid := writing && <ip;
+        wlast := wvalid && (count == 0);
+
+        when (<ip && <addr && <len && !writing) par {
+            awvalid <- true;
+            writing <- true;
+            waddr <- addr;
+            wlen <- len;
+            count <- len;
+        }
+        when (awvalid && awready)
+            awvalid <- false;
+
+        when (writing && wready && <ip) sync {
+            count--;
+            null <<- ip;
+            writing <- !wlast;
+        }
+    }
+
+    //---------------------------------------------------------------------------
+    // External connections from PS to DDR and GP I/O.
+    //
+    export(
+        DDR_addr,
+        DDR_ba,
+        DDR_cas_n,
+        DDR_ck_n,
+        DDR_ck_p,
+        DDR_cke,
+        DDR_cs_n,
+        DDR_dm,
+        DDR_dq,
+        DDR_dqs_n,
+        DDR_dqs_p,
+        DDR_odt,
+        DDR_ras_n,
+        DDR_reset_n,
+        DDR_we_n,
+        FIXED_IO_ddr_vrn,
+        FIXED_IO_ddr_vrp,
+        FIXED_IO_mio,
+        FIXED_IO_ps_clk,
+        FIXED_IO_ps_porb,
+        FIXED_IO_ps_srstb
+        <-
+    );
+
+
+    //---------------------------------------------------------------------------
+    // PS7 processor.
+    //
+    import (
+            // DDR memory
+            DDRCASB=DDR_cas_n,
+            DDRCKE=DDR_cke,
+            DDRCKN=DDR_ck_n,
+            DDRCKP=DDR_ck_p,
+            DDRCSB=DDR_cs_n,
+            DDRDRSTB=DDR_reset_n,
+            DDRODT=DDR_odt,
+            DDRRASB=DDR_ras_n,
+            DDRVRN=FIXED_IO_ddr_vrn,
+            DDRVRP=FIXED_IO_ddr_vrp,
+            DDRWEB=DDR_we_n,
+            PSCLK=FIXED_IO_ps_clk,
+            PSPORB=FIXED_IO_ps_porb,
+            PSSRSTB=FIXED_IO_ps_srstb,
+            DDRA=DDR_addr,
+            DDRBA=DDR_ba,
+            DDRDM=DDR_dm,
+            DDRDQSN=DDR_dqs_n,
+            DDRDQSP=DDR_dqs_p,
+            DDRDQ=DDR_dq,
+            MIO=FIXED_IO_mio,   // 54 general purpose I/O to pins
+            
+            // DMA
+            DMA0DAVALID, DMA0DRREADY, DMA0RSTN,
+            DMA1DAVALID, DMA1DRREADY, DMA1RSTN,
+            DMA2DAVALID, DMA2DRREADY, DMA2RSTN, 
+            DMA3DAVALID, DMA3DRREADY, DMA3RSTN,
+            
+            // CAN0, CAN1
+            EMIOCAN0PHYTX, EMIOCAN1PHYTX,
+            
+            EMIOENET0GMIITXEN, EMIOENET0GMIITXER,
+            
+            EMIOENET0MDIOMDC, EMIOENET0MDIOO, EMIOENET0MDIOTN,
+            
+            EMIOENET0PTPDELAYREQRX, EMIOENET0PTPDELAYREQTX, 
+            EMIOENET0PTPPDELAYREQRX, EMIOENET0PTPPDELAYREQTX, 
+            EMIOENET0PTPPDELAYRESPRX, EMIOENET0PTPPDELAYRESPTX, 
+            EMIOENET0PTPSYNCFRAMERX, EMIOENET0PTPSYNCFRAMETX,
+            
+            EMIOENET0SOFRX, EMIOENET0SOFTX,
+            
+            EMIOENET1GMIITXEN, EMIOENET1GMIITXER,
+            EMIOENET1MDIOMDC, EMIOENET1MDIOO, EMIOENET1MDIOTN,
+            EMIOENET1PTPDELAYREQRX, EMIOENET1PTPDELAYREQTX, 
+            EMIOENET1PTPPDELAYREQRX, EMIOENET1PTPPDELAYREQTX, 
+            EMIOENET1PTPPDELAYRESPRX, EMIOENET1PTPPDELAYRESPTX, 
+            EMIOENET1PTPSYNCFRAMERX, EMIOENET1PTPSYNCFRAMETX,
+            
+            EMIOENET1SOFRX, EMIOENET1SOFTX,
+            
+            EMIOI2C0SCLO, EMIOI2C0SCLTN, EMIOI2C0SDAO, EMIOI2C0SDATN, 
+            EMIOI2C1SCLO, EMIOI2C1SCLTN, EMIOI2C1SDAO, EMIOI2C1SDATN,
+            
+            EMIOPJTAGTDO, EMIOPJTAGTDTN, EMIOSDIO0BUSPOW, 
+            EMIOSDIO0CLK, EMIOSDIO0CMDO, EMIOSDIO0CMDTN, 
+            EMIOSDIO0LED, EMIOSDIO1BUSPOW, EMIOSDIO1CLK, 
+            EMIOSDIO1CMDO, EMIOSDIO1CMDTN, EMIOSDIO1LED,
+            
+            EMIOSPI0MO, EMIOSPI0MOTN, EMIOSPI0SCLKO, 
+            EMIOSPI0SCLKTN, EMIOSPI0SO, EMIOSPI0SSNTN, EMIOSPI0STN,
+            
+            EMIOSPI1MO, EMIOSPI1MOTN, EMIOSPI1SCLKO, 
+            EMIOSPI1SCLKTN, EMIOSPI1SO, EMIOSPI1SSNTN, EMIOSPI1STN,
+            
+            EMIOTRACECTL, EMIOUART0DTRN, EMIOUART0RTSN, EMIOUART0TX, 
+            EMIOUART1DTRN, EMIOUART1RTSN, EMIOUART1TX, 
+            EMIOUSB0VBUSPWRSELECT, EMIOUSB1VBUSPWRSELECT,
+            EMIOWDTRSTO, EVENTEVENTO,
+            
+            // GP0 PL slave
+            MAXIGP0ARESETN=gp_aresetn[0],
+            MAXIGP0ARVALID=gp_arvalid[0],
+            MAXIGP0AWVALID=gp_awvalid[0], 
+            MAXIGP0BREADY=gp_bready[0],
+            MAXIGP0RREADY=gp_rready[0],
+            MAXIGP0WLAST=gp_wlast[0],
+            MAXIGP0WVALID=gp_wvalid[0],
+            MAXIGP0ARADDR=gp_araddr[0],
+            MAXIGP0ARBURST=gp_arburst[0],
+            MAXIGP0ARCACHE,
+            MAXIGP0ARID=gp_arid[0],
+            MAXIGP0ARLEN=gp_arlen[0],
+            MAXIGP0ARLOCK,
+            MAXIGP0ARPROT=gp_arprot[0],
+            MAXIGP0ARQOS,
+            MAXIGP0ARSIZE,
+            MAXIGP0AWADDR=gp_awaddr[0],
+            MAXIGP0AWBURST=gp_awburst[0],
+            MAXIGP0AWCACHE,
+            MAXIGP0AWID=gp_awid[0],
+            MAXIGP0AWLEN=gp_awlen[0],
+            MAXIGP0AWLOCK,
+            MAXIGP0AWPROT=gp_awprot[0],
+            MAXIGP0AWQOS,
+            MAXIGP0AWSIZE,
+            MAXIGP0WDATA=gp_wdata[0],
+            MAXIGP0WID,
+            MAXIGP0WSTRB=gp_wstrb[0],
+            
+            // GP1 PL slave
+            MAXIGP1ARESETN=gp_aresetn[1],
+            MAXIGP1ARVALID=gp_arvalid[1],
+            MAXIGP1AWVALID=gp_awvalid[1], 
+            MAXIGP1BREADY=gp_bready[1],
+            MAXIGP1RREADY=gp_rready[1],
+            MAXIGP1WLAST=gp_wlast[1],
+            MAXIGP1WVALID=gp_wvalid[1],
+            MAXIGP1ARADDR=gp_araddr[1],
+            MAXIGP1ARBURST=gp_arburst[1],
+            MAXIGP1ARCACHE,
+            MAXIGP1ARID=gp_arid[1],
+            MAXIGP1ARLEN=gp_arlen[1],
+            MAXIGP1ARLOCK,
+            MAXIGP1ARPROT=gp_arprot[1],
+            MAXIGP1ARQOS,
+            MAXIGP1ARSIZE,
+            MAXIGP1AWADDR=gp_awaddr[1],
+            MAXIGP1AWBURST=gp_awburst[0],
+            MAXIGP1AWCACHE,
+            MAXIGP1AWID=gp_awid[1],
+            MAXIGP1AWLEN=gp_awlen[1],
+            MAXIGP1AWLOCK,
+            MAXIGP1AWPROT=gp_awprot[1],
+            MAXIGP1AWQOS,
+            MAXIGP1AWSIZE,
+            MAXIGP1WDATA=gp_wdata[1],
+            MAXIGP1WID,
+            MAXIGP1WSTRB=gp_wstrb[1],
+            
+            // ACP PL master
+            SAXIACPARESETN, SAXIACPARREADY, SAXIACPAWREADY, 
+            SAXIACPBVALID, SAXIACPRLAST, SAXIACPRVALID, SAXIACPWREADY,
+            SAXIACPBID, SAXIACPBRESP, SAXIACPRDATA, SAXIACPRID,
+            SAXIACPRRESP,
+            
+            // GP0 PL master
+            SAXIGP0ARESETN, SAXIGP0ARREADY, SAXIGP0AWREADY, 
+            SAXIGP0BVALID, SAXIGP0RLAST, SAXIGP0RVALID, 
+            SAXIGP0WREADY, SAXIGP0BID, SAXIGP0BRESP, SAXIGP0RDATA,
+            SAXIGP0RID, SAXIGP0RRESP,
+            
+            // GP1 PL master
+            SAXIGP1ARESETN, SAXIGP1ARREADY, SAXIGP1AWREADY, 
+            SAXIGP1BVALID, SAXIGP1RLAST, SAXIGP1RVALID, 
+            SAXIGP1WREADY, SAXIGP1BID, SAXIGP1BRESP, SAXIGP1RDATA,
+            SAXIGP1RID, SAXIGP1RRESP,
+            
+            // HP0 PL master
+            SAXIHP0ARESETN=hp_aresetn[0],
+            SAXIHP0ARREADY=hp_arready[0],
+            SAXIHP0AWREADY=hp_awready[0], 
+            SAXIHP0BVALID=hp_bvalid[0],
+            SAXIHP0RLAST=hp_rlast[0],
+            SAXIHP0RVALID=hp_rvalid[0], 
+            SAXIHP0WREADY=hp_wready[0],
+            SAXIHP0BID=hp_bid[0],
+            SAXIHP0BRESP=hp_bresp[0],
+            SAXIHP0RACOUNT,
+            SAXIHP0RCOUNT,
+            SAXIHP0RDATA=hp_rdata[0],
+            SAXIHP0RID=hp_rid[0],
+            SAXIHP0RRESP=hp_rresp[0],
+            SAXIHP0WACOUNT,
+            SAXIHP0WCOUNT,
+            
+            // HP1 PL master
+            SAXIHP1ARESETN=hp_aresetn[1],
+            SAXIHP1ARREADY=hp_arready[1],
+            SAXIHP1AWREADY=hp_awready[1], 
+            SAXIHP1BVALID=hp_bvalid[1],
+            SAXIHP1RLAST=hp_rlast[1],
+            SAXIHP1RVALID=hp_rvalid[1], 
+            SAXIHP1WREADY=hp_wready[1],
+            SAXIHP1BID=hp_bid[1],
+            SAXIHP1BRESP=hp_bresp[1],
+            SAXIHP1RACOUNT,
+            SAXIHP1RCOUNT,
+            SAXIHP1RDATA=hp_rdata[1],
+            SAXIHP1RID=hp_rid[1],
+            SAXIHP1RRESP=hp_rresp[1],
+            SAXIHP1WACOUNT,
+            SAXIHP1WCOUNT,
+            
+            
+            // HP2 PL master
+            SAXIHP2ARESETN=hp_aresetn[2],
+            SAXIHP2ARREADY=hp_arready[2],
+            SAXIHP2AWREADY=hp_awready[2], 
+            SAXIHP2BVALID=hp_bvalid[2],
+            SAXIHP2RLAST=hp_rlast[2],
+            SAXIHP2RVALID=hp_rvalid[2], 
+            SAXIHP2WREADY=hp_wready[2],
+            SAXIHP2BID=hp_bid[2],
+            SAXIHP2BRESP=hp_bresp[2],
+            SAXIHP2RACOUNT,
+            SAXIHP2RCOUNT,
+            SAXIHP2RDATA=hp_rdata[2],
+            SAXIHP2RID=hp_rid[2],
+            SAXIHP2RRESP=hp_rresp[2],
+            SAXIHP2WACOUNT,
+            SAXIHP2WCOUNT,
+            
+            
+            // HP3 PL master
+            SAXIHP3ARESETN=hp_aresetn[3],
+            SAXIHP3ARREADY=hp_arready[3],
+            SAXIHP3AWREADY=hp_awready[3], 
+            SAXIHP3BVALID=hp_bvalid[3],
+            SAXIHP3RLAST=hp_rlast[3],
+            SAXIHP3RVALID=hp_rvalid[3], 
+            SAXIHP3WREADY=hp_wready[3],
+            SAXIHP3BID=hp_bid[3],
+            SAXIHP3BRESP=hp_bresp[3],
+            SAXIHP3RACOUNT,
+            SAXIHP3RCOUNT,
+            SAXIHP3RDATA=hp_rdata[3],
+            SAXIHP3RID=hp_rid[3],
+            SAXIHP3RRESP=hp_rresp[3],
+            SAXIHP3WACOUNT,
+            SAXIHP3WCOUNT,
+            
+            DMA0DATYPE, DMA1DATYPE, DMA2DATYPE, DMA3DATYPE,
+            EMIOENET0GMIITXD, EMIOENET1GMIITXD, EMIOGPIOO, EMIOGPIOTN,
+            EMIOSDIO0BUSVOLT, EMIOSDIO0DATAO, EMIOSDIO0DATATN,
+            EMIOSDIO1BUSVOLT, EMIOSDIO1DATAO, EMIOSDIO1DATATN, EMIOSPI0SSON,
+            EMIOSPI1SSON, EMIOTRACEDATA, EMIOTTC0WAVEO, EMIOTTC1WAVEO,
+            EMIOUSB0PORTINDCTL, EMIOUSB1PORTINDCTL, EVENTSTANDBYWFE,
+            EVENTSTANDBYWFI,
+            FTMTF2PTRIGACK,
+            FTMTP2FDEBUG, FTMTP2FTRIG, IRQP2F,
+            
+            FCLKCLK=fclk,
+            FCLKRESETN
+            <-
+            "PS7", "ps7",
+            
+            // DMA
+            DMA0ACLK, DMA0DAREADY, DMA0DRLAST, DMA0DRVALID,
+            DMA1ACLK, DMA1DAREADY, DMA1DRLAST, DMA1DRVALID,
+            DMA2ACLK, DMA2DAREADY, DMA2DRLAST, DMA2DRVALID,
+            DMA3ACLK, DMA3DAREADY, DMA3DRLAST, DMA3DRVALID,
+            
+            // CAN0, CAN1
+            EMIOCAN0PHYRX, EMIOCAN1PHYRX,
+            
+            EMIOENET0EXTINTIN,
+            
+            EMIOENET0GMIICOL, EMIOENET0GMIICRS, EMIOENET0GMIIRXCLK,
+            EMIOENET0GMIIRXDV, EMIOENET0GMIIRXER, EMIOENET0GMIITXCLK,
+            
+            EMIOENET0MDIOI,
+            
+            EMIOENET1EXTINTIN, EMIOENET1GMIICOL, EMIOENET1GMIICRS,
+            EMIOENET1GMIIRXCLK, EMIOENET1GMIIRXDV,
+            EMIOENET1GMIIRXER, EMIOENET1GMIITXCLK, EMIOENET1MDIOI,
+            
+            EMIOI2C0SCLI, EMIOI2C0SDAI, EMIOI2C1SCLI, EMIOI2C1SDAI,
+            
+            EMIOPJTAGTCK, EMIOPJTAGTDI, EMIOPJTAGTMS,
+            
+            EMIOSDIO0CDN,
+            EMIOSDIO0CLKFB, EMIOSDIO0CMDI, EMIOSDIO0WP, EMIOSDIO1CDN,
+            EMIOSDIO1CLKFB, EMIOSDIO1CMDI, EMIOSDIO1WP,
+            
+            EMIOSPI0MI, EMIOSPI0SCLKI, EMIOSPI0SI, EMIOSPI0SSIN,
+            
+            EMIOSPI1MI, EMIOSPI1SCLKI, EMIOSPI1SI, EMIOSPI1SSIN,
+            
+            EMIOSRAMINTIN,
+            
+            EMIOTRACECLK, EMIOUART0CTSN, EMIOUART0DCDN, EMIOUART0DSRN,
+            EMIOUART0RIN, EMIOUART0RX, EMIOUART1CTSN, EMIOUART1DCDN,
+            EMIOUART1DSRN, EMIOUART1RIN, EMIOUART1RX, EMIOUSB0VBUSPWRFAULT,
+            EMIOUSB1VBUSPWRFAULT, EMIOWDTCLKI, EVENTEVENTI, FPGAIDLEN,
+            FTMDTRACEINCLOCK, FTMDTRACEINVALID,
+
+            // GP0 PL slave
+            MAXIGP0ACLK=gp_aclk,
+            MAXIGP0ARREADY=gp_arready[0],
+            MAXIGP0AWREADY=gp_awready[0],
+            MAXIGP0BVALID=gp_bvalid[0],
+            MAXIGP0RLAST=gp_rlast[0],
+            MAXIGP0RVALID=gp_rvalid[0],
+            MAXIGP0WREADY=gp_wready[0],
+            MAXIGP0BID=gp_bid[0],
+            MAXIGP0BRESP=gp_bresp[0],
+            MAXIGP0RDATA=gp_rdata[0],
+            MAXIGP0RID=gp_rid[0],
+            MAXIGP0RRESP=gp_rresp[0],
+            
+            // GP1 PL slave
+            MAXIGP1ACLK=gp_aclk,
+            MAXIGP1ARREADY=gp_arready[1],
+            MAXIGP1AWREADY=gp_awready[1],
+            MAXIGP1BVALID=gp_bvalid[1],
+            MAXIGP1RLAST=gp_rlast[1],
+            MAXIGP1RVALID=gp_rvalid[1],
+            MAXIGP1WREADY=gp_wready[1],
+            MAXIGP1BID=gp_bid[1],
+            MAXIGP1BRESP=gp_bresp[1],
+            MAXIGP1RDATA=gp_rdata[1],
+            MAXIGP1RID=gp_rid[1],
+            MAXIGP1RRESP=gp_rresp[1],
+            
+            // ACP PL master
+            SAXIACPACLK, SAXIACPARVALID, SAXIACPAWVALID, SAXIACPBREADY,
+            SAXIACPRREADY, SAXIACPWLAST, SAXIACPWVALID, SAXIACPARADDR,
+            SAXIACPARBURST, SAXIACPARCACHE, SAXIACPARID, SAXIACPARLEN,
+            SAXIACPARLOCK, SAXIACPARPROT, SAXIACPARQOS, SAXIACPARSIZE,
+            SAXIACPARUSER, SAXIACPAWADDR, SAXIACPAWBURST, SAXIACPAWCACHE,
+            SAXIACPAWID, SAXIACPAWLEN, SAXIACPAWLOCK, SAXIACPAWPROT,
+            SAXIACPAWQOS, SAXIACPAWSIZE, SAXIACPAWUSER, SAXIACPWDATA,
+            SAXIACPWID, SAXIACPWSTRB,
+            
+            // GP0 PL master
+            SAXIGP0ACLK, SAXIGP0ARVALID, SAXIGP0AWVALID, SAXIGP0BREADY,
+            SAXIGP0RREADY, SAXIGP0WLAST, SAXIGP0WVALID, SAXIGP0ARADDR,
+            SAXIGP0ARBURST, SAXIGP0ARCACHE, SAXIGP0ARID, SAXIGP0ARLEN,
+            SAXIGP0ARLOCK, SAXIGP0ARPROT, SAXIGP0ARQOS, SAXIGP0ARSIZE,
+            SAXIGP0AWADDR, SAXIGP0AWBURST, SAXIGP0AWCACHE, SAXIGP0AWID,
+            SAXIGP0AWLEN, SAXIGP0AWLOCK, SAXIGP0AWPROT, SAXIGP0AWQOS,
+            SAXIGP0AWSIZE, SAXIGP0WDATA, SAXIGP0WID, SAXIGP0WSTRB,
+            
+            // GP1 PL master
+            SAXIGP1ACLK, SAXIGP1ARVALID, SAXIGP1AWVALID, SAXIGP1BREADY,
+            SAXIGP1RREADY, SAXIGP1WLAST, SAXIGP1WVALID, SAXIGP1ARADDR,
+            SAXIGP1ARBURST, SAXIGP1ARCACHE, SAXIGP1ARID, SAXIGP1ARLEN,
+            SAXIGP1ARLOCK, SAXIGP1ARPROT, SAXIGP1ARQOS, SAXIGP1ARSIZE,
+            SAXIGP1AWADDR, SAXIGP1AWBURST, SAXIGP1AWCACHE, SAXIGP1AWID,
+            SAXIGP1AWLEN, SAXIGP1AWLOCK, SAXIGP1AWPROT, SAXIGP1AWQOS,
+            SAXIGP1AWSIZE, SAXIGP1WDATA, SAXIGP1WID, SAXIGP1WSTRB,
+            
+            // HP0 PL master
+            SAXIHP0ACLK=hp_aclk,
+            SAXIHP0ARVALID=hp_arvalid[0],
+            SAXIHP0AWVALID=hp_awvalid[0],
+            SAXIHP0BREADY=hp_bready[0],
+            SAXIHP0RDISSUECAP1EN=hp_rdissuecap1en[0],
+            SAXIHP0RREADY=hp_rready[0],
+            SAXIHP0WLAST=hp_wlast[0],
+            SAXIHP0WRISSUECAP1EN=hp_wrissuecap1en[0],
+            SAXIHP0WVALID=hp_wvalid[0],
+            SAXIHP0ARADDR=hp_araddr[0],
+            SAXIHP0ARBURST=hp_arburst[0],
+            SAXIHP0ARCACHE=hp_arcache[0],
+            SAXIHP0ARID=hp_arid[0],
+            SAXIHP0ARLEN=hp_arlen[0],
+            SAXIHP0ARLOCK=hp_arlock[0],
+            SAXIHP0ARPROT=hp_arprot[0],
+            SAXIHP0ARQOS=hp_arqos[0],
+            SAXIHP0ARSIZE=hp_arsize[0],
+            SAXIHP0AWADDR=hp_awaddr[0],
+            SAXIHP0AWBURST=hp_awburst[0],
+            SAXIHP0AWCACHE=hp_awcache[0],
+            SAXIHP0AWID=hp_awid[0],
+            SAXIHP0AWLEN=hp_awlen[0],
+            SAXIHP0AWLOCK=hp_awlock[0],
+            SAXIHP0AWPROT=hp_awprot[0],
+            SAXIHP0AWQOS=hp_awqos[0],
+            SAXIHP0AWSIZE=hp_awsize[0],
+            SAXIHP0WDATA=hp_wdata[0],
+            SAXIHP0WID=hp_wid[0],
+            SAXIHP0WSTRB=hp_wstrb[0],
+            
+            // HP1 PL master
+            SAXIHP1ACLK=hp_aclk,
+            SAXIHP1ARVALID=hp_arvalid[1],
+            SAXIHP1AWVALID=hp_awvalid[1],
+            SAXIHP1BREADY=hp_bready[1],
+            SAXIHP1RDISSUECAP1EN=hp_rdissuecap1en[1],
+            SAXIHP1RREADY=hp_rready[1],
+            SAXIHP1WLAST=hp_wlast[1],
+            SAXIHP1WRISSUECAP1EN=hp_wrissuecap1en[1],
+            SAXIHP1WVALID=hp_wvalid[1],
+            SAXIHP1ARADDR=hp_araddr[1],
+            SAXIHP1ARBURST=hp_arburst[1],
+            SAXIHP1ARCACHE=hp_arcache[1],
+            SAXIHP1ARID=hp_arid[1],
+            SAXIHP1ARLEN=hp_arlen[1],
+            SAXIHP1ARLOCK=hp_arlock[1],
+            SAXIHP1ARPROT=hp_arprot[1],
+            SAXIHP1ARQOS=hp_arqos[1],
+            SAXIHP1ARSIZE=hp_arsize[1],
+            SAXIHP1AWADDR=hp_awaddr[1],
+            SAXIHP1AWBURST=hp_awburst[1],
+            SAXIHP1AWCACHE=hp_awcache[1],
+            SAXIHP1AWID=hp_awid[1],
+            SAXIHP1AWLEN=hp_awlen[1],
+            SAXIHP1AWLOCK=hp_awlock[1],
+            SAXIHP1AWPROT=hp_awprot[1],
+            SAXIHP1AWQOS=hp_awqos[1],
+            SAXIHP1AWSIZE=hp_awsize[1],
+            SAXIHP1WDATA=hp_wdata[1],
+            SAXIHP1WID=hp_wid[1],
+            SAXIHP1WSTRB=hp_wstrb[0],
+            
+            
+            // HP2 PL master
+            SAXIHP2ACLK=hp_aclk,
+            SAXIHP2ARVALID=hp_arvalid[2],
+            SAXIHP2AWVALID=hp_awvalid[2],
+            SAXIHP2BREADY=hp_bready[2],
+            SAXIHP2RDISSUECAP1EN=hp_rdissuecap1en[2],
+            SAXIHP2RREADY=hp_rready[2],
+            SAXIHP2WLAST=hp_wlast[2],
+            SAXIHP2WRISSUECAP1EN=hp_wrissuecap1en[2],
+            SAXIHP2WVALID=hp_wvalid[2],
+            SAXIHP2ARADDR=hp_araddr[2],
+            SAXIHP2ARBURST=hp_arburst[2],
+            SAXIHP2ARCACHE=hp_arcache[2],
+            SAXIHP2ARID=hp_arid[2],
+            SAXIHP2ARLEN=hp_arlen[2],
+            SAXIHP2ARLOCK=hp_arlock[2],
+            SAXIHP2ARPROT=hp_arprot[2],
+            SAXIHP2ARQOS=hp_arqos[2],
+            SAXIHP2ARSIZE=hp_arsize[2],
+            SAXIHP2AWADDR=hp_awaddr[2],
+            SAXIHP2AWBURST=hp_awburst[2],
+            SAXIHP2AWCACHE=hp_awcache[2],
+            SAXIHP2AWID=hp_awid[2],
+            SAXIHP2AWLEN=hp_awlen[2],
+            SAXIHP2AWLOCK=hp_awlock[2],
+            SAXIHP2AWPROT=hp_awprot[2],
+            SAXIHP2AWQOS=hp_awqos[2],
+            SAXIHP2AWSIZE=hp_awsize[2],
+            SAXIHP2WDATA=hp_wdata[2],
+            SAXIHP2WID=hp_wid[2],
+            SAXIHP2WSTRB=hp_wstrb[2],
+            
+            // HP3 PL master
+            SAXIHP3ACLK=hp_aclk,
+            SAXIHP3ARVALID=hp_arvalid[3],
+            SAXIHP3AWVALID=hp_awvalid[3],
+            SAXIHP3BREADY=hp_bready[3],
+            SAXIHP3RDISSUECAP1EN=hp_rdissuecap1en[3],
+            SAXIHP3RREADY=hp_rready[3],
+            SAXIHP3WLAST=hp_wlast[3],
+            SAXIHP3WRISSUECAP1EN=hp_wrissuecap1en[3],
+            SAXIHP3WVALID=hp_wvalid[3],
+            SAXIHP3ARADDR=hp_araddr[3],
+            SAXIHP3ARBURST=hp_arburst[3],
+            SAXIHP3ARCACHE=hp_arcache[3],
+            SAXIHP3ARID=hp_arid[3],
+            SAXIHP3ARLEN=hp_arlen[3],
+            SAXIHP3ARLOCK=hp_arlock[3],
+            SAXIHP3ARPROT=hp_arprot[3],
+            SAXIHP3ARQOS=hp_arqos[3],
+            SAXIHP3ARSIZE=hp_arsize[3],
+            SAXIHP3AWADDR=hp_awaddr[3],
+            SAXIHP3AWBURST=hp_awburst[3],
+            SAXIHP3AWCACHE=hp_awcache[3],
+            SAXIHP3AWID=hp_awid[3],
+            SAXIHP3AWLEN=hp_awlen[3],
+            SAXIHP3AWLOCK=hp_awlock[3],
+            SAXIHP3AWPROT=hp_awprot[3],
+            SAXIHP3AWQOS=hp_awqos[3],
+            SAXIHP3AWSIZE=hp_awsize[3],
+            SAXIHP3WDATA=hp_wdata[3],
+            SAXIHP3WID=hp_wid[3],
+            SAXIHP3WSTRB=hp_wstrb[3],
+            
+            DDRARB, DMA0DRTYPE, DMA1DRTYPE, DMA2DRTYPE, DMA3DRTYPE,
+            EMIOENET0GMIIRXD, EMIOENET1GMIIRXD, EMIOGPIOI, EMIOSDIO0DATAI,
+            EMIOSDIO1DATAI, EMIOTTC0CLKI, EMIOTTC1CLKI, FCLKCLKTRIGN,
+            FTMDTRACEINATID, FTMDTRACEINDATA, FTMTF2PDEBUG, FTMTF2PTRIG,
+            FTMTP2FTRIGACK,
+            IRQF2P=irqf2p
+    );    
+
+}
+
+// DMA from RAM to PL using an AXI_HP bus.
+// A datum on each of queues 'address' and 'burstlen' will trigger
+// the DMA transfer if queue 'data' is not full.
+// The transfer will consume one datum from each of 'address' and 'burstlen'
+// and will write the number of data to queue 'data' necessary to satisfy the
+// burst length. Burst length is a maximum of 16 words but note that
+// 'burstlen' is the burst length minus 1, i.e. 0 for 1 word to 15 for 16 words.
+module
+dma_read (
+    queue(data, "bits:64")
+    <-
+    queue(address, "uint:32"),  // memory address
+    queue(burstlen, "uint:4"),  // burst length - 1
+    int(bus)                    // HP bus 0 to 3
+) {
+    useclock(bus_clk);
+    
+    if (axi_hp_read_used[bus])
+        texit("dma_read() - multiple interfaces to an HP bus not implemented");
+    hp_rapp[bus]-> <<- address;
+    hp_rlpp[bus]-> <<- burstlen;
+    data <<- hp_ripp[bus]->;
+    axi_hp_read_used[bus] = true;
+    
+    useclock();
+}
+
+// DMA from PL to RAM using an AXI_HP bus.
+// A datum on each of queues 'address' and 'burstlen' will trigger
+// the DMA transfer if queue 'data' is not empty.
+// The transfer will consume one datum from each of 'address' and 'burstlen'
+// and will read the number of data from queue 'data' necessary to satisfy the
+// burst length. Burst length is a maximum of 16 words but note that
+// 'burstlen' is the burst length minus 1, i.e. 0 for 1 word to 15 for 16 words.
+module
+dma_write (
+    queue(data, "bits:64"),
+    queue(address, "uint:32"),  // memory address
+    queue(burstlen, "uint:4"),  // burst length - 1
+    int(bus)                    // HP bus 0 to 3
+) {
+    useclock(bus_clk);
+    
+    if (axi_hp_write_used[bus])
+        texit("dma_write() - multiple interfaces to an HP bus not implemented");
+    hp_wipp[bus]-> <<- data;
+    hp_wapp[bus]-> <<- address;
+    hp_wlpp[bus]-> <<- burstlen;
+    axi_hp_write_used[bus] = true;
+    
+    useclock();
+}
+
+// Handle a GP bus read burst.
+//
+// Note that this is a procedure so that the instantiations are not
+// separate queue sinks. The addressing mechanism enforces mutually
+// exclusive reading of the read address queues, i.e.
+// only one instance of this procedure will read a queue though all
+// examine the read address queue. This saves the logic normally necessary
+// to ensure that reads from separate modules are all completed before
+// queue output becomes available with the next datum. That logic can become
+// a problem with meeting time constraints if there are a large number of
+// readers. Ensuring that all readers are in a single module, as is the case
+// here, avoids the problem as long as the readers look after their own
+// exclusive access.
+procedure
+cpu_read (
+    value(access, "log"),
+    value(init, "log"),
+    queue(out)
+    <-
+    int(bus),
+    int(addr),
+    value(data_in),
+    value(contin, "log")
+) {
+    type(atype, "uint:"+(gp_raddr_width[bus]-gp_ext_raddr_width[bus]));
+    int(ashift, gp_ext_raddr_width[bus]); // 0 for GP0
+    value(addr_match, "log", cast(?gp_rda_p[bus]->.addr>>ashift, atype) == addr);
+    value(valid, "log");
+    int(data_width, size(data_in));
+    static(data, "bits:"+data_width);
+    static(len, "int:5");
+    value(rav, "log", <data_in); // always true for static mode
+    static(empty, "log");
+    
+    read_address_match[bus] := read_address_match[bus] || addr_match;
+    
+    when (<gp_rda_p[bus]-> && addr_match) seq {
+        if (matched(contin)) {
+            assert(init <-);
+            wait_until(contin);
+        }
+        par {
+            when (rav)
+                data <- cast(data_in, type(data));
+            empty <- !rav;
+            len <- ?gp_rda_p[bus]->.len;
+            // 1st word to queue is packed ID, burst length and error code (0)
+            gp_rdd_p[bus]-> <<- ?gp_rda_p[bus]->.id | (?gp_rda_p[bus]->.len << 12);
+            assert(access <-);
+            if (matched(out))
+                when (>out)
+                    out <<- data_in;
+        }
+        sync while (len >= 0) {
+            // remaining words are data
+            gp_rdd_p[bus]-> <<- empty ? 0xffffffff : cast(data, "bits:32");
+            len--;
+            if (data_width > 32)
+                data <- data >> 32;
+        }
+        null <<- gp_rda_p[bus]->; // pop address queue after last word
+    }
+}
+
+// Detect when a read request has been written to the read request queue for
+// the bus but no address match has been made, i.e. the read address is not
+// valid.
+// Execute a zero read to satisfy the bus.
+procedure
+cpu_read_default (int(bus)) {
+    static(len, "int:5");
+    int(ERR, 0);    // should be 3, but hangs CPU!
+    
+    useclock(bus_clk);
+    
+    when (<gp_rda_p[bus]-> && !read_address_match[bus]) seq {
+        par {
+            len <- ?gp_rda_p[bus]->.len;
+            // 1st word to queue is packed ID, burst length and error code (1)
+            gp_rdd_p[bus]-> <<- ?gp_rda_p[bus]->.id | (?gp_rda_p[bus]->.len << 12) | (ERR << 16);
+       }
+        sync while (len >= 0) {
+            gp_rdd_p[bus]-> <<- cast(0, "bits:32");
+            len--;
+        }
+        null <<- gp_rda_p[bus]->; // pop address queue after last word
+    }
+    
+    useclock();
+}
+
+// Handle a GP bus write burst.
+
+// THIS HAS BEEN COMMENTED OUT AS AN STM TO THE MEMORY-MAPPED ADDRESS
+// DOES NOT PERFORM A BURST WRITE BUT INSTEAD DOES A NUMBER OF
+// SEQUENTIAL SINGLE WORD WRITES. The un-commented version following
+// handles these single word writes.
+//
+// Note that this is a procedure so that the instantiations are not
+// separate queue sinks. The addressing mechanism enforces mutually
+// exclusive reading of the write address and write data queues, i.e.
+// only one instance of this procedure will read the queues though all
+// examine the write address queue. This saves the logic normally necessary
+// to ensure that reads from separate modules are all completed before
+// queue output becomes available with the next datum. That logic can become
+// a problem with meeting time constraints if there are a large number of
+// readers. Ensuring that all readers are in a single module, as is the case
+// here, avoids the problem as long as the readers look after there own
+// exclusive access.
+/*
+procedure
+cpu_write (
+    var(out),
+    value(access, "log")
+    <-
+    int(bus),
+    int(addr)
+) {
+    type(atype, "uint:"+(gp_waddr_width[bus]-gp_ext_waddr_width[bus]));
+    int(ashift, gp_ext_waddr_width[bus]); // 0 for GP0
+    value(addr_match, "log", cast(?gp_wra_p[bus]->.addr>>ashift, atype) == addr);
+    log(out_used, matched(out));
+    if (out_used) {
+        int(local.dbuf_words, (size(out)-1)/32+1);
+        int(local.shift, (dbuf_words-1)*32);
+        int(local.dbuf_size, dbuf_words*32);
+    }
+    if (out_used)
+        static(data, "bits:"+dbuf_size);
+    
+    static(len, "int:5");
+    
+    write_address_match[bus] := write_address_match[bus] || addr_match;
+        
+    when (<gp_wra_p[bus]-> && addr_match) seq {
+        len <- ?gp_wra_p[bus]->.len;
+        par while (len >= 0) {
+            if (out_used)
+                data <- (data >> 32) | (gp_wrd_p[bus]-> << shift);  // pop from write data queue
+            else
+                null <<- gp_wrd_p[bus]->; // pop write data queue
+            len--;
+        }
+        when (>gp_wrr_p[bus]->) par { // sync would hang on ! >out
+            // Write to write response queue.
+            gp_wrr_p[bus]->.id <<- gp_wra_p[bus]->.id; // also pops write address queue
+            gp_wrr_p[bus]->.ec <<- 0;                  // OK code
+            if (out_used) {
+                if (mode(out) == "static")
+                    out <- cast(data, type(out));      // output is static
+                else
+                    when (>out)
+                        out <<- cast(data, type(out)); // output is queue
+            }
+        }
+        assert(access <-);
+    }
+}
+*/
+
+// Handle GP bus writes.
+// The CPU code executes a burst write. This has a maximum of 8 32-bit words.
+// In practice the CPU seems to issue burst writes in some cases and a number
+// of single word writes in others. It is assumed that it may break up
+// a multi-word thansfer into a mixture of single word and burst transfers.
+// This interface is written based on that assumption.
+//
+// Regardless of the mix of transfer sizes it is assumed that multiple
+// writes will be to increasing addresses. Each successive write is copied
+// into the MS word of 'data', the previous value being shifted right by 32
+// bits. When the last word has been received, 'data' is copied to the
+// destination static or queue variable.
+//
+// Note that the address is only used to recognise the destination specific
+// variable interface. Thus for variables wider than one 32-bit word the
+// address is compared with a range. Otherwise the address on each write is
+// not used.
+//
+// Note that this is a procedure so that the instantiations are not
+// separate queue sinks. The addressing mechanism enforces mutually
+// exclusive reading of the write address and write data queues, i.e.
+// only one instance of this procedure will read the queues though all
+// examine the write address queue. This saves the logic normally necessary
+// to ensure that reads from separate modules are all completed before
+// queue output becomes available with the next datum. That logic can become
+// a problem with meeting time constraints if there are a large number of
+// readers. Ensuring that all readers are in a single module, as is the case
+// here, avoids the problem as long as the readers look after their own
+// exclusive access.
+//
+procedure
+cpu_write (
+    var(out),
+    value(access, "log")
+    <-
+    int(bus),
+    int(addr)
+) {
+    // gp_wra_p points to the write address input queue
+    // gp_wrd_p points to the write data input queue
+    // gp_wrr_p points to the write response output queue
+    type(atype, "uint:"+(gp_waddr_width[bus]-gp_ext_waddr_width[bus]));
+    int(ashift, gp_ext_waddr_width[bus]); // 0 for GP0 - no memory address
+    value(w_addr, atype, cast(?gp_wra_p[bus]->.addr>>ashift, atype));
+    log(out_used, matched(out));
+    if (out_used) {
+        int(local.dbuf_words, (size(out)-1)/32+1);
+        int(local.shift, (dbuf_words-1)*32);
+        int(local.dbuf_size, dbuf_words*32);
+        int(local.addr_max, addr + dbuf_words - 1); // last address
+        static(local.data, "bits:"+dbuf_size);
+    } else {
+        int(local.dbuf_words, 1);
+        int(local.shift, 0);
+        int(local.dbuf_size, 32);
+    }
+    if (out_used && dbuf_words != 1)
+        value(local.addr_match, "log", w_addr >= addr && w_addr <= addr_max);
+    else
+        value(local.addr_match, "log", w_addr == addr);
+    
+    static(len, "int:5");       // burst length maximum 7 (8-1) - -ve after last word
+    static(count, "uint:4");    // 8 words is burst maximum
+    
+    write_address_match[bus] := write_address_match[bus] || addr_match;
+        
+    when (<gp_wra_p[bus]-> && addr_match) seq {
+        par {
+            when (w_addr == addr)
+                count <- 0;
+            len <- ?gp_wra_p[bus]->.len;
+        }
+        par while (len >= 0) {
+            if (out_used) {
+                if (dbuf_words != 1)
+                    data <- (data >> 32) | (gp_wrd_p[bus]-> << shift);  // pop from write data queue
+                else
+                    data <- gp_wrd_p[bus]->;  // pop from write data queue
+            } else
+                null <<- gp_wrd_p[bus]->; // pop write data queue
+            par {
+                len--;
+                count++;
+            }
+        }
+        when (>gp_wrr_p[bus]->) par { // sync would hang on ! >out rather than skip
+            // Write to write response queue.
+            gp_wrr_p[bus]->.id <<- gp_wra_p[bus]->.id; // also pops write address queue
+            gp_wrr_p[bus]->.ec <<- 0;                  // OK code
+            if (out_used) {
+                when (count == dbuf_words) {
+                    if (mode(out) == "static")
+                        out <- cast(data, type(out));      // output is static
+                    else
+                        when (>out)
+                            out <<- cast(data, type(out)); // output is queue
+                }
+            }
+        }
+        assert(access <-);
+    }
+}
+
+// Detect when a write request has been written to the write request queue for
+// the bus but no address match has been made, i.e. the write address is not
+// valid.
+// Execute a null write to satisfy the bus.
+procedure
+cpu_write_default (int(bus)) {
+    useclock(bus_clk);
+    
+    static(len, "int:5");
+    int(ERR, 0);    // should be 3, but hangs CPU!
+    
+    when (<gp_wra_p[bus]-> && !write_address_match[bus]) seq {
+        len <- ?gp_wra_p[bus]->.len;
+        par while (len >= 0) {
+            null <<- gp_wrd_p[bus]->;   // pop write data queue
+            len--;
+        }
+        // Write to write response queue.
+        sync {
+            gp_wrr_p[bus]->.id <<- gp_wra_p[bus]->.id; // also pops write address queue
+            gp_wrr_p[bus]->.ec <<- ERR;                // error code
+        }
+    }
+    
+    useclock();
+}
+
+module
+sigint(int(n), value(sig, "log")) {
+    if (currentclock() == bus_clk)
+        interrupts[n] := sig;
+    else {
+        value(v, "log");
+        useclock(bus_clk);
+        resync(v <- sig);
+        interrupts[n] := v;
+        useclock();
+    }
+}
+
+// Input data must be of type -
+// struct (s,
+//      data,       user_data_type,
+//      term,       dma_block_term,
+//      tag,        tagtype
+// );
+//
+// where
+//  data is the user data (can be any type)
+//  term is a block termination enumerated type 'dma_block_term' which is
+//      'none' (default) to add the datum to the current block
+//      'ignore' to terminate the block, discarding the datum
+//      'first' to terminate the block and start a new block with the datum
+//      'last' to add the current datum to the block then terminate the block
+//  tag is a user-defined field which can be used to distinguish blocks
+//  of different content. The block type field of the last datum to be
+//  added to the current block is used as the block type, all previous ones
+//  being ignored.
+//
+// Blocks will be terminated when full if not explicitly terminated by use
+// of the termination field
+//
+// The input data type is rounded up in size to 8, 16, 32 or 64 bits,
+// zero padded at the MSB end where necessary.
+// Data are packed into 64-bit words for transmission across an HP bus
+// to CPU memory. The packing is 8x8, 4x16, 2x32 or 1x64.
+// Where a block is terminated before being filled any unfilled portion of
+// the last 64-bit word will be zero. The remainder of the block in CPU
+// memory remains unwritten.
+//
+// On completion of a block transfer the structure that is read by
+// the CPU from the 'done' queue is -
+//
+//    struct(bnctype,
+//        blocknum,   "uint:"+size(nblocks),
+//        words,      "uint:"+size(blockwords),
+//        tag,        tagtype
+//    );
+//
+// where
+//  blocknum is the block number in the DMA buffer space
+//  words gives the number of words of packed user data in the block
+//  tag is the user-defined block type
+//
+global module
+cpu_write_dma_buffer (
+    str(name),          // interface name
+    int(blockwords),    // block length in data words
+    int(nblocks),       // number of blocks
+    queue(in),          // data in
+    log(use_wcount),    // use queue count rather than interrupt
+    log(bigendian)      // transfer data as bigendian
+) {
+    if (!matched(name))
+        texit("cpu_write_dma_buffer() - name not given");
+    if (gp_names[name] != null) {
+        println("cpu_write_dma_buffer() - '" + name + "' already used");
+        println("previous use -");
+        println(gp_names[name]);
+        texit();
+    } else
+        gp_names[name] = stacktrace();
+
+    int(port, hp_port);
+    if (port == 4)
+        texit("cpu_write_dma_buffer() - all 4 ports already used");
+
+    str(st, typestring(in));        // input queue type
+    type(datatype, type(in.data));  // input data field type
+    type(tagtype, type(in.tag));    // tag field type
+    int(idsize, size(datatype));    // data type size
+    var(pn, "uint");                // packing number - items packed in 64-bit word
+    if (idsize > 64)
+        texit("cpu_write_dma_buffer() - data word size > 64 bits (" + idsize + ")");
+    else if (idsize <= 8)
+        pn = 8;
+    else if (idsize <= 16)
+        pn = 4;
+    else if (idsize <= 32)
+        pn = 2;
+    else
+        pn = 1;
+
+    // 'blockwords' is the number of data words in a block and
+    // 'pn' is the number of data words that will be packed into each
+    // 64-bit word to be transferred.
+    // 'w64' is the number of 64-bit words per block, the last of which may
+    // be partially full.
+    // 'pages' is the number of 4K byte pages which will be allocated for
+    // the DMA buffer for this port, the last of which may be partially full.
+    //
+    int(w64, (blockwords + pn - 1) / pn);   // block size in 64-bit words
+    int(blocksize, w64 * 8);                // block size in bytes
+    int(pages, (w64 + 511) / 512);          // 4K pages required
+
+    // Set port parameters for inclusion in .info file
+    hp_names[port] = name;
+
+    hp_base_address[port] = DMA_base_address;
+    DMA_base_address += pages * 4096;       // bump base address
+    DMA_available_pages -= pages;           // decrease pages available
+    if (DMA_available_pages < 0)
+        texit("cpu_write_dma_buffer() - not enough DMA buffer space available for port " + port);
+    
+    hp_pages[port] = pages;
+    hp_blocks[port] = nblocks;
+    hp_blocksize[port] = blocksize;
+    hp_blockwords[port] = blockwords;
+    hp_dtype[port] = typestring(in.data);
+    hp_dtype_bits[port] = size(in.data);
+    
+    // Type for 'done' queue.
+    // Includes, block number, number of words in block and block tag.
+    type(bntype, "uint:"+size(nblocks));
+    struct(bnctype,
+        blocknum,   "uint:"+size(nblocks),
+        words,      "uint:"+size(blockwords),
+        tag,        tagtype
+    );
+       
+    //--------------------------------------------------------------------------
+    // Buffer status memory and control queues.
+
+    enum(stype, missing, free, busy, done);
+    rmemory(status, 2, bntype, stype);
+    
+    cpu_write_memory(name + "_status", status, 1);
+    
+    // Free block queue.
+    queue({fbp, fbpi}, bntype, mindepth=nblocks);
+    cpu_write_queue(fbpi <- name + "_free");
+    sync {
+        fbp <<- fbpi;
+        rmemorywrite(status, 1, fbpi, stype.free);
+    }
+    
+    // Done queue.
+    queue({dp, dpr}, bnctype, mindepth=nblocks);
+    if (use_wcount)
+        cpu_read_queue(, dpr <- name + "_done", dp, true);   // use readable item count
+    else
+        cpu_read_queue(, dpr <- name + "_done", dp,, false); // use interrupt on non-empty
+    rmemorywrite(status, 1, dpr.blocknum, stype.missing);
+
+    //--------------------------------------------------------------------------
+    // If the termination type is 'first' insert a datum of termination type
+    // 'ignore'.
+    queue(ip, st);
+    sync {
+        branch (?in.term) {
+        case dma_block_term.first:
+            seq {
+                sync {
+                    ip.term <<- dma_block_term.ignore;
+                    ip.tag <<- ?in.tag;
+                }
+                sync {
+                    ip.data <<- in.data;
+                    ip.term <<- dma_block_term.none;
+                    ip.tag <<- in.tag;
+                }
+            }
+        default:
+            ip <<- in;
+        }
+    }
+       
+    //--------------------------------------------------------------------------
+    // Pack input data.
+    struct (ppptype,
+        data,   "bits:64",
+        wcount, "uint:"+size(blockwords),
+        tag,    tagtype,
+        term,   dma_block_term
+    );
+
+    static(wcount, "uint:"+(size(blockwords)+1), 1);
+    queue(ppp, ppptype);
+    value(blockfull, "log", wcount == blockwords);
+    // Each datum uses the full 64 bit bus width, hence
+    // no packing is required.
+    if (pn == 1)  sync {
+        branch (ip.term) {
+        case dma_block_term.none:
+            par {
+                when (blockfull) par {
+                    ppp.term <<- dma_block_term.last;
+                    reset(wcount);
+                } else
+                    ppp.term <<- ip.term;
+                wcount++;
+            }
+        case dma_block_term.ignore:
+            // Don't process if block empty (wcount == 0).
+            par {
+                when (wcount != 0) par {
+                    ppp.term <<- ip.term;
+                    reset(wcount);
+                } else
+                    null <<- ip;
+            }
+        case dma_block_term.last:
+            par {
+                ppp.term <<- ip.term;
+                reset(wcount);
+            }
+        }
+        ppp.data <<- forcecast(ip.data, "bits:64");
+        ppp.tag <<- ip.tag;
+        ppp.wcount <<- wcount;
+    } else {
+        // Data must be packed into 64 bit words.
+        // A termination code must be applied to the last
+        // transfer word in a block.
+        // Termination codes in the data stream are simplified here.
+        static(scount, "uint:"+size(pn));
+        static(v64, "["+(pn-1)+"]bits:"+64/pn);
+        int(lastshift, (blockwords - 1) % pn);
+        value(packfull, "log", scount == pn-1);
+        value(blockempty, "log", wcount == 0);
+        var(dsize, "uint", 64/pn);  // width of words being packed (>= data size)
+        value(lastpack, "bits:64");
+        lastpack := cast(v64, "bits:64") | lshift(forcecast(ip.data, "bits:"+dsize), scount, pn);
+
+        sync {
+            branch (ip.term) {
+            case dma_block_term.none:
+                par {
+                    when (!packfull && !blockfull) par {
+                        v64[scount] <- forcecast(ip.data, "bits:"+dsize);
+                        scount++;
+                        wcount++;
+                    }
+                    when (packfull && !blockfull) par {
+                        ppp.data <<- lastpack;
+                        reset(scount, v64);
+                        wcount++;
+                    }
+                    when (blockfull) par {
+                        ppp.data <<- lastpack;
+                        ppp.tag <<- ip.tag;
+                        ppp.term <<- dma_block_term.last;
+                        ppp.wcount <<- wcount;
+                        reset(scount, v64, wcount);
+                    }
+                }
+            case dma_block_term.ignore:
+                par {
+                    when (blockempty) // Don't process if block empty (wcount == 0).
+                        null <<- ip;
+                    else par {
+                        when (scount == 0)
+                            ppp.term <<- dma_block_term.ignore;
+                        else par {
+                            ppp.data <<- cast(v64, "bits:64");
+                            ppp.term <<- dma_block_term.last;
+                        }
+                        ppp.tag <<- ip.tag;
+                        ppp.wcount <<- wcount - 1;
+                        reset(scount, wcount, v64);
+                    }
+                }
+            case dma_block_term.last:
+                par {
+                    ppp.data <<- lastpack;
+                    ppp.term <<- dma_block_term.last;
+                    ppp.tag <<- ip.tag;
+                    ppp.wcount <<- wcount;
+                    reset(scount, wcount, v64);
+                }
+            }
+        }
+    }
+    
+    function
+    lshift (value(v), value(count), int(pn)) {
+        switch (pn) {
+        case 2:
+            return(mux(count, v, v<<32));
+        case 4:
+            return(mux(count, v, v<<16, v<<32, v<<48));
+        case 8:
+            return(mux(count, v, v<<8, v<<16, v<<24, v<<32, v<<40, v<<48, v<<56));
+        }
+    }
+    
+    //--------------------------------------------------------------------------
+    // Stream to HP bus.
+    // Data blocks are explicitly terminated by the 'term' field, not
+    // by a count!
+    // The 'term' field is set by the data packing code which keeps count
+    // of the 64-bit words as it packs.
+    //
+    queue(a, "uint:32");                    // address to bus
+    queue(l, "uint:4");                     // burst length to bus
+    queue(bdata, "bits:64", mindepth=32);   // data to bus
+    static(block, bntype);
+    static(words, "uint:5");
+    static(last, "log");
+    static(addr, "uint:32");    // burst write address
+    static(wc, type(wcount));
+    static(tag, tagtype);
+    value(ignore,, ppp.term == dma_block_term.ignore);
+    value(ignore_or_last,, ppp.term != dma_block_term.none);
+
+    seq {
+        // Set up block transfer.
+        sync {
+            addr <- hp_base_address[port] + fbp * blocksize; // block start address
+            block <- fbp;                                    // block number
+            rmemorywrite(status, 0, fbp, stype.busy);
+            reset(words);
+        }
+        
+        // Transfer block.
+        sync do {
+            last <- ignore_or_last;
+            wc <- ppp.wcount;
+            tag <- ppp.tag;
+            when (!ignore)
+                if (!bigendian)
+                    bdata <<- ppp.data;
+                else
+                    bdata <<- byteswap(ppp.data);
+            when (words == 15 || ignore_or_last) par {
+                a <<- addr;
+                l <<- ignore ? words-1 : words;
+                addr <- addr + 128; // 16 words * 8 bytes/word
+                reset(words);
+            } else
+                words++;
+        } while (!last)
+
+        // Write to 'done' queue and update buffer status memory
+        sync {
+            dp.blocknum <<- block;
+            dp.words <<- wc;
+            dp.tag <<- tag;
+            rmemorywrite(status, 0, block, stype.done);
+        }
+    }
+
+    // DMA low-level interface.
+    dma_write(port, bdata, a, l);
+    
+    hp_port++;
+    hp_writes++;
+    
+    function byteswap(value(v, "bits:64")) {
+        value(v8,, forcecast(v, "[8]bits:8"));
+        value(rv8, "[8]bits:8");
+        for (int(i) ; i<8 ; i++)
+            rv8[i] := v8[7-i];
+        return(forcecast(rv8, type(v)));
+    }
+
+}
+
+//------------------------------------------------------------------
+// Create modules for -
+//  cpu_read_value()
+//  cpu_write_static()
+//  cpu_read_queue()
+//  cpu_write_queue()
+//  cpu_read_memory()
+//  cpu_write_memory()
+//
+// This is delayed until the end of immediate execution (it is called
+// from a trailer module) so that the variable clock domains have been
+// established.
+//
+module
+create_bus_interfaces () {
+    str(od, directive("outputDirectory"));
+    str(info_temp_file_name, od + "__temp__.info");
+    str(info_file_name, od + directive("designName") + ".info");
+    file(df, info_temp_file_name);
+    open(df, "w");
+    int(indent);
+    int(lsize);
+
+    // GP0 address 1 is used to access the stored .info data in block RAM
+    // and has both a read and a write interface. These interfaces have
+    // been created by default. If they are not used, i.e. the directive
+    // "excludeinfo" exists, then these interfaces are removed here.
+    // Because these interfaces (one read and one write) are created first
+    // they will be the first two entries in the GP0 interface list.
+    // Note that read and write address 1 still remains allocated to these
+    // interfaces even though they have been removed.
+    if (gp_rd_used[0] && gp_wr_used[0] && direxists("excludeinfo")) {
+        remove(bus_list, 0);   // remove the .info read interface
+        remove(bus_list, 0);   // remove the .info write interface
+    }
+
+    str(infostring);
+    
+    directive("ZYNQ", true);
+    
+    winfo("{");
+
+    // relates to the format of the JSON
+    //   -- bump major number for incompatible changes
+    //   -- bump minor number of compatible changes (like additions)
+    winfo("\"version\": {");
+    winfo("\"major\": 1,");
+    winfo("\"minor\": 0");
+    winfo("},");
+
+    winfo("\"directives\": {");
+    var(dirs, "map", directives());
+    int(dn, entries(dirs));
+    if (dn != 0) {
+        for (int(i) ; i<dn ; i++) {
+            str(key, dirs[i]);
+            str(val, dirs[key]);
+            str(comma, ",");
+            if (i == dn - 1)
+                comma = "";
+            winfo("\"" + key + "\": \"" + val + "\"" + comma);
+        }
+    }
+    winfo("},");
+    winfo("\"spaces\": {");
+    
+    // Write description of register and queue bus interfaces to .info file.
+    // This "reg" space is always linked to AXI_MGP0.
+    if (gp_rd_used[0] || gp_wr_used[0]) {
+        winfo("\"reg\": {");
+        winfo("\"bus\": \"axi_mgp0\",");
+        if (gp_rd_used[0])
+            winfo("\"read_addr_bits\": " + gp_raddr_width[0] + ",");
+        if (gp_wr_used[0])
+            winfo("\"write_addr_bits\": " + gp_waddr_width[0] + ",");
+
+        winfo("\"interfaces\": {");
+        lsize = entries(bus_list[0]);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, bus_list[0][i]->);
+            winfo("\"" + v.object_name + "\": {");
+            winfo("\"interface\": \"" + v.interface_name + "\",");
+            winfo("\"write\": " + v.write + ",");
+            if (v.var != null && mode(v.var->) == "queue")
+                winfo("\"data_depth\": " + queuedepth(v.var->) + ",");
+            winfo("\"data_addr\": " + v.addr + ",");
+            if (v.caddr > 0)
+                winfo("\"avail_addr\": " + v.caddr + ",");
+            if (v.laddr > 0)
+                winfo("\"avail_thresh_addr\": " + v.laddr + ",");
+            else if (v.iev >= 0)
+                winfo("\"fixed_thresh\": " + -v.laddr + ",");
+            if (v.iev >= 0)
+                winfo("\"avail_thresh_intr\": " + v.iev + ",");
+            if (v.var != null) {
+                if (mode(v.var->) == "queue")
+                    winfo("\"check\": " + v.check + ",");
+                winfo("\"data_bits\": " + size(v.var->) + ",");
+                winfo("\"data_type\": {");
+                infostring = infostring + jsontype(type(v.var->), indent) + "\n";
+                winfo("}");
+            } else
+                winfo("\"data_bits\": 0");
+            if (i == lsize - 1)
+                winfo("}");
+            else
+                winfo("},");
+        }
+        winfo("}");
+        if (gp_rd_used[1] || gp_wr_used[1] || hp_writes != 0)
+            winfo("},");
+        else
+            winfo("}");
+    }
+
+    // Write description of memory interfaces to .info file.
+    // This "mem" space is always linked to AXI_MGP1
+    if (gp_rd_used[1] || gp_wr_used[1]) {
+        winfo("\"mem\": {");
+        winfo("\"bus\": \"axi_mgp1\",");
+        if (gp_rd_used[1]) {
+            winfo("\"read_addr_bits\": " + gp_raddr_width[1] + ",");
+            winfo("\"read_addr_loc_bits\": " + gp_ext_raddr_width[1] + ",");
+        }
+        if (gp_wr_used[1]) {
+            winfo("\"write_addr_bits\": " + gp_waddr_width[1] + ",");
+            winfo("\"write_addr_loc_bits\": " + gp_ext_waddr_width[1] + ",");
+        }
+
+        winfo("\"interfaces\": {");
+        lsize = entries(bus_list[1]);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, bus_list[1][i]->);
+            type(mdtype, memorydatatype(v.var->));
+
+            int(addr);
+            addr = v.addr <<
+                (v.write ? gp_ext_waddr_width[1] : gp_ext_raddr_width[1]);
+
+            winfo("\"" + v.object_name + "\": {");
+            winfo("\"interface\": \"" + v.interface_name + "\",");
+            winfo("\"write\": " + v.write + ",");
+            winfo("\"port\": " + v.port + ",");
+            winfo("\"data_addr\": " + addr + ",");
+            winfo("\"data_bits\": " + size(mdtype) + ",");
+            winfo("\"data_type\": {");
+            if (v.qdepth != 0)
+                winfo("\"queue_depth\": " + v.qdepth + ",");
+            infostring = infostring + jsontype(mdtype, indent) + "\n";
+            winfo("}");
+            if (i == lsize - 1)
+                winfo("}");
+            else
+                winfo("},");
+        }
+        winfo("}");
+        if (hp_writes != 0)
+            winfo("},");
+        else
+            winfo("}");
+    }
+
+    // Write description of DMA interfaces to .info file.
+    // This "dma" space is always linked to one or more of the AXI_HP busses.
+    if (hp_writes != 0) {
+        winfo("\"dma\": {");
+        winfo("\"interfaces\": {");
+        int(i);
+        for (int(port) ; port<4 ; port++) {
+            if (!axi_hp_write_used[port])
+                continue;
+            i++;
+            winfo("\"" + hp_names[port] + "\": {");
+	    winfo("\"bus\": \"axi_hp" + port + "\",");
+            winfo("\"interface\": \"cpu_read_dma\",");
+            winfo("\"write\": false,");
+            winfo("\"phys_addr\": " + sprintf("%d", hp_base_address[port]) + ",");
+            winfo("\"pages\": " + hp_pages[port] + ",");
+            winfo("\"blocks\": " + hp_blocks[port] + ",");
+            winfo("\"block_size\": " + hp_blocksize[port] + ",");
+            winfo("\"block_words\": " + hp_blockwords[port] + ",");
+            winfo("\"data_bits\": " + hp_dtype_bits[port] + ",");
+            winfo("\"data_type\": {");
+            infostring = infostring + jsontype(hp_dtype[port], indent);
+            winfo("}");
+            if (i == hp_writes)
+                winfo("}");
+            else
+                winfo("},");
+        }
+        winfo("}");
+        winfo("}");
+    }
+        
+    winfo("},");
+
+    // CPU interrupts.
+    winfo("\"events\": {");
+    lsize = entries(cpu.interrupt_map);
+    for (int(i) ; i<lsize ; i++) {
+        str(id, interrupt_map[i]);
+        int(ev, interrupt_map[id]);
+        winfo("\"" + id + "\": {");
+        winfo("\"intr\": " + ev);
+        if (i == lsize - 1)
+            winfo("}");
+        else
+            winfo("},");
+    }
+    
+    winfo("},");
+    
+    int(ilen, strlen(infostring));
+    infostring = infostring + "    \"length\": " + sprintf("%8d\n", ilen);
+    
+    winfo("}");
+
+    // Write to the .info file.
+    writeln(df, infostring);
+    
+    close(df);
+    if (!filerename(info_temp_file_name, info_file_name))
+        println(".info file could not be moved from '" + info_temp_file_name +
+        "' to '" + info_file_name + "'");
+    else
+	setdirective("postProcessAppendFile", info_file_name);
+    
+    // Optionally create a compressed version of the .info file in block RAM.
+    if (!direxists("excludeinfo"))
+        if (!compressInfo(info_file_name))
+            println("embedded .info file not created");
+    
+
+    //
+    // Create interface modules for AXI_GP0 bus.
+    //
+    if (gp_rd_used[0] || gp_wr_used[0]) {
+        lsize = entries(bus_list[0]);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, bus_list[0][i]->);
+            v.genproc->(v);
+        }
+        if (gp_rd_used[0])
+            cpu_read_default(0);
+        if (gp_wr_used[0])
+            cpu_write_default(0);
+    }
+    
+    //
+    // Create memory interface modules for AXI_GP1 bus.
+    //
+    if (gp_rd_used[1] || gp_wr_used[1]) {
+        lsize = entries(bus_list[1]);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, bus_list[1][i]->);
+            v.genproc->(v);
+        }
+        if (gp_rd_used[1])
+            cpu_read_default(1);
+        if (gp_wr_used[1])
+            cpu_write_default(1);
+    }
+   
+    // Connect interrupts.
+    for (int(i) ; i<16 ; i++)
+        irqf2p[i] := cpu.interrupts[i];
+    irqf2p[16] := false;
+    irqf2p[17] := false;
+    irqf2p[18] := false;
+    irqf2p[19] := false;
+    
+    // Copy directives into a comment in the netlist file.
+    netlistcommentfromdirs();
+    
+    // Append an indented line to the information file string.
+    procedure
+    winfo (str(s)) {
+        // Adjust indenting on closing brackets or braces.
+        if (strpos(s, "}") >= 0 || strpos(s, "]") >= 0)
+            calling.indent--;
+        
+        calling.infostring = calling.infostring + lspace(calling.indent) + s + "\n";
+        
+        // Adjust indenting on opening brackets or braces.
+        if (strpos("{[", tail(s, 1)) >= 0)
+            calling.indent++;
+    }
+    
+    //
+    // Create a compressed version of the .info string and load into a
+    // registered output memory that can be read by the CPU.
+    // The data is packed into 32 bit memory words. This requires
+    // command 'gzip' to be available on the host.
+    //
+    function compressInfo (str(ifname)) {
+        var(iminit, "[]uint", deflate(calling.infostring));
+        int(words, dimension(iminit));
+        if (words > 32766) {
+            printf(".info file too large to incorporate into FPGA block RAM\n");
+            return(false);
+        }
+        
+        [
+            //
+            // Note that this interface has been kept very simple to minimise
+            // the use of logic resources. The CPU reads the output of the
+            // rmemory (block RAM) using cpu_read_value(), i.e. a queue is
+            // not used! Each CPU read triggers an address increment and a
+            // new rmemory read.
+            //
+            // Before reading the packed .info data, a write to GP0 bus
+            // address 1 must be done to initialise the read address and
+            // perform the first read. That write has zero data width.
+            // Four bytes at a time can then be read from 'address'
+            // which is incremented after each read.
+            //
+            int(addrwidth, size(words));
+            type(addrtype, "uint:"+addrwidth);
+            int(maxaddr, (1 << addrwidth) - 1);
+            rmemory(im, 1, addrtype, "uint:32", iminit);
+            static(address, addrtype);
+            value(next, "log");
+
+            infoword := rmemoryout(im, 0);
+            when (inforead)
+                assert(next <-);
+            when (inforeset) seq {
+                address <- 0;
+                assert(next <- true);
+            }
+            when (next) par {
+                rmemoryread(im, 0, address);
+                when (address != maxaddr)
+                    address++;
+            }
+        ]
+
+        return(true);
+    }
+
+    // Create an indenting space string whose length is n * 4.
+    function
+    lspace (int(n)) {
+        str(space_string, "                                                                    ");
+        return(head(space_string, n*4));
+    }
+}
+
+

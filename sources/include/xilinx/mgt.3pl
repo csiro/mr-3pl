@@ -1,0 +1,546 @@
+nosource
+
+struct(global.gt_16,
+    data,   "bits:16",  // data
+    k,      "log",      // true if top 8 bits of data are a K-character
+    contin, "log"       // this is a continuation word
+);
+
+struct(global.gt_16_e,
+    data,   "bits:16",  // data
+    k,      "log",      // true if top 8 bits of data are a K-character
+    first,  "log",      // previous word was an idle
+    error,  "log"       // disparity error or not-in-table error
+);
+
+struct(global.gt_16_ee,
+    data,       "bits:16",  // data
+    k,          "log",      // true if top 8 bits of data are a K-character
+    first,      "log",      // previous word was an idle
+    disperr,    "[2]log",   // disparity errors
+    niterr,     "[2]log"    // not-in-table errors
+);
+
+var(ruclk_map, "map");
+var(rclk_map, "map");
+
+int(comma8, K28_5);
+int(comma10m, 0b0011111010);
+int(comma10p, 0b1100000101);
+int(D21_4, 0b10010101);
+
+global module
+gt_custom_16 (
+    queue(out),
+    clock(ruclk),
+    value(rxdiag, "[5]log"),
+    value(txdiag, "[2]log")
+    <-
+    str({loc, txp_pin, txn_pin, rxp_pin, rxn_pin, clkp_pin, clkn_pin}),
+    float(freq),         // MGT base frequency
+    queue(in),
+    int(run_length),
+    value(reset, "log"),
+    int(tx_diff_ctrl, 500),
+    int(tx_preemphasis, 0),
+    value(loopback, "uint:2", 0),
+    log(los_fsm)
+) {
+
+    clock(rclk);
+    if (ruclk_map[clkp_pin] == null) {
+        var(clk_pins, "[2]str", {clkp_pin, clkn_pin});
+        //attributes(ruclk, frequency=freq);
+        clock(rclk, frequency=freq, loc=clk_pins, differential=true, ibufg=true, tnm="RCLK");
+        clock(ruclk_raw, frequency=freq, tnm="RUCLK");
+        clkdcm(clk0=ruclk_raw <- clkin=rclk, clkfb=ruclk);
+        clockbufg(ruclk <- ruclk_raw);
+        ruclk_map[clkp_pin] = &ruclk;
+        rclk_map[clkp_pin] = &rclk;
+    }
+    ruclk := ruclk_map[clkp_pin]->;
+    rclk := rclk_map[clkp_pin]->;
+
+    useclock(ruclk);
+
+    value({rxdata, txdata}, "bits:16");
+    value(rxlossofsync, "uint:2");
+    value({txcharisk, rxnotintable, rxchariscomma, rxcharisk,
+           rxdisperr, rxrundisp}, "[2]log");
+    value(falses, "[2]log", {false, false});
+    value({rxcommadet}, "log");
+    static({powerdown, rxreset, txreset}, "log");
+
+    mgt (
+        // output signals
+        rxdata=rxdata,
+        /*rxbufstatus "uint:2" */
+        rxchariscomma=rxchariscomma,
+        rxcharisk=rxcharisk,
+        rxcommadet=rxcommadet,
+        rxdisperr=rxdisperr,
+        rxlossofsync=rxlossofsync,
+        rxnotintable=rxnotintable,
+        rxrundisp=rxrundisp,
+        /*rxrealign "log" */
+        /*txbuferr "log" */
+        /*txkerr "[2]log" */
+        /*txrundisp[2]log */
+        <-
+        loc, txn_pin, txp_pin, rxn_pin, rxp_pin,
+        // attributes
+        align_comma_msb=true,
+        clk_cor_keep_idle=false,
+        clk_cor_repeat_wait=0,
+        clk_cor_seq_1_1=(0b001<<8)|comma8,
+        clk_cor_seq_1_2=(0b000<<8)|D21_4,
+        clk_cor_seq_len=2,
+        clk_correct_use=true,
+        comma_10b_mask=0b1111111111,    // match all bits
+        dec_mcomma_detect=true,
+        dec_pcomma_detect=true,
+        dec_valid_comma_only=true,
+        mcomma_10b_value=comma10m,
+        mcomma_detect=true,
+        pcomma_10b_value=comma10p,
+        pcomma_detect=true,
+        ref_clk_v_sel=1,
+        rx_data_width=2,
+        tx_data_width=2,
+        rx_decode_use=true,
+        rx_los_invalid_incr=2,  //32
+        rx_los_threshold=4,     //64
+        rx_loss_of_sync_fsm=los_fsm,
+        serdes_10b=false,
+        termination_imp=50,
+        tx_crc_force_value=0b11010110,
+        tx_diff_ctrl=tx_diff_ctrl,
+        tx_preemphasis=tx_preemphasis,
+        // input signals
+        txdata=txdata,
+        /* chbondi "[]log" */
+        /* enchansync "log" */
+        enmcommaalign=true,
+        enpcommaalign=true,
+        loopback=loopback,
+        powerdown=powerdown,
+        /* refclk */
+        /* refclk2 */
+        brefclk=rclk,
+        /* brefclk2 */
+        refclksel=false,
+        rxpolarity=false,
+        rxreset=rxreset,
+        rxusrclk=ruclk,
+        rxusrclk2=ruclk,
+        txbypass8b10b=falses,  // enable 8b/10b encoding
+        txchardispmode=falses, // | running disparity
+        txchardispval=falses,  // |
+        txcharisk=txcharisk,
+        /* txforcecrcerr "log" */
+        txinhibit=false,
+        txpolarity=false,
+        txreset=txreset,
+        txusrclk=ruclk,
+        txusrclk2=ruclk
+    );
+
+    if (matched(out)) {
+        static(initialised, "log");
+        static(errors, "log");
+        if (los_fsm)
+            value(rxok, "log", initialised && rxlossofsync == 0);
+        else
+            value(rxok, "log", initialised);
+        value(is_idle, "log", rxchariscomma[1]);
+        value(derror, "log", rxdisperr[0] || rxdisperr[1] || rxnotintable[0] || rxnotintable[1]);
+        
+        static(was_idle, "log");
+        was_idle <- is_idle;
+
+        if (matched(rxdiag)) {
+            rxdiag[0] := rxcommadet;
+            rxdiag[1] := rxdisperr[0] || rxnotintable[0];
+            rxdiag[2] := rxdisperr[1] || rxnotintable[1];
+            rxdiag[3] := rxok;
+            rxdiag[4] := is_idle;
+        }
+
+        when (rxok && !is_idle) sync {
+            if (type(out) == gt_16_ee) {
+                out.data <<- rxdata;
+                out.k <<- rxcharisk[1];
+                out.first <<- was_idle;
+                out.disperr <<- rxdisperr;
+                out.niterr <<- rxnotintable;
+            } else if (type(out) == gt_16_e) {
+                out.data <<- rxdata;
+                out.k <<- rxcharisk[1];
+                out.first <<- was_idle;
+                out.error <<- derror;
+            } else if (type(out) == ds16) {
+                out.data <<- rxdata;
+                out.k <<- rxcharisk[1];
+            } else
+                texit("gt_custom_16(): output queue not allowed type");
+        }
+        
+        if (matched(reset)) {
+            when (to_pulse(reset))
+                initialised <- false;
+        }
+        
+        when (!initialised) seq {
+            seq do {
+                wait(1e-2);
+                powerdown <- true;
+                wait(1e-3);
+                powerdown <- false;
+                wait(1e-3);
+                rxreset <- true;
+                txreset <- true;
+                rxreset <- false;
+                txreset <- false;
+                wait(1e-2);         // wait 10mS to lock in
+                errors <- false;
+                seq {
+                    wait(2.0);      // watch for 2S for errors
+                } unless (derror) {errors <- true;}
+            } while (errors);       // if errors, retry
+            initialised <- true;
+        }
+    }
+            
+    if (matched(in)) {
+        value(idle, "log");
+        
+        if (run_length != 0) {
+            static(block_count, "uint:"+size(run_length), run_length);
+            value(block_count_eq_0, "log", block_count == 0);
+            if (type(in) == gt_16)
+                idle := <in && !?in.contin && block_count_eq_0 || !<in;
+            else if (type(in) == ds16)
+                idle := block_count_eq_0 || !<in;
+            else
+                texit("gt_custom_16(): input queue not allowed type");
+
+            txdata := idle ? cast((comma8 << 8) | D21_4, "bits:16") : ?in.data;
+            txcharisk[1] := idle ? true : ?in.k;
+            txcharisk[0] := false;
+
+            when (!idle)
+                null <<- in;
+            when (idle)
+                block_count <- run_length;
+            when (!idle && !block_count_eq_0)
+                block_count--;
+        } else {
+            idle := !<in;
+
+            txdata := idle ? cast((comma8 << 8) | D21_4, "bits:16") : ?in.data;
+            txcharisk[1] := idle ? true : ?in.k;
+            txcharisk[0] := false;
+
+            when (!idle)
+                null <<- in;
+        }
+
+        if (matched(txdiag)) {
+            txdiag[0] := !idle && ?in.k;
+            txdiag[1] := idle;
+        }
+    } else {
+        txdata := cast((comma8 << 8) | D21_4, "bits:16");
+        txcharisk[1] := true;
+        txcharisk[0] := false;
+    }
+
+    useclock();
+}
+
+//
+// NOTE:
+// Explicit connections to rxp, rxn, txp and txn are not strictly required
+// but produce warning messages from ngdbuild if omitted. For later GTPs these
+// are not needed.
+//
+global procedure
+mgt (
+    // outputs
+    value(rxdata, "bits:16"),
+    value(rxchariscomma, "[2]log"),
+    value(rxcharisk, "[2]log"),
+    value(rxcommadet, "log"),
+    value(rxlossofsync, "uint:2"),
+    value(rxnotintable, "[2]log"),
+    value(rxbufstatus, "[2]log"),
+    value(rxcheckingcrc, "log"),
+    value(rxclkcorcnt, "uint:3"),
+    value(rxcrcerr, "log"),
+    value(rxdisperr, "[2]log"),
+    value(rxrealign, "log"),
+    value(rxrecclk, "log"),
+    value(rxrundisp, "[2]log"),
+    value(txbuferr, "log"),
+    value(txkerr, "[2]log"),
+    value(txrundisp, "[2]log"),
+    value(chbondo, "[4]log"),
+    value(chbonddone, "log")
+    <-
+    // attributes
+    str(loc),
+    str(txn_pin),
+    str(txp_pin),
+    str(rxn_pin),
+    str(rxp_pin),
+    log(align_comma_msb),
+    int(chan_bond_limit),
+    str(chan_bond_mode),
+    int(chan_bond_offset),
+    log(chan_bond_one_shot),
+    int(chan_bond_seq_1_1),
+    int(chan_bond_seq_1_2),
+    int(chan_bond_seq_1_3),
+    int(chan_bond_seq_1_4),
+    int(chan_bond_seq_2_1),
+    int(chan_bond_seq_2_2),
+    int(chan_bond_seq_2_3),
+    int(chan_bond_seq_2_4),
+    log(chan_bond_seq_2_use),
+    int(chan_bond_seq_len),
+    int(chan_bond_wait),
+    log(clk_cor_insert_idle_flag),
+    log(clk_cor_keep_idle),
+    int(clk_cor_repeat_wait),
+    int(clk_cor_seq_1_1),
+    int(clk_cor_seq_1_2),
+    int(clk_cor_seq_1_3),
+    int(clk_cor_seq_1_4),
+    int(clk_cor_seq_2_1),
+    int(clk_cor_seq_2_2),
+    int(clk_cor_seq_2_3),
+    int(clk_cor_seq_2_4),
+    log(clk_cor_seq_2_use),
+    int(clk_cor_seq_len),
+    log(clk_correct_use),
+    int(comma_10b_mask),
+    int(crc_end_of_pkt),
+    str(crc_format),
+    int(crc_start_of_pkt),
+    log(dec_mcomma_detect),
+    log(dec_pcomma_detect),
+    log(dec_valid_comma_only),
+    int(mcomma_10b_value),
+    log(mcomma_detect),
+    int(pcomma_10b_value),
+    log(pcomma_detect),
+    int(ref_clk_v_sel),
+    log(rx_crc_use),
+    int(rx_data_width),
+    log(rx_decode_use),
+    int(rx_los_invalid_incr),
+    int(rx_los_threshold),
+    log(rx_loss_of_sync_fsm),
+    log(serdes_10b),
+    int(termination_imp),
+    int(tx_crc_force_value),
+    log(tx_crc_use),
+    int(tx_data_width),
+    int(tx_diff_ctrl),
+    int(tx_preemphasis),
+    // Inputs
+    value(chbondi, "[4]log"),
+    value(enchansync, "log"),
+    value(enmcommaalign, "log"),
+    value(enpcommaalign, "log"),
+    value(loopback, "uint:2"),
+    value(powerdown, "log"),
+    clock(refclk),
+    clock(refclk2),
+    clock(brefclk),
+    clock(brefclk2),
+    value(refclksel, "log"),
+    value(rxpolarity, "log"),
+    value(rxreset, "log"),
+    clock(rxusrclk),
+    clock(rxusrclk2),
+    value(txbypass8b10b, "[2]log"),
+    value(txchardispmode, "[2]log"),
+    value(txchardispval, "[2]log"),
+    value(txcharisk, "[2]log"),
+    value(txdata, "bits:16"),
+    value(txforcecrcerr, "log"),
+    value(txinhibit, "log"),
+    value(txpolarity, "log"),
+    value(txreset, "log"),
+    clock(txusrclk),
+    clock(txusrclk2)
+
+) {
+    int(arrayformat, 1);
+    log(rx_buffer_use, true);
+    log(tx_buffer_use, true);
+
+    value({txn, txp, rxn, rxp}, "bits:1");
+    
+    //IPAD(rxn <- rxn_pin);
+    //IPAD(rxp <- rxp_pin);
+    //OPAD(txn, txn_pin);
+    //OPAD(txp, txp_pin);
+        
+    /*
+    ext_ports.add(rxn);
+    ext_port_dirs.add(TDEVPtype.INPUT);
+    rxn.setPort(null, TDEVPtype.INPUT);
+
+    ext_ports.add(rxp);
+    ext_port_dirs.add(TDEVPtype.INPUT);
+    rxp.setPort(null, TDEVPtype.INPUT);
+
+    ext_ports.add(txn);
+    ext_port_dirs.add(TDEVPtype.OUTPUT);
+    txn.setPort(null, TDEVPtype.OUTPUT);
+
+    ext_ports.add(txp);
+    ext_port_dirs.add(TDEVPtype.OUTPUT);
+    txp.setPort(null, TDEVPtype.OUTPUT);
+    */
+
+    
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "mgt"+idn++);
+    element("GT_CUSTOM", id);
+    
+    external(id + "RXN", rxn, "in");
+    external(id + "RXP", rxp, "in");
+    
+    elementclockinput(id, "REFCLK",    nullarg(refclk)   );
+    elementclockinput(id, "REFCLK2",   nullarg(refclk2)  );
+    elementclockinput(id, "BREFCLK",   nullarg(brefclk)  );
+    elementclockinput(id, "BREFCLK2",  nullarg(brefclk2) );
+    elementclockinput(id, "TXUSRCLK",  nullarg(txusrclk) );
+    elementclockinput(id, "TXUSRCLK2", nullarg(txusrclk2));
+    
+    elementinput(id, "TXDATA",         nullarg(txdata),          arrayformat);
+    elementinput(id, "CHBONDI",        nullarg(chbondi),         arrayformat);
+    elementinput(id, "ENCHANSYNC",     nullarg(enchansync)                  );
+    elementinput(id, "ENMCOMMAALIGN",  nullarg(enmcommaalign)               );
+    elementinput(id, "ENPCOMMAALIGN",  nullarg(enpcommaalign)               );
+    elementinput(id, "LOOPBACK",       nullarg(loopback),        arrayformat);
+    elementinput(id, "POWERDOWN",      nullarg(powerdown)                   );
+    elementinput(id, "REFCLKSEL",      nullarg(refclksel)                   );
+    elementinput(id, "RXPOLARITY",     nullarg(rxpolarity)                  );
+    elementinput(id, "RXRESET",        nullarg(rxreset)                     );
+    elementinput(id, "RXUSRCLK",       nullarg(rxusrclk)                    );
+    elementinput(id, "RXUSRCLK2",      nullarg(rxusrclk2)                   );
+    elementinput(id, "TXBYPASS8B10B",  nullarg(txbypass8b10b),   arrayformat);
+    elementinput(id, "TXCHARDISPMODE", nullarg(txchardispmode),  arrayformat);
+    elementinput(id, "TXCHARDISPVAL",  nullarg(txchardispval),   arrayformat);
+    elementinput(id, "TXCHARISK",      nullarg(txcharisk),       arrayformat);
+    elementinput(id, "TXFORCECRCERR",  nullarg(txforcecrcerr)               );
+    elementinput(id, "TXINHIBIT",      nullarg(txinhibit)                   );
+    elementinput(id, "TXPOLARITY",     nullarg(txpolarity)                  );
+    elementinput(id, "TXRESET",        nullarg(txreset)                     );
+    elementinput(id, "RXN",            rxn                                  );
+    elementinput(id, "RXP",            rxp                                  );
+
+    elementoutput(nullarg(rxdata)        <- id, "RXDATA"       , arrayformat);
+    elementoutput(nullarg(chbonddone)    <- id, "CHBONDDONE"                );
+    elementoutput(nullarg(chbondo)       <- id, "CHBONDO"      , arrayformat);
+    elementoutput(nullarg(rxbufstatus)   <- id, "RXBUFSTATUS"  , arrayformat);
+    elementoutput(nullarg(rxchariscomma) <- id, "RXCHARISCOMMA", arrayformat);
+    elementoutput(nullarg(rxcharisk)     <- id, "RXCHARISK"    , arrayformat);
+    elementoutput(nullarg(rxcheckingcrc) <- id, "RXCHECKINGCRC"             );
+    elementoutput(nullarg(rxclkcorcnt)   <- id, "RXCLKCORCNT"  , arrayformat);
+    elementoutput(nullarg(rxcommadet)    <- id, "RXCOMMADET"                );
+    elementoutput(nullarg(rxcrcerr)      <- id, "RXCRCERR"                  );
+    elementoutput(nullarg(rxdisperr)     <- id, "RXDISPERR"    , arrayformat);
+    elementoutput(nullarg(rxlossofsync)  <- id, "RXLOSSOFSYNC" , arrayformat);
+    elementoutput(nullarg(rxnotintable)  <- id, "RXNOTINTABLE" , arrayformat);
+    elementoutput(nullarg(rxrealign)     <- id, "RXREALIGN"                 );
+    elementoutput(nullarg(rxrecclk)      <- id, "RXRECCLK"                  );
+    elementoutput(nullarg(rxrundisp)     <- id, "RXRUNDISP"    , arrayformat);
+    elementoutput(nullarg(txbuferr)      <- id, "TXBUFERR"                  );
+    elementoutput(nullarg(txkerr)        <- id, "TXKERR"       , arrayformat);
+    elementoutput(nullarg(txrundisp)     <- id, "TXRUNDISP"    , arrayformat);
+    elementoutput(txn                    <- id, "TXN"                       );
+    elementoutput(txp                    <- id, "TXP"                       );
+
+    external(id + "TXN", txn, "out");
+    external(id + "TXP", txp, "out");
+    
+    elementLogProperty(id, "ALIGN_COMMA_MSB", nullarg(align_comma_msb));
+    elementIntProperty(id, "CHAN_BOND_LIMIT", nullarg(chan_bond_limit), 1, 31);
+    elementStrProperty(id, "CHAN_BOND_MODE", nullarg(chan_bond_mode), "OFF", "MASTER", "SLAVE_1_HOP", "SLAVE_2_HOPS");
+    elementIntProperty(id, "CHAN_BOND_OFFSET", nullarg(chan_bond_offset), 0, 15);
+    elementLogProperty(id, "CHAN_BOND_ONE_SHOT", nullarg(chan_bond_one_shot));
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_1", nullarg(chan_bond_seq_1_1), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_2", nullarg(chan_bond_seq_1_2), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_3", nullarg(chan_bond_seq_1_3), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_4", nullarg(chan_bond_seq_1_4), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_1", nullarg(chan_bond_seq_2_1), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_2", nullarg(chan_bond_seq_2_2), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_3", nullarg(chan_bond_seq_2_3), 0, 0x7ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_4", nullarg(chan_bond_seq_2_4), 0, 0x7ff, 11);
+    elementLogProperty(id, "CHAN_BOND_SEQ_2_USE", nullarg(chan_bond_seq_2_use));
+    elementIntProperty(id, "CHAN_BOND_SEQ_LEN", nullarg(chan_bond_seq_len), 1, 4);
+    elementIntProperty(id, "CHAN_BOND_WAIT", nullarg(chan_bond_wait), 1, 15);
+    elementLogProperty(id, "CLK_COR_INSERT_IDLE_FLAG", nullarg(clk_cor_insert_idle_flag));
+    elementLogProperty(id, "CLK_COR_KEEP_IDLE", nullarg(clk_cor_keep_idle));
+    elementIntProperty(id, "CLK_COR_REPEAT_WAIT", nullarg(clk_cor_repeat_wait), 0, 31);
+    elementBinProperty(id, "CLK_COR_SEQ_1_1", nullarg(clk_cor_seq_1_1), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_2", nullarg(clk_cor_seq_1_2), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_3", nullarg(clk_cor_seq_1_3), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_4", nullarg(clk_cor_seq_1_4), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_1", nullarg(clk_cor_seq_2_1), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_2", nullarg(clk_cor_seq_2_2), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_3", nullarg(clk_cor_seq_2_3), 0, 0x7ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_4", nullarg(clk_cor_seq_2_4), 0, 0x7ff, 11);
+    elementLogProperty(id, "CLK_COR_SEQ_2_USE", nullarg(clk_cor_seq_2_use));
+    elementIntProperty(id, "CLK_COR_SEQ_LEN", nullarg(clk_cor_seq_len), 1, 4);
+    elementLogProperty(id, "CLK_CORRECT_USE", nullarg(clk_correct_use));
+    elementBinProperty(id, "COMMA_10B_MASK", nullarg(comma_10b_mask), 0, 0x3ff, 10);
+    elementBinProperty(id, "CRC_END_OF_PKT", nullarg(crc_end_of_pkt), 0, 255, 8);
+    elementStrProperty(id, "CRC_FORMAT", nullarg(crc_format), "ETHERNET", "INFINIBAND", "FIBRE_CHAN");
+    elementBinProperty(id, "CRC_START_OF_PKT", nullarg(crc_start_of_pkt), 0, 255, 8);
+    elementLogProperty(id, "DEC_MCOMMA_DETECT", nullarg(dec_mcomma_detect));
+    elementLogProperty(id, "DEC_PCOMMA_DETECT", nullarg(dec_pcomma_detect));
+    elementLogProperty(id, "DEC_VALID_COMMA_ONLY", nullarg(dec_valid_comma_only));
+    elementBinProperty(id, "MCOMMA_10B_VALUE", nullarg(mcomma_10b_value), 0, 0x3ff, 10);
+    elementLogProperty(id, "MCOMMA_DETECT", nullarg(mcomma_detect));
+    elementBinProperty(id, "PCOMMA_10B_VALUE", nullarg(pcomma_10b_value), 0, 0x3ff, 10);
+    elementLogProperty(id, "PCOMMA_DETECT", nullarg(pcomma_detect));
+    elementIntProperty(id, "REF_CLK_V_SEL", nullarg(ref_clk_v_sel), 0, 1);
+    elementLogProperty(id, "RX_BUFFER_USE", rx_buffer_use); // fixed, not a parameter
+    elementLogProperty(id, "RX_CRC_USE", nullarg(rx_crc_use));   
+    if (matched(rx_data_width) && (rx_data_width == 3))
+        texit("rx_data_width must be 1, 2 or 4, not 3");
+    elementIntProperty(id, "RX_DATA_WIDTH", nullarg(rx_data_width), 1, 4);
+    elementLogProperty(id, "RX_DECODE_USE", nullarg(rx_decode_use));
+    // Need to implement the following somehow -
+    //if (matched(rx_los_invalid_incr) && (Long.bitCount(rx_los_invalid_incr) != 1))
+    //    texit("rx_los_invalid_incr must be a power of 2, not " + rx_los_invalid_incr);
+    elementIntProperty(id, "RX_LOS_INVALID_INCR", nullarg(rx_los_invalid_incr), 1, 128);
+    //if (matched(rx_los_threshold) && (Long.bitCount(rx_los_threshold) != 1))
+    //      texit("rx_los_threshold must be a power of 2, not " + rx_los_threshold);
+    elementIntProperty(id, "RX_LOS_THRESHOLD", nullarg(rx_los_threshold), 2, 512);
+    elementLogProperty(id, "RX_LOSS_OF_SYNC_FSM", nullarg(rx_loss_of_sync_fsm));
+    elementLogProperty(id, "SERDES_10B", nullarg(serdes_10b));
+    if (matched(termination_imp) && (termination_imp != 50) && (termination_imp != 75))
+        texit("termination_imp must be 50 or 75, not " + termination_imp);
+    elementIntProperty(id, "TERMINATION_IMP", nullarg(termination_imp), 50, 75);
+    elementLogProperty(id, "TX_BUFFER_USE", tx_buffer_use); // fixed, not a parameter
+    elementBinProperty(id, "TX_CRC_FORCE_VALUE", nullarg(tx_crc_force_value), 0, 255, 8);
+    if (matched(tx_diff_ctrl) && ((tx_diff_ctrl % 100) != 0))
+        texit("tx_diff_ctrl must be multiple of 100, not " + tx_diff_ctrl);
+    elementLogProperty(id, "TX_CRC_USE", nullarg(tx_crc_use));
+    if (matched(tx_data_width) && (tx_data_width == 3))
+        texit("tx_data_width must be 1, 2 or 4, not 3");
+    elementIntProperty(id, "TX_DATA_WIDTH", nullarg(tx_data_width), 1, 4);
+    elementIntProperty(id, "TX_DIFF_CTRL", nullarg(tx_diff_ctrl), 400, 800);
+    elementIntProperty(id, "TX_PREEMPHASIS", nullarg(tx_preemphasis), 0, 3);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+    
+    elementend(id);
+}

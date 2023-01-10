@@ -1,0 +1,359 @@
+Directives - initial values.
+----------------------------
+
+	ALU              = false
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	compileOnly      = false
+	compilerMakeDate = 2022-08-24 14:24:48 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test
+	date             = 2022-10-05 11:32:30 +1100
+	designName       = prog
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	unassOut         = fatal
+	version          = 11.7.0M (devel svn 10083:10129M, dun202)
+
+
+Memory requested 746061824 bytes
+3PL version 11.7.0M (devel svn 10083:10129M, dun202).
+Source file /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.3pl
+command line options - rntfs
+2022-10-05 11:32:30 +1100
+
+Parsing source.
+---------------
+
+
+    source files
+    ------------
+
+       prog.3pl
+        FMOD1    /Users/dun202/src/mine/3pl/sources/include/boards/avnet   microzed_7010.3pl
+            FMOD2    /Users/dun202/src/mine/3pl/sources/include/xilinx   xc7.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   common.3pl
+                FMOD3    /Users/dun202/src/mine/3pl/sources/include/xilinx   postprocess.3pl
+                FMOD4    /Users/dun202/src/mine/3pl/sources/include   stdlib.3pl
+                FMOD5    /Users/dun202/src/mine/3pl/sources/include/xilinx   clocks.3pl
+                FMOD6    /Users/dun202/src/mine/3pl/sources/include/xilinx   io.3pl
+                FMOD7    /Users/dun202/src/mine/3pl/sources/include/xilinx   dsp48.3pl
+                FMOD8    /Users/dun202/src/mine/3pl/sources/include/xilinx   gtp_dual.3pl
+            FMOD9    /Users/dun202/src/mine/3pl/sources/include/xilinx   zynq_axi.3pl
+                FMOD10    /Users/dun202/src/mine/3pl/sources/include   jsontype.3pl
+                SRC      /Users/dun202/src/mine/3pl/sources/include/xilinx   cpu.3pl
+
+
+Immediate execution.
+--------------------
+
+
+Executing leader modules.
+-------------------------
+
+	module "gtp_dual" order 0
+	-------------------------
+
+	module "assign attribute procedure" order 100
+	---------------------------------------------
+
+
+
+
+Executing main module.
+----------------------
+
+
+
+
+Executing trailer modules.
+--------------------------
+
+	module "zynq processor" order 0
+	-------------------------------
+
+	zynq_axi.3pl:869:38:  - WARNING
+	'par' block at zynq_axi.3pl:869:38:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:932:13:  - WARNING
+	'par' block at zynq_axi.3pl:932:13:  has mixture of statements with and without queue accesses
+
+	class CPU_API order 1
+	---------------------
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1915:9:  - WARNING
+	'par' block at zynq_axi.3pl:1915:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1928:33:  - WARNING
+	'par' block at zynq_axi.3pl:1928:33:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1915:9:  - WARNING
+	'par' block at zynq_axi.3pl:1915:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1928:33:  - WARNING
+	'par' block at zynq_axi.3pl:1928:33:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1915:9:  - WARNING
+	'par' block at zynq_axi.3pl:1915:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1915:9:  - WARNING
+	'par' block at zynq_axi.3pl:1915:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1928:33:  - WARNING
+	'par' block at zynq_axi.3pl:1928:33:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1724:9:  - WARNING
+	'par' block at zynq_axi.3pl:1724:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1915:9:  - WARNING
+	'par' block at zynq_axi.3pl:1915:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1928:33:  - WARNING
+	'par' block at zynq_axi.3pl:1928:33:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1759:9:  - WARNING
+	'par' block at zynq_axi.3pl:1759:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1959:9:  - WARNING
+	'par' block at zynq_axi.3pl:1959:9:  has mixture of statements with and without queue accesses
+
+	module "generate constraints" order 100
+	---------------------------------------
+
+
+
+
+Creating target-mode variable logic.
+------------------------------------
+
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_1.if_1.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_2.if_2.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_3.if_3.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_4.if_4.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_6.if_6.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_7.if_7.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_8.if_8.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_9.if_9.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_11.if_11.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_12.if_12.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_13.if_13.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_14.if_14.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_15.if_15.forvar_3.queuearray_16.if_16.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_15.if_15.forvar_3.queuearray_17.if_17.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_15.if_15.forvar_3.queuearray_18.if_18.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_15.if_15.forvar_3.queuearray_19.if_19.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_20.if_20.forvar_4.queuearray_21.if_21.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_20.if_20.forvar_4.queuearray_22.if_22.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_20.if_20.forvar_4.queuearray_23.if_23.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_20.if_20.forvar_4.queuearray_24.if_24.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_25.if_25.forvar_5.queuearray_26.if_26.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_25.if_25.forvar_5.queuearray_27.if_27.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_25.if_25.forvar_5.queuearray_28.if_28.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.queuearray_25.if_25.forvar_5.queuearray_29.if_29.q' unused - deleted
+	static variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.read_0.case_0.read_value_0.access' unused - deleted
+	static variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.write_0.if_30.write_static_0.out' unused - deleted
+	static variable 'prog.read_1.access' unused - deleted
+	static variable 'prog.read_1.case_7.read_queue_0.count' unused - deleted
+	queue variable 'prog.read_1.case_7.read_queue_0.out' unused - deleted
+	static variable 'prog.read_1.case_7.read_queue_0.access' unused - deleted
+	static variable 'prog.read_2.access' unused - deleted
+	static variable 'prog.read_2.case_12.read_value_1.access' unused - deleted
+	static variable 'prog.read_3.access' unused - deleted
+	static variable 'prog.read_3.case_14.read_value_2.access' unused - deleted
+	static variable 'prog.read_4.access' unused - deleted
+	static variable 'prog.read_4.case_16.read_value_3.access' unused - deleted
+	static variable 'prog.write_2.if_311.write_static_1.access' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_170.read_value_gen_0.read_5.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_172.read_queue_gen_0.read_6.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_172.read_queue_gen_0.if_343.read_7.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_173.write_queue_gen_0.if_354.read_8.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_174.read_value_gen_1.read_9.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_175.read_value_gen_2.read_10.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_176.read_value_gen_3.read_11.out' unused - deleted
+
+Queue variables with multiple sink modules
+------------------------------------------
+
+
+
+
+Clock variables driving clocked logic.
+-------------------------------------
+
+	glob:c100
+
+Clock variables not driving clocked logic.
+------------------------------------------
+
+	FMOD9/zynq_axi:c100_in
+
+
+Directives - final values.
+-------------------------
+
+	ALU                   = false
+	FIFO                  = false
+	OS                    = mac os x
+	QUEUEREG              = false
+	ZYNQ                  = true
+	arch                  = x86_64
+	compileOnly           = false
+	compilerMakeDate      = 2022-08-24 14:24:48 +1000
+	continuous            = false
+	currentDirectory      = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test
+	date                  = 2022-10-05 11:32:30 +1100
+	designName            = prog
+	family                = XC7
+	filePath              = false
+	forceExec             = true
+	gatesNotLuts          = false
+	intTruncWarning       = false
+	intermediateOnly      = false
+	listNets              = true
+	listTDEs              = true
+	listTDEsSel           = 0
+	locations             = false
+	netFile               = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.net
+	netlistDisplay        = false
+	netlistFile           = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.edn
+	optimiseConnect       = true
+	outputDirectory       = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/
+	parentDirectory       = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/
+	part                  = xc7z010clg400-1
+	postProcessAppendFile = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.info
+	postProcessCompress   = true
+	postProcessTool       = vivado
+	reportFile            = /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.rpt
+	rptToFile             = true
+	sigList               = false
+	skipPostProc          = true
+	sourceFile            = prog.3pl
+	srlAddrWidth          = 5
+	tlimit                = 256
+	unassOut              = fatal
+	version               = 11.7.0M (devel svn 10083:10129M, dun202)
+
+
+Optimising intermediate code.
+-----------------------------
+
+	optimisation passes: 8
+	Platform-specific optimisation pass.
+	Intermediate code cleanup optimisation.
+	cleanup optimisation passes: 1
+
+	clock variables - 
+
+		clock variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.clockbufg_0.in' is linked to clock variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.c100_in'
+		clock variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.clockbufg_0.out' is linked to clock variable 'glob.c100'
+		clock variable 'prog.FMOD1/microzed_7010.FMOD9/zynq_axi.bus_clk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_0.zynq_ps_0.gp_aclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_0.zynq_ps_0.hp_aclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_170.read_value_gen_0.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_171.write_static_gen_0.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_174.read_value_gen_1.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_175.read_value_gen_2.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_176.read_value_gen_3.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_1.create_bus_interfaces_0.if_335.forvar_199.for_177.write_static_gen_1.arg_domain' is linked to clock variable 'glob.c100'
+
+Printing TDE list to .icl file
+------------------------------
+
+Generating EDIF code.
+---------------------
+
+	generating netlist from intermediate code
+	intermediate list elements - 2398
+	convert intermediate list to netlist
+		converting logic
+		converting static and queue variables
+	Elements before optimisation - 3965
+	Net IDs before optimisation - 12269
+	Nets before optimisation - 6321
+	checking net and element validity before optimisation
+	optimising netlist gates
+		optimisation passes: 5
+	checking net and element validity after optimisation
+	Elements after optimisation - 3204
+	Net IDs after optimisation - 12941
+	Nets after optimisation - 5907
+	resolving net identifiers
+	writing netlist to .edn file
+	writing vivado constraints file /Users/dun202/src/mine/3PL/test/11.6.0/zynq_queue_test/prog.xdc
+	writing list of equivalent nets
+
+	cell occurrences -
+
+		AND5               15
+		AND3               25
+		RAMB36              4
+		MUXCY             304
+		AND4               17
+		LUT2              103
+		AND2              698
+		LUT6               82
+		BUFG                1
+		XORCY             189
+		OR2               305
+		RAM32X1D           53
+		INV               425
+		OR4                17
+		FDSE                3
+		SRLC32E            24
+		OR3                28
+		FDRE              820
+		OR5                 1
+		PS7                 1
+		VCC                 1
+		MUXF5               2
+		GND                 1
+		XOR2               85
+
+Parse time                                  0.635s
+Immediate execution time                    0.424s
+Intermediate code list optimisation time    0.097s
+Netlist generation time                     0.167s
+Netlist optimisation time                   0.080s
+Netlist output time                         0.161s
+Total elapsed time                          1.565s
+Memory usage: max 746061824 total 324534272 free 209296184
+-s option - skipping post-processing

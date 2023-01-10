@@ -1,0 +1,10 @@
+GND:
+        GND 
+PORT_P89:
+        PORT_P89 
+VCC:
+        VCC startex 
+glob_c32:
+        glob.c32 
+prog_FMOD1_dummy_c32_in:
+        prog.FMOD1/dummy.c32_in 

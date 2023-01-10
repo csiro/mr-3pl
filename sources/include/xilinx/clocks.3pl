@@ -1,0 +1,1143 @@
+nosource
+
+
+
+/*
+ * A table of some shared elements created in clocks.3pl.
+ *
+               xc95 xc2c xc2s xc3s xc6s xcv xc2v xc2vp xc4v xc5v xc6v xc7a xc7k xc7v xc7z
+
+DLL                        Y             Y
+DLLE                       Y             Y
+DLLHF                      Y             Y
+DCM                             Y             Y    Y
+DCM_ADV                                                  Y    Y
+DCM_SP                               Y
+MMCM                                                               Y    
+MMCME2_ADV                                                              Y    Y    Y   Y
+PLL                                                           Y
+PLLE2_ADV                                                               Y    Y    Y   Y
+BUFG             Y    Y    Y    Y    Y   Y    Y    Y     Y    Y    Y    Y    Y    Y   Y
+BUFGCE                          Y    Y        Y    Y     Y    Y    Y    Y    Y    Y   Y
+BUFGMUX                         Y    Y        Y    Y     Y
+BUFGCTRL                                                 Y    Y    Y
+BUFGMUX_CTRL                                                  Y    Y    Y    Y    Y   Y
+BUFR                                                     Y    Y    Y    Y    Y    Y   Y
+BUFIO                                                    Y    Y    Y    Y    Y    Y   Y
+*/
+
+
+// These digital locked loops are used by Spartan2, Virtex and VirtexE.
+
+// Construct an extended delay-locked loop.
+// For attributes and signals see Xilinx documentation.
+global procedure
+clkdll (
+    clock({clk0, clk90, clk180, clk270, clk2x, clkdv}),
+    value(locked, "log")
+    <-
+    str(loc), log({duty_cycle_correction, startup_wait}),
+    int(clkdv_divide),
+    clock({clkin, clkfb}), value(reset, "log", false)
+) {
+    elementCheck("DLL", "clkdll");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+     str(id, "dll"+idn++);
+    element("DLL", id);
+
+    elementinput(id, "CLKIN", nullarg(clkin));
+    elementinput(id, "CLKFB", nullarg(clkfb));
+    elementinput(id, "RST",   reset         );
+    
+    elementoutput(nullarg(clk0)     <- id, "CLK0"    );
+    elementoutput(nullarg(clk90)    <- id, "CLK90"   );
+    elementoutput(nullarg(clk180)   <- id, "CLK180"  );
+    elementoutput(nullarg(clk270)   <- id, "CLK270"  );
+    elementoutput(nullarg(clk2x)    <- id, "CLK2X"   );
+    elementoutput(nullarg(clkdv)    <- id, "CLKDV"   );
+    elementoutput(nullarg(locked)   <- id, "LOCKED"  );   
+
+    elementLogProperty(id, "DUTY_CYCLE_CORRECTION", nullarg(duty_cycle_correction));
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));
+    if (matched(clkdv_divide)) elementIntProperty(id, "CLKDV_DIVIDE", nullarg(clkdv_divide), 1, 32);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("clkdll() - input clock has no (or 0) frequency attribute");
+    if (matched(clk0)) attributes(clk0, frequency=fin);
+    if (matched(clk90)) attributes(clk90, frequency=fin);
+    if (matched(clk180)) attributes(clk180, frequency=fin);
+    if (matched(clk270)) attributes(clk270, frequency=fin);
+    if (matched(clk2x)) attributes(clk2x, frequency=2.0*fin);
+    if (matched(clkdv)) attributes(clkdv, frequency=fin/clkdv_divide);
+
+    elementend(id);
+}
+
+// Construct an extended delay-locked loop.
+// For attributes and signals see Xilinx documentation.
+global procedure
+clkdlle (
+    clock({clk0, clk90, clk180, clk270, clk2x, clk2x180, clkdv}),
+    value(locked, "log")
+    <-
+    str(loc), log({duty_cycle_correction, startup_wait}),
+    int(clkdv_divide),
+    clock({clkin, clkfb}), value(reset, "log", false)
+) {
+    elementCheck("DLLE", "clkdlle");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+     str(id, "dlle"+idn++);
+    element("DLLE", id);
+
+    elementinput(id, "CLKIN", nullarg(clkin));
+    elementinput(id, "CLKFB", nullarg(clkfb));
+    elementinput(id, "RST",   reset         );
+    
+    elementoutput(nullarg(clk0)     <- id, "CLK0"    );
+    elementoutput(nullarg(clk90)    <- id, "CLK90"   );
+    elementoutput(nullarg(clk180)   <- id, "CLK180"  );
+    elementoutput(nullarg(clk270)   <- id, "CLK270"  );
+    elementoutput(nullarg(clk2x)    <- id, "CLK2X"   );
+    elementoutput(nullarg(clk2x180) <- id, "CLK2X180");
+    elementoutput(nullarg(clkdv)    <- id, "CLKDV"   );
+    elementoutput(nullarg(locked)   <- id, "LOCKED"  );
+    elementLogProperty(id, "DUTY_CYCLE_CORRECTION", nullarg(duty_cycle_correction));
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));
+    if (matched(clkdv_divide)) elementIntProperty(id, "CLKDV_DIVIDE", nullarg(clkdv_divide), 1, 32);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("clkdlle() - input clock has no (or 0) frequency attribute");
+    if (matched(clk0)) attributes(clk0, frequency=fin);
+    if (matched(clk90)) attributes(clk90, frequency=fin);
+    if (matched(clk180)) attributes(clk180, frequency=fin);
+    if (matched(clk270)) attributes(clk270, frequency=fin);
+    if (matched(clk2x)) attributes(clk2x, frequency=2.0*fin);
+    if (matched(clk2x180)) attributes(clk2x, frequency=2.0*fin);
+    if (matched(clkdv)) attributes(clkdv, frequency=fin/clkdv_divide);
+    
+    elementend(id);
+}
+
+// Construct a high frequency delay-locked loop.
+// For attributes and signals see Xilinx documentation.
+global procedure
+clkdllhf (
+    clock({clk0, clk180, clkdv}),
+    value(locked, "log")
+    <-
+    str(loc), log({duty_cycle_correction, startup_wait}),
+    int(clkdv_divide),
+    clock({clkin, clkfb}), value(reset, "log", false)
+) {
+    elementCheck("DLLHF", "clkdllhf");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+     str(id, "dllhf"+idn++);
+    element("DLLHF", id);
+
+    elementinput(id, "CLKIN", nullarg(clkin));
+    elementinput(id, "CLKFB", nullarg(clkfb));
+    elementinput(id, "RST",   reset         );
+    
+    elementoutput(nullarg(clk0)     <- id, "CLK0"    );
+    elementoutput(nullarg(clk180)   <- id, "CLK180"  );
+    elementoutput(nullarg(clkdv)    <- id, "CLKDV"   );
+    elementoutput(nullarg(locked)   <- id, "LOCKED"  );
+    elementLogProperty(id, "DUTY_CYCLE_CORRECTION", nullarg(duty_cycle_correction));
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));
+    if (matched(clkdv_divide)) elementIntProperty(id, "CLKDV_DIVIDE", nullarg(clkdv_divide), 1, 32);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("clkdllhf() - input clock has no (or 0) frequency attribute");
+    if (matched(clk0)) attributes(clk0, frequency=fin);
+    if (matched(clk180)) attributes(clk180, frequency=fin);
+    if (matched(clkdv)) attributes(clkdv, frequency=fin/clkdv_divide);
+    
+    elementend(id);
+}
+
+// Construct a digital clock manager.
+// This is used by Spartan3, Virtex2, Virtex2Pro, Virtex4 and Virtex5.
+// For attributes and signals see Xilinx documentation.
+//
+//                DCM     DCM_ADV     DCM_SP
+//
+// in
+//     CLKIN       X       X           X
+//     CLKFB       X       X           X
+//     RST         X       X           X
+//     PSINCDEC    X       X           X
+//     PSEN        X       X           X
+//     PSCLK       X       X           X
+//     DADDR               X
+//     DI[0..15]           X
+//     DWE                 X
+//     DEN                 X
+//     DCLK                X
+// 
+// out
+//     CLK0        X       X           X
+//     CLK90       X       X           X
+//     CLK180      X       X           X
+//     CLK270      X       X           X
+//     CLK2X       X       X           X
+//     CLK2X180    X       X           X
+//     CLKDV       X       X           X
+//     CLKFX       X       X           X
+//     CLKFX180    X       X           X
+//     LOCKED      X       X           X
+//     STATUS      X                   X
+//     PSDONE      X       X           X
+//     DO[0..15]           X
+//     DRDY                X
+//
+global procedure
+clkdcm (
+    clock({clk0, clk90, clk180, clk270, clk2x, clk2x180, clkdv, clkfx, clkfx180}),
+    value({locked, psdone, drdy}, "log"), value(dout, "bits:16"), value(status, "uint:8")
+    <-
+    str(loc), log({clkin_divide_by_2, duty_cycle_correction, startup_wait}),
+    str(clkdv_divide),
+    int({clkfx_divide, clkfx_multiply, phase_shift}),
+    str({clk_feedback, clkout_phase_shift, dfs_frequency_mode,
+    dll_frequency_mode, deskew_adjust, dcm_performance_mode}),
+    clock({clkin, clkfb, psclk, dclk}), value({reset, psincdec, psen, dwe, den}, "log", false),
+    value(din, "bits:16"), value(daddr, "uint:7")
+) {
+    int(arrayformat, 1);
+    log(dcm_adv);
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "dcm"+idn++);
+    if (elementCheck("DCM_SP")) {
+        element("DCM_SP", id);
+    } else if (elementCheck("DCM_ADV")) {
+        element("DCM_ADV", id);
+        dcm_adv = true;
+    } else if (elementCheck("DCM"))
+        element("DCM", id);
+    else
+        texit("procedure clkdcm cannot be used with " + directive("family"));
+    ;
+    str(family, directive("family"));
+
+    if (dcm_adv) {
+        if (matched(status))
+            texit("clkdcm - output 'status' not available in " + family);
+    } else {
+        if (matched(din))
+            texit("clkdcm - input 'din' not available in " + family);
+        if (matched(daddr))
+            texit("clkdcm - input 'daddr' not available in " + family);
+        if (matched(dwe))
+            texit("clkdcm - input 'dwe' not available in " + family);
+        if (matched(den))
+            texit("clkdcm - input 'den' not available in " + family);
+        if (matched(dclk))
+            texit("clkdcm - input 'dclk' not available in " + family);
+        if (matched(drdy))
+            texit("clkdcm - output 'drdy' not available in " + family);
+        if (matched(dout))
+            texit("clkdcm - output 'dout' not available in " + family);
+    }
+
+    elementclockinput(id, "PSCLK", nullarg(psclk));
+    
+    elementinput(id,  "CLKIN",    nullarg(clkin)    );
+    elementinput(id,  "CLKFB",    nullarg(clkfb)    );
+    elementinput(id,  "RST",      reset             );
+    elementinput(id,  "PSINCDEC", psincdec );
+    elementinput(id,  "PSEN",     psen     );
+    
+    if (dcm_adv) {
+        elementclockinput(id, "DCLK",  nullarg(dclk));
+        elementinput(id,  "DWE",      dwe      );
+        elementinput(id,  "DEN",      den      );
+        elementinput(id,  "DI",       nullarg(din), arrayformat);
+        elementinput(id,  "DADDR",    nullarg(daddr), arrayformat);
+    }
+    
+    elementoutput(nullarg(clk0)     <- id, "CLK0"               );
+    elementoutput(nullarg(clk90)    <- id, "CLK90"              );
+    elementoutput(nullarg(clk180)   <- id, "CLK180"             );
+    elementoutput(nullarg(clk270)   <- id, "CLK270"             );
+    elementoutput(nullarg(clk2x)    <- id, "CLK2X"              );
+    elementoutput(nullarg(clk2x180) <- id, "CLK2X180"           );
+    elementoutput(nullarg(clkfx)    <- id, "CLKFX"              );
+    elementoutput(nullarg(clkfx180) <- id, "CLKFX180"           );
+    elementoutput(nullarg(clkdv)    <- id, "CLKDV"              );
+    elementoutput(nullarg(locked)   <- id, "LOCKED"             );
+    elementoutput(nullarg(psdone)   <- id, "PSDONE"             );
+    
+    if (dcm_adv) {
+        elementoutput(nullarg(drdy)     <- id, "DRDY"               );
+        elementoutput(nullarg(dout)     <- id, "DO"    , arrayformat);
+    } else
+        elementoutput(nullarg(status)   <- id, "STATUS", arrayformat);
+
+    elementLogProperty(id, "CLKIN_DIVIDE_BY_2", nullarg(clkin_divide_by_2));
+    elementLogProperty(id, "DUTY_CYCLE_CORRECTION", nullarg(duty_cycle_correction));
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));
+    if (matched(clkdv_divide)) elementStrProperty(id, "CLKDV_DIVIDE", clkdv_divide,
+                                                "1.5", "2.0", "2.5", "3.0", "3.5",
+                                                "4.0", "4.5", "5.0", "5.5", "6.0",
+                                                "6.5", "7.0", "7.5", "8.0", "9.0",
+                                                "10.0", "11.0", "12.0", "13.0",
+                                                "14.0", "15.0", "16.0");
+    
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("clkdcm() - input clock has no (or 0) frequency attribute");
+    float(clkin_period_ns, 1.0 / frequency(clkin) * 1.0e9);
+    elementFloatProperty(id, "CLKIN_PERIOD", clkin_period_ns, 1.25, 1000.0, 2);
+
+    elementIntProperty(id, "CLKFX_DIVIDE", nullarg(clkfx_divide), 1, 32);
+    elementIntProperty(id, "CLKFX_MULTIPLY", nullarg(clkfx_multiply), 2, 32);
+    elementIntProperty(id, "PHASE_SHIFT", nullarg(phase_shift), -255, 255);
+    elementStrProperty(id, "CLK_FEEDBACK", nullarg(clk_feedback), "1X", "2X", "NONE");
+    elementStrProperty(id, "CLKOUT_PHASE_SHIFT", nullarg(clkout_phase_shift), "NONE", "FIXED", "VARIABLE");
+    elementStrProperty(id, "DFS_FREQUENCY_MODE", nullarg(dfs_frequency_mode), "LOW", "HIGH");
+    elementStrProperty(id, "DLL_FREQUENCY_MODE", nullarg(dll_frequency_mode), "LOW", "HIGH");
+    elementStrProperty(id, "DESKEW_ADJUST", nullarg(deskew_adjust), "system_synchronous", "source_synchronous");
+    elementStrProperty(id, "DCM_PERFORMANCE_MODE", nullarg(dcm_performance_mode), "MAX_SPEED", "MAX_RANGE");
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    if (matched(clk0)) attributes(clk0, frequency=fin);
+    if (matched(clk90)) attributes(clk90, frequency=fin);
+    if (matched(clk180)) attributes(clk180, frequency=fin);
+    if (matched(clk270)) attributes(clk270, frequency=fin);
+    if (matched(clk2x)) attributes(clk2x, frequency=2.0*fin);
+    if (matched(clk2x180)) attributes(clk2x180, frequency=2.0*fin);
+    if (matched(clkfx)) attributes(clkfx, frequency=fin*cast(clkfx_multiply, "float")/cast(clkfx_divide, "float"));
+    if (matched(clkfx180)) attributes(clkfx180, frequency=fin*cast(clkfx_multiply, "float")/cast(clkfx_divide, "float"));
+    if (matched(clkdv)) attributes(clkdv, frequency=fin/cast(clkdv_divide, "float"));
+
+    elementend(id);
+}
+
+// Construct a basic mixed mode clock manager.
+// Used by Virtex6 and series 7.
+// For attributes and signals see Xilinx documentation.
+global procedure
+clkmmcm_base (
+    clock({ clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkout6,
+            clkout0b, clkout1b, clkout2b, clkout3b, clkfbout, clkfboutb}),
+    value(locked, "log")
+    <-
+    str(loc),
+    str(bandwidth),
+    float(clkfbout_mult_f, 30.0),
+    float(clkfbout_phase),
+    float(clkout0_divide_f, 1.0),
+    int({clkout1_divide, clkout2_divide, clkout3_divide,
+         clkout4_divide, clkout5_divide,clkout6_divide}, 1),
+    float({clkout0_duty_cycle, clkout1_duty_cycle,
+           clkout2_duty_cycle, clkout3_duty_cycle,
+           clkout4_duty_cycle, clkout5_duty_cycle,
+           clkout6_duty_cycle}, 0.5),
+    float({clkout0_phase, clkout1_phase, clkout2_phase,
+           clkout3_phase, clkout4_phase, clkout5_phase,
+           clkout6_phase}),
+    //log(clkout4_cascade),
+    int(divclk_divide, 30),
+    float(ref_jitter1),
+    log(startup_wait),
+    clock({clkin, clkfb}),
+    value({pwrdwn, reset}, "log", false)
+) {
+    int(arrayformat, 2);
+    elementCheck("MMCM", "mmcm");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(x, directive("family")=="xc7" ? "E2" : "");
+    str(id, "mmcm"+idn++);
+    element("MMCM" + x + "_BASE", id);
+
+    float(clkin1_period, 1.0 / attribute(clkin, "frequency"));
+    
+    if (reset == null)
+        reset = Net.LO;
+    if (pwrdwn == null)
+        pwrdwn = Net.LO;
+
+    elementinput(id,  "CLKIN1",  nullarg(clkin));
+    elementinput(id,  "CLKFBIN", nullarg(clkfb));
+    elementinput(id,  "RST",     reset         );
+    elementinput(id,  "PWRDWN",  pwrdwn        );
+        
+    elementoutput(nullarg(clkout0)   <- id, "CLKOUT0"               );
+    elementoutput(nullarg(clkout1)   <- id, "CLKOUT1"               );
+    elementoutput(nullarg(clkout2)   <- id, "CLKOUT2"               );
+    elementoutput(nullarg(clkout3)   <- id, "CLKOUT3"               );
+    elementoutput(nullarg(clkout4)   <- id, "CLKOUT4"               );
+    elementoutput(nullarg(clkout5)   <- id, "CLKOUT5"               );
+    elementoutput(nullarg(clkout6)   <- id, "CLKOUT6"               );
+    elementoutput(nullarg(clkout0b)  <- id, "CLKOUT0B"              );
+    elementoutput(nullarg(clkout1b)  <- id, "CLKOUT1B"              );
+    elementoutput(nullarg(clkout2b)  <- id, "CLKOUT2B"              );
+    elementoutput(nullarg(clkout3b)  <- id, "CLKOUT3B"              );
+    elementoutput(nullarg(clkfbout)  <- id, "CLKFBOUT"              );
+    elementoutput(nullarg(clkfboutb) <- id, "CLKFBOUTB"             );
+    elementoutput(nullarg(locked)    <- id, "LOCKED"                );
+    
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("clkdcm() - input clock has no (or 0) frequency attribute");
+    float(clkin_period_ns, 1.0 / frequency(clkin) * 1.0e9);
+    float(clkin1_period_ns, clkin1_period * 1.0e9);
+    elementFloatProperty(id, "CLKIN1_PERIOD", clkin_period_ns, 0.00, 100.0, 2);
+
+    elementStrProperty(id, "OPTIMISED", nullarg(bandwidth), "HIGH", "LOW");
+    elementFloatProperty(id, "CLKFBOUT_MULT_F", clkfbout_mult_f, 2.000, 64.000, 3);
+    elementFloatProperty(id, "CLKOUT0_DIVIDE_F", clkout0_divide_f, 1.000, 128.000, 3);
+    elementFloatProperty(id, "CLKFBOUT_PHASE", nullarg(clkfbout_phase),     -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKIN1_PERIOD", clkin1_period_ns,      1.000, 10000.000, 3);
+    elementIntProperty(id, "CLKOUT1_DIVIDE", nullarg(clkout1_divide), 1, 128);        
+    elementIntProperty(id, "CLKOUT2_DIVIDE", nullarg(clkout2_divide), 1, 128);        
+    elementIntProperty(id, "CLKOUT3_DIVIDE", nullarg(clkout3_divide), 1, 128);        
+    elementIntProperty(id, "CLKOUT4_DIVIDE", nullarg(clkout4_divide), 1, 128);        
+    elementIntProperty(id, "CLKOUT5_DIVIDE", nullarg(clkout5_divide), 1, 128);        
+    elementIntProperty(id, "CLKOUT6_DIVIDE", nullarg(clkout6_divide), 1, 128);        
+    elementIntProperty(id, "DIVCLK_DIVIDE", nullarg(divclk_divide),  1, 106);        
+    elementFloatProperty(id, "CLKOUT0_DUTY_CYCLE", nullarg(clkout0_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT1_DUTY_CYCLE", nullarg(clkout1_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT2_DUTY_CYCLE", nullarg(clkout2_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT3_DUTY_CYCLE", nullarg(clkout3_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT4_DUTY_CYCLE", nullarg(clkout4_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT5_DUTY_CYCLE", nullarg(clkout5_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT6_DUTY_CYCLE", nullarg(clkout6_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT0_PHASE"     , nullarg(clkout0_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT1_PHASE"     , nullarg(clkout1_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT2_PHASE"     , nullarg(clkout2_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT3_PHASE"     , nullarg(clkout3_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT4_PHASE"     , nullarg(clkout4_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT5_PHASE"     , nullarg(clkout5_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT6_PHASE"     , nullarg(clkout6_phase),      -360.000,   360.000, 3);
+    //elementLogProperty(id, "CLKOUT4_CASCADE", nullarg(clkout4_cascade));
+
+
+    elementFloatProperty(id, "REF_JITTER1", nullarg(ref_jitter1), 0.000, 0.999, 3);
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));                
+    
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    if (matched(clkout0)) attributes(clkout0, frequency=fin*clkfbout_mult_f/clkout0_divide_f/divclk_divide);
+    if (matched(clkout1)) attributes(clkout1, frequency=fin*clkfbout_mult_f/clkout1_divide/divclk_divide);
+    if (matched(clkout2)) attributes(clkout2, frequency=fin*clkfbout_mult_f/clkout2_divide/divclk_divide);
+    if (matched(clkout3)) attributes(clkout3, frequency=fin*clkfbout_mult_f/clkout3_divide/divclk_divide);
+    if (matched(clkout4)) attributes(clkout4, frequency=fin*clkfbout_mult_f/clkout4_divide/divclk_divide);
+    if (matched(clkout5)) attributes(clkout5, frequency=fin*clkfbout_mult_f/clkout5_divide/divclk_divide);
+    if (matched(clkout6)) attributes(clkout6, frequency=fin*clkfbout_mult_f/clkout6_divide/divclk_divide);
+    if (matched(clkout0b)) attributes(clkout0b, frequency=fin*clkfbout_mult_f/clkout0_divide_f/divclk_divide);
+    if (matched(clkout1b)) attributes(clkout1b, frequency=fin*clkfbout_mult_f/clkout1_divide/divclk_divide);
+    if (matched(clkout2b)) attributes(clkout2b, frequency=fin*clkfbout_mult_f/clkout2_divide/divclk_divide);
+    if (matched(clkout3b)) attributes(clkout3b, frequency=fin*clkfbout_mult_f/clkout3_divide/divclk_divide);
+    
+    elementend(id);
+}
+
+// Construct a fully-featured mixed mode clock manager.
+// Used by Virtex6 and series 7.
+// For attributes and signals see Xilinx documentation.
+// Spread spectrum and clock4 output cascade not supported at present.
+global procedure
+clkmmcm_adv (
+    clock({ clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkout6,
+            clkout0b, clkout1b, clkout2b, clkout3b, clkfbout, clkfboutb}),
+    value({clkfbstopped, clkinstopped, drdy, locked, psdone}, "log"),
+    value(dout, "bits:16")
+    <-
+    str(loc),
+    str(bandwidth),
+    log({   clkfbout_use_fine_ps, clkout0_use_fine_ps, clkout1_use_fine_ps,
+            clkout2_use_fine_ps, clkout3_use_fine_ps, clkout4_use_fine_ps,
+            clkout5_use_fine_ps, clkout6_use_fine_ps, startup_wait, clock_hold}),
+    int(divclk_divide),
+    int({clkout1_divide, clkout2_divide, clkout3_divide,
+         clkout4_divide, clkout5_divide,clkout6_divide}, 1),
+    float({ clkfbout_phase, clkfbout_mult_f,
+            clkout0_divide_f,
+            clkout0_duty_cycle, clkout0_phase,
+            clkout1_duty_cycle, clkout1_phase,
+            clkout2_duty_cycle, clkout2_phase,
+            clkout3_duty_cycle, clkout3_phase,
+            clkout4_duty_cycle, clkout4_phase,
+            clkout5_duty_cycle, clkout5_phase,
+            clkout6_duty_cycle, clkout6_phase, ref_jitter1, ref_jitter2}),
+    str(compensation),
+    clock({clkfb, clkin1, clkin2, dclk, psclk}),
+    value({clkinsel, den, dwe, psen, psincdec, pwrdwn, reset}, "log", false),
+    //log({clkout4_cascade, ssen}),
+    value(din, "bits:16", 0), value(daddr, "uint:7", 0)
+) {
+    int(arrayformat, 2);
+    elementCheck("MMCM", "mmcm");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(x, directive("family")=="xc7" ? "E2" : "");
+    str(id, "mmcm"+idn++);
+    element("MMCM" + x + "_ADV", id);
+
+    if (reset == null)
+        reset = Net.LO;
+    if (pwrdwn == null)
+        pwrdwn = Net.LO;
+        
+    if (matched(psclk))
+        elementclockinput(id, "PSCLK", psclk);
+    else
+        elementclockinput(id, "PSCLK", false);
+    
+    if (matched(dclk))
+        elementclockinput(id, "DCLK", dclk);
+    else
+        elementclockinput(id, "DCLK", false);
+    
+    elementinput(id, "CLKIN1",     nullarg(clkin1)       );
+    elementinput(id, "CLKIN2",     nullarg(clkin2)       );
+    elementinput(id, "CLKINSEL",   clkinsel              );
+    elementinput(id, "CLKFBIN",    nullarg(clkfb)        );
+    elementinput(id, "PSINCDEC",   psincdec              );
+    elementinput(id, "PSEN",       psen                  );
+    elementinput(id, "DI",         din, arrayformat  );
+    elementinput(id, "DADDR",      daddr, arrayformat );
+    elementinput(id, "DWE",        dwe                   );
+    elementinput(id, "DEN",        den                   );
+    elementinput(id, "RST",        reset                 );
+    elementinput(id, "PWRDWN",     pwrdwn                );
+        
+    elementoutput(nullarg(clkout0)      <- id, "CLKOUT0"               );
+    elementoutput(nullarg(clkout1)      <- id, "CLKOUT1"               );
+    elementoutput(nullarg(clkout2)      <- id, "CLKOUT2"               );
+    elementoutput(nullarg(clkout3)      <- id, "CLKOUT3"               );
+    elementoutput(nullarg(clkout4)      <- id, "CLKOUT4"               );
+    elementoutput(nullarg(clkout5)      <- id, "CLKOUT5"               );
+    elementoutput(nullarg(clkout6)      <- id, "CLKOUT6"               );
+    elementoutput(nullarg(clkout0b)     <- id, "CLKOUT0B"              );
+    elementoutput(nullarg(clkout1b)     <- id, "CLKOUT1B"              );
+    elementoutput(nullarg(clkout2b)     <- id, "CLKOUT2B"              );
+    elementoutput(nullarg(clkout3b)     <- id, "CLKOUT3B"              );
+    elementoutput(nullarg(clkfbout)     <- id, "CLKFBOUT"              );
+    elementoutput(nullarg(clkfboutb)    <- id, "CLKFBOUTB"             );
+    elementoutput(nullarg(clkfbstopped) <- id, "CLKFBSTOPPED"          );
+    elementoutput(nullarg(clkinstopped) <- id, "CLKINBSTOPPED"         );
+    elementoutput(nullarg(locked)       <- id, "LOCKED"                );
+    elementoutput(nullarg(psdone)       <- id, "PSDONE"                );
+    elementoutput(nullarg(drdy)         <- id, "DRDY"                  );
+    elementoutput(nullarg(dout)         <- id, "DO"       , arrayformat);
+
+    float(fin1, frequency(clkin1));
+    if (fin1 == 0.0)
+        texit("clkdcm() - input clock 1 has no (or 0) frequency attribute");
+    float(fin2, frequency(clkin2));
+    if (fin2 == 0.0)
+        texit("clkdcm() - input clock 2 has no (or 0) frequency attribute");
+    if (matched(clkin1)) {
+        float(clkin1_period_ns, 1.0 / frequency(clkin1) * 1.0e9);
+        elementFloatProperty(id, "CLKIN1_PERIOD", clkin1_period_ns, 1.000, 10000.000, 3);
+    }
+    if (matched(clkin2)) {
+        float(clkin2_period_ns, 1.0 / frequency(clkin2) * 1.0e9);
+        elementFloatProperty(id, "CLKIN2_PERIOD", clkin2_period_ns, 1.000, 10000.000, 3);
+    }
+    float(fmax, fin1 >= fin2 ? fin1 : fin2);
+
+    
+    elementStrProperty(id, "OPTIMISED", nullarg(bandwidth), "HIGH", "LOW");
+    elementFloatProperty(id, "CLKFBOUT_MULT_F"   , nullarg(clkfbout_mult_f),       1.000,    64.000, 3);
+    elementFloatProperty(id, "CLKFBOUT_PHASE"    , nullarg(clkfbout_phase),     -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT0_DIVIDE_F"  , nullarg(clkout0_divide_f),      1.000,   128.000, 3);
+    elementIntProperty(id, "CLKOUT1_DIVIDE"  , nullarg(clkout1_divide),      1,   128);
+    elementIntProperty(id, "CLKOUT2_DIVIDE"  , nullarg(clkout2_divide),      1,   128);
+    elementIntProperty(id, "CLKOUT3_DIVIDE"  , nullarg(clkout3_divide),      1,   128);
+    elementIntProperty(id, "CLKOUT4_DIVIDE"  , nullarg(clkout4_divide),      1,   128);
+    elementIntProperty(id, "CLKOUT5_DIVIDE"  , nullarg(clkout5_divide),      1,   128);
+    elementIntProperty(id, "CLKOUT6_DIVIDE"  , nullarg(clkout6_divide),      1,   128);
+    elementFloatProperty(id, "CLKOUT0_DUTY_CYCLE", nullarg(clkout0_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT1_DUTY_CYCLE", nullarg(clkout1_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT2_DUTY_CYCLE", nullarg(clkout2_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT3_DUTY_CYCLE", nullarg(clkout3_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT4_DUTY_CYCLE", nullarg(clkout4_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT5_DUTY_CYCLE", nullarg(clkout5_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT6_DUTY_CYCLE", nullarg(clkout6_duty_cycle),    0.001,     0.999, 3);
+    elementFloatProperty(id, "CLKOUT0_PHASE"     , nullarg(clkout0_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT1_PHASE"     , nullarg(clkout1_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT2_PHASE"     , nullarg(clkout2_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT3_PHASE"     , nullarg(clkout3_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT4_PHASE"     , nullarg(clkout4_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT5_PHASE"     , nullarg(clkout5_phase),      -360.000,   360.000, 3);
+    elementFloatProperty(id, "CLKOUT6_PHASE"     , nullarg(clkout6_phase),      -360.000,   360.000, 3);
+    //elementLogProperty(id, "CLKOUT4_CASCADE", nullarg(clkout4_cascade));
+    //elementLogProperty(id, "SSEN", nullarg(ssen));
+    elementLogProperty(id, "CLOCK_HOLD", nullarg(clock_hold));
+    elementStrProperty(id, "COMPENSATION", nullarg(compensation), "ZHOLD", "BUF_IN", "CASCADE", "EXTERNAL", "INTERNAL");
+    elementIntProperty(id, "DIVCLK_DIVIDE", nullarg(divclk_divide), 1, 128);        
+    //elementIntProperty(id, "SS_MOD_PERIOD", nullarg(ss_mod_period), 4000, 40000);
+    //elementStrProperty(id, "SS_MODE", nullarg(ss_mode), "CENTER_HIGH", "CENTER_LOW", "DOWN_HIGH", "DOWN_LOW");
+    elementLogProperty(id, "STARTUP_WAIT", nullarg(startup_wait));                
+    elementLogProperty(id, "CLKFBOUT_USE_FINE_PS", nullarg(clkfbout_use_fine_ps));         
+    elementLogProperty(id, "CLKOUT0_USE_FINE_PS" , nullarg(clkout0_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT1_USE_FINE_PS" , nullarg(clkout1_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT2_USE_FINE_PS" , nullarg(clkout2_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT3_USE_FINE_PS" , nullarg(clkout3_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT4_USE_FINE_PS" , nullarg(clkout4_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT5_USE_FINE_PS" , nullarg(clkout5_use_fine_ps));        
+    elementLogProperty(id, "CLKOUT6_USE_FINE_PS" , nullarg(clkout6_use_fine_ps));        
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    if (matched(clkout0)) attributes(clkout0, frequency=fmax*clkfbout_mult_f/clkout0_divide_f/divclk_divide);
+    if (matched(clkout1)) attributes(clkout1, frequency=fmax*clkfbout_mult_f/clkout1_divide/divclk_divide);
+    if (matched(clkout2)) attributes(clkout2, frequency=fmax*clkfbout_mult_f/clkout2_divide/divclk_divide);
+    if (matched(clkout3)) attributes(clkout3, frequency=fmax*clkfbout_mult_f/clkout3_divide/divclk_divide);
+    if (matched(clkout4)) attributes(clkout4, frequency=fmax*clkfbout_mult_f/clkout4_divide/divclk_divide);
+    if (matched(clkout5)) attributes(clkout5, frequency=fmax*clkfbout_mult_f/clkout5_divide/divclk_divide);
+    if (matched(clkout6)) attributes(clkout6, frequency=fmax*clkfbout_mult_f/clkout6_divide/divclk_divide);
+    if (matched(clkout0b)) attributes(clkout0b, frequency=fmax*clkfbout_mult_f/clkout0_divide_f/divclk_divide);
+    if (matched(clkout1b)) attributes(clkout1b, frequency=fmax*clkfbout_mult_f/clkout1_divide/divclk_divide);
+    if (matched(clkout2b)) attributes(clkout2b, frequency=fmax*clkfbout_mult_f/clkout2_divide/divclk_divide);
+    if (matched(clkout3b)) attributes(clkout3b, frequency=fmax*clkfbout_mult_f/clkout3_divide/divclk_divide);
+    
+    elementend(id);
+}
+
+//
+// Make a clock source. Should work on most platforms.
+//
+//  v       - an identifier for the resulting clock
+//  in      - the input clock
+//  freq    - the requested frequency, Hz
+//  tol     - an absolute tolerance for the resulting clock, Hz
+// If 'freq' is omitted just create a DCM for the input clock.
+// If a clock cannot be created within the specified tolerance a
+// fatal error occurs.
+//
+// At the moment no account is taken of DCM frequency modes or limits.
+//
+global procedure
+simpleclock (ident(v), clock(in), float(freq), float(tol)) {
+    str(cname);
+    switch (v.context) {
+    case "global":
+        cname = "global."+v.id;
+    case "file":
+        cname = "file."+v.id;
+    case "calling":
+        trace();
+        fatal("simpleclock() - cannot have 'calling' context");
+    case "local":
+        trace();
+        fatal("simpleclock() - cannot have 'local' context");
+    case "default":
+        cname = "calling."+v.id; // create in calling scope
+    }
+    str(rawcname, v.id + "_raw");
+
+    float(fin, frequency(in));  // frequency of input clock
+    if (fin == 0.0)
+        texit("simpleclock() - input clock does not have frequency attribute");
+    clock({cname->, craw});
+    var(divratios, "[]float", {
+            1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5,
+            8, 9, 10, 11, 12, 13, 14, 15, 16
+        });
+     log(is_dcm, elementCheck("DCM") || elementCheck("DCM_SP") || elementCheck("DCM_ADV"));
+
+    if (!matched(freq) || (mod(freq - fin) <= tol)) {
+        // No frequency argument or requested frequency close to
+        // input frequency.
+        // Just create a DCM or MMCM for the clock input.
+        if (is_dcm) {
+            clkdcm(
+                clk0=craw
+                <-
+                clkin=in,
+                clkfb=cname->
+            );
+        } else {
+	    clock({fbc, fbcraw});
+            clkmmcm_base(
+                clkfbout=fbcraw,
+                clkout0=craw
+                <-
+                clkin=in,
+                clkfb=fbc
+            );
+            clockbufg(fbc <- fbcraw);
+        }
+        clockbufg(cname-> <- craw);
+        attributes(cname->, frequency=fin, tnm=toupper(v.id));
+        return;
+    }
+    
+    float(ratio, fin / freq);           // ratio of requested freq to input freq
+    str(sratio);
+    
+    // First examine frequency synthesis.
+    float(sfreq);
+    var(fp, "empty", clock_params(fin, freq, 2, 32, 1, 32, tol));
+    sfreq = fp.af;  // resulting frequency for synthesis
+    
+    // If lower frequency required, try division.
+    float(divratio);
+    float(dfreq);
+    if (ratio > 1.0 && ratio < 16.1) {
+        for (int(i) ; i<dimension(divratios) ; i++) {
+            if (mod(divratios[i] - ratio) < 0.1) {
+                divratio = divratios[i];
+                sratio = tostring(divratio);
+                dfreq = fin / divratio;  // resulting frequency for division
+                break;
+            }
+        }
+    }
+    
+    if (dfreq == 0.0 && sfreq == 0.0) {
+        if (fp.exit == 1)
+            texit("simpleclock() - frequency tolerance too low");
+        else
+            texit("simpleclock() - frequency too low");
+    }
+    if (dfreq != 0.0 && mod(freq - dfreq) <= mod(freq - sfreq)) {
+        // Division valid and closer than synthesis.
+        // Use a DCM with a divider output.
+        clock({fbc, fbcraw});
+        if (is_dcm) {
+            clkdcm(
+                clk0=fbcraw,
+                clkdv=craw
+                <-
+                clkin=in,
+                clkfb=fbc,
+                clkdv_divide=sratio
+            );
+        } else if (elementCheck("MMCM")) {
+            clkmmcm_base(
+                clkfbout=fbcraw,
+                clkout0=craw
+                <-
+                clkin=in,
+                clkfb=fbc,
+                clkout0_divide_f=cast(divratio, "float")
+            );
+        } else
+            texit("simpleclock() - device " + directive("family") + "not catered for");
+        clockbufg(fbc <- fbcraw);
+        attributes(cname->, frequency=dfreq, tnm=toupper(v.id));
+        clockbufg(cname-> <- craw);
+    } else if (mod(freq - sfreq) <= tol) {
+        // Synthesis within tolerance.
+        // use a DCM with a frequency synthesiser output
+        clock({fbc, fbcraw});
+        if (is_dcm) {
+            clkdcm(
+                clk0=fbcraw,
+                clkfx=craw
+                <-
+                clkin=in,
+                clkfb=fbc,
+                clkfx_divide=fp.div,
+                clkfx_multiply=fp.mul
+            );
+        } else {
+            clkmmcm_base(
+                clkfbout=fbcraw,
+                clkout0=craw
+                <-
+                clkin=in,
+                clkfb=fbc,
+                clkout0_divide_f=cast(fp.div, "float"),
+                clkfbout_mult_f=cast(fp.mul, "float")
+            );
+        }
+        clockbufg(fbc <- fbcraw);
+        attributes(cname->, frequency=sfreq, tnm=toupper(v.id));
+        clockbufg(cname-> <- craw);
+    }
+}
+
+global procedure
+pll_base (
+    clock({clkout0, clkout1, clkout2, clkout3, clkout4, clkout5, clkfbout}),
+    value(locked, "log")
+    <-
+    str(loc),
+    int({   clkout0_divide, clkout1_divide, clkout2_divide, clkout3_divide,
+            clkout4_divide, clkout5_divide, clkfbout_mult,
+            divclk_divide}, 1),
+    str({compensation, bandwidth}),
+    float({clkout0_phase, clkout1_phase, clkout2_phase, clkout3_phase,
+            clkout4_phase, clkout5_phase, clkfbout_phase}, 0.0),
+    float({clkout0_duty_cycle, clkout1_duty_cycle, clkout2_duty_cycle,
+            clkout3_duty_cycle, clkout4_duty_cycle, clkout5_duty_cycle}, 0.5),
+    float(ref_jitter, 0.1),
+    clock({clkin, clkfbin}), value(reset, "log", false)
+) {
+    elementCheck("PLL_BASE", "pll");
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(x, directive("family")=="xc7" ? "E2" : "");
+    str(id, "pll"+idn++);
+    element("PLL" + x + "_BASE", id);
+    
+    float(fin, frequency(clkin));
+    if (fin == 0.0)
+        texit("pll_base() - input clock has no (or 0) frequency attribute");
+    float(clkin_period, 1.0 / fin);
+    float(clkin_period_ns, clkin_period * 1.0e9);
+
+    elementinput(id, "CLKIN",   nullarg(clkin)   );
+    elementinput(id, "CLKFBIN", nullarg(clkfbin) );
+    elementinput(id, "RST",     reset            );
+    
+    elementoutput(nullarg(clkout0)  <- id, "CLKOUT0" );
+    elementoutput(nullarg(clkout1)  <- id, "CLKOUT1" );
+    elementoutput(nullarg(clkout2)  <- id, "CLKOUT2" );
+    elementoutput(nullarg(clkout3)  <- id, "CLKOUT3" );
+    elementoutput(nullarg(clkout4)  <- id, "CLKOUT4" );
+    elementoutput(nullarg(clkout5)  <- id, "CLKOUT5" );
+    elementoutput(nullarg(clkfbout) <- id, "CLKFBOUT");
+    elementoutput(nullarg(locked)   <- id, "LOCKED"  );
+
+    //elementStrProperty(id, nullarg(compensation), "SYSTEM_SYNCHRONOUS", "SOURCE_SYNCHRONOUS"); ???
+    elementStrProperty(id, "OPTIMISED", nullarg(bandwidth), "HIGH", "LOW");
+    elementIntProperty(id, "CLKOUT0_DIVIDE", nullarg(clkout0_divide), 1, 128);
+    elementIntProperty(id, "CLKOUT1_DIVIDE", nullarg(clkout1_divide), 1, 128);
+    elementIntProperty(id, "CLKOUT2_DIVIDE", nullarg(clkout2_divide), 1, 128);
+    elementIntProperty(id, "CLKOUT3_DIVIDE", nullarg(clkout3_divide), 1, 128);
+    elementIntProperty(id, "CLKOUT4_DIVIDE", nullarg(clkout4_divide), 1, 128);
+    elementIntProperty(id, "CLKOUT5_DIVIDE", nullarg(clkout5_divide), 1, 128);
+    elementFloatProperty(id, "CLKOUT0_PHASE", nullarg(clkout0_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT1_PHASE", nullarg(clkout1_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT2_PHASE", nullarg(clkout2_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT3_PHASE", nullarg(clkout3_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT4_PHASE", nullarg(clkout4_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT5_PHASE", nullarg(clkout5_phase), -360.0, 360.0, 1);
+    elementFloatProperty(id, "CLKOUT0_DUTY_CYCLE", nullarg(clkout0_duty_cycle), 0.0000, 0.9999, 4);
+    elementFloatProperty(id, "CLKOUT1_DUTY_CYCLE", nullarg(clkout1_duty_cycle), 0.0000, 0.9999, 4);
+    elementFloatProperty(id, "CLKOUT2_DUTY_CYCLE", nullarg(clkout2_duty_cycle), 0.0000, 0.9999, 4);
+    elementFloatProperty(id, "CLKOUT3_DUTY_CYCLE", nullarg(clkout3_duty_cycle), 0.0000, 0.9999, 4);
+    elementFloatProperty(id, "CLKOUT4_DUTY_CYCLE", nullarg(clkout4_duty_cycle), 0.0000, 0.9999, 4);
+    elementFloatProperty(id, "CLKOUT5_DUTY_CYCLE", nullarg(clkout5_duty_cycle), 0.0000, 0.9999, 4);
+    elementIntProperty(id, "CLKFBOUT_MULT", nullarg(clkfbout_mult), 1, 64);
+    elementIntProperty(id, "CLKFBOUT_PHASE", nullarg(clkfbout_phase), 0, 360);
+    elementFloatProperty(id, "REF_JITTER", nullarg(ref_jitter), 0.000, 0.999, 3);
+    elementFloatProperty(id, "CLKIN_PERIOD", clkin_period_ns, 1.00, 52.63, 2);
+    elementIntProperty(id, "DIVCLK_DIVIDE", nullarg(divclk_divide), 1, 52);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+    
+    if (matched(clkout0)) attributes(clkout0, frequency=fin*clkfbout_mult/clkout0_divide/divclk_divide);
+    if (matched(clkout1)) attributes(clkout1, frequency=fin*clkfbout_mult/clkout1_divide/divclk_divide);
+    if (matched(clkout2)) attributes(clkout2, frequency=fin*clkfbout_mult/clkout2_divide/divclk_divide);
+    if (matched(clkout3)) attributes(clkout3, frequency=fin*clkfbout_mult/clkout3_divide/divclk_divide);
+    if (matched(clkout4)) attributes(clkout4, frequency=fin*clkfbout_mult/clkout4_divide/divclk_divide);
+    if (matched(clkout5)) attributes(clkout5, frequency=fin*clkfbout_mult/clkout5_divide/divclk_divide);
+    
+    elementend(id);
+}
+
+// Create a global clock buffer.
+// Arguments:
+//  clock out       output clock variable
+//  clock in        input clock variable
+//  str loc         location of buffer
+//  log invert      optional - invert the clock
+//
+global procedure
+clockbufg (clock(out) <- clock(in), str(loc), log(invert)) {
+    elementCheck("BUFG", "clockbufg");
+    element("BUFG");
+    if (invert) {
+        value(_in, "log", !in);
+        elementinput(, "I", _in);
+    } else
+        elementinput(, "I", in);
+    elementoutput(out <- , "O");
+    
+    float(fi, frequency(in));
+    float(fo, frequency(out));
+    if (fo == 0.0 && fi != 0.0)
+        attributes(out,
+            frequency=fi,
+            dutycycle=dutycycle(in)
+        );
+    //if (attribute(out, "tnm") == null)
+    //    attributes(out, tnm="NONE");
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+
+}
+
+// Create a clock buffer.
+// Arguments:
+//  clock out       output clock variable
+//  clock in0       input clock variable 0
+//  clock in1       input clock variable 1
+//  value select    select input clock
+//  str loc         location of buffer
+//  str group       the timing group name
+//
+global procedure
+clockmuxbuffer (clock(out) <- clock({in0, in1}), value(select, "log"), str(loc)) {
+    elementCheck("BUFGMUX", "clockmuxbuffer");
+    element("BUFGCTRL");
+    elementinput(, "I0", in0);
+    elementinput(, "I1", in1);
+    elementinput(, "S0", !select);
+    elementinput(, "S1", select);
+    elementinput(, "CE0", true);
+    elementinput(, "CE1", true);
+    elementinput(, "IGNORE0", false);
+    elementinput(, "IGNORE1", false);
+    elementoutput(out <- , "O");
+
+    if (frequency(in0) > frequency(in1))
+        attributes(out, {frequency=frequency(in0), dutycycle=dutycycle(in0)});
+    else
+        attributes(out, {frequency=frequency(in1), dutycycle=dutycycle(in1)});
+    if (attribute(out, "tnm") == null)
+        attributes(out, tnm="NONE");
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+}
+
+// Create a regional clock buffer.
+// Arguments:
+//  clock out       output clock variable
+//  clock in        input clock variable
+//  str loc         optional - location of buffer
+//  log enable      optional - clock enable
+//  int ratio       optional - clock division ratio, 1 to 8
+//  log clear       optional - clock divider counter clear
+//
+global procedure
+clockbufr (clock(out) <- clock(in), str(loc), log(enable), int(ratio) ,log(clear)) {
+    elementCheck("BUFR", "clockbufr");
+    element("BUFR");
+    elementinput(, "I", in);
+    if (matched(enable))
+        elementinput(, "CE", enable);
+    else
+        elementinput(, "CE", true);
+    if (matched(clear))
+        elementinput(, "CLR", clear);
+    else
+        elementinput(, "CLR", false);
+    elementoutput(out <- , "O");
+    
+    if (matched(ratio))
+        elementaddxdc(, "BUFR_DIVIDE=" + ratio);
+    attributes(out,
+        frequency=frequency(in),
+        dutycycle=dutycycle(in)
+    );
+    if (attribute(out, "tnm") == null)
+        attributes(out, tnm="NONE");
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+}
+
+// Create a local clock buffer.
+// Arguments:
+//  clock out       output clock variable
+//  clock in        input clock variable
+//  str loc         optional - location of buffer
+//
+global procedure
+clockbufio (clock(out) <- clock(in), str(loc)) {
+    elementCheck("BUFIO", "clockbufio");
+    element("BUFIO");
+    elementinput(, "I", in);
+    elementoutput(out <- , "O");
+    
+    attributes(out,
+        frequency=frequency(in),
+        dutycycle=dutycycle(in)
+    );
+    if (attribute(out, "tnm") == null)
+        attributes(out, tnm="NONE");
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+}
+
+// Create a clock buffer with a disable.
+// Arguments:
+//  clock out       output clock variable
+//  clock in        input clock variable
+//  value disable   disable
+//  str loc         optional - location of buffer
+//
+global procedure
+clockmuxbufferdisable (clock(out) <- clock(in), value(disable, "log"), str(loc)) {
+    elementCheck("BUFGCTRL", "clockmuxbufferdisable");    
+    element("BUFGCTRL");
+    elementinput(, "I0", in);
+    elementinput(, "I1", true);
+    elementinput(, "S0", true);
+    elementinput(, "S1", false);
+    elementinput(, "CE0", !disable);
+    elementinput(, "CE1", false);
+    elementinput(, "IGNORE0", false);
+    elementinput(, "IGNORE1", true);
+    elementoutput(out <- , "O");
+    
+    attributes(out, frequency=frequency(in));
+    if (attribute(out, "tnm") == null)
+        attributes(out, tnm="NONE");
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+}
+
+// Request low skew secondary clock routing.
+// Arguments:
+//  clock   c       clock variable
+//
+global procedure
+lowskew (clock(c)) {
+    netaddncf("USELOWSKEWLINES", c);
+}
+
+// Derive an integer multiplier and an integer divisor for clock synthesis.
+// Output arguments -
+//  mul     the synthesis multiplier
+//  div     the synthesis divisor
+//  af      the actual resulting frequency
+// Input arguments -
+//  fin     the input frequency
+//  freq    the required frequency
+//  mmin    the minimum value of the multiplier
+//  mmax    the maximum value of the multiplier
+//  dmin    the minimum value of the divisor
+//  dmax    the maximum value of the divisor
+//  tol     an optional frequency tolerance to minimise the search
+//
+// This procedure searches through combinations of multiplier and divisor
+// to find the nearest generated frequency that is not greater than the
+// requested frequency. The optional tolerance argument when supplied
+// greatly reduces the execution time. Frequencies may be in any units,
+// e.g. MHz, KHz, Hz, but must be consistent.
+//
+// A fatal error occurs if the frequency tolerance is too small or
+// the requested frequency is too low.
+//
+global procedure
+clock_params (
+    int({mul, div}),                // synthesis parameters
+    float(af)                       // actual frequency
+    <-
+    float({fin, freq}),             // frequency in, frequency required
+    int({mmin, mmax, dmin, dmax}),  // m limits, d limits
+    float(tol)                      // optional tolerance
+) {
+    var(cp, "empty", clock_params(fin, freq, mmin, mmax, dmin, dmax, tol));
+    switch (cp.exit) {
+    case 1:
+        texit("clock_params() - frequency tolerance too small");
+    case 2:
+        texit("clock_params() - frequency too low");
+    }
+    mul = cp.mul;
+    div = cp.div;
+    af = cp.af;
+}
+
+// Derive an integer multiplier and an integer divisor for clock synthesis.
+// Input arguments -
+//  fin     the input frequency
+//  freq    the required frequency
+//  mmin    the minimum value of the multiplier
+//  mmax    the maximum value of the multiplier
+//  dmin    the minimum value of the divisor
+//  dmax    the maximum value of the divisor
+//  tol     an optional frequency tolerance to minimise the search
+// return structure -
+//  .mul     the integer multiplier
+//  .div     the integer divisor
+//  .af      optional - the actual frequency generated
+//  .exit    exit code
+//
+// This procedure searches through combinations of multiplier and divisor
+// to find the nearest generated frequency that is not greater than the
+// requested frequency. The optional tolerance argument when supplied
+// greatly reduces the execution time. Frequencies may be in any units,
+// e.g. MHz, KHz, Hz, but must be consistent.
+//
+// Exit code -
+//  0   OK
+//  1   frequency tolerance too low
+//  2   frequency too low
+//
+global function
+clock_params (
+    float({fin, freq}),             // frequency in, frequency required
+    int({mmin, mmax, dmin, dmax}),  // m limits, d limits
+    float(tol)                      // optional tolerance
+) {
+    struct(rv,      // return value structure
+        {mul, div}, "int",
+        af,         "float",
+        exit,       "int"
+    );
+    var(ret, rv);   // return value
+    struct(sl,
+        f,      "float",
+        {m, d}, "int"
+    );
+    int(n, (mmax - mmin + 1) * (dmax - dmin + 1));
+    var(a, "["+n+"]sl");
+    float(f);
+    int({i, j});
+
+    for (int(m, mmin) ; m<=mmax ; m++) {
+        for (int(d, dmin) ; d<=dmax ; d++) {
+            f = fin * cast(m, "float") / cast(d, "float");
+            if (matched(tol) && mod(freq - f) > tol)
+                continue;
+            for (j=0 ; j<i ; j++) {
+                if (f == a[j].f) {
+                    j = -1;
+                    break;
+                } else if (f > a[j].f)
+                    continue;
+                else {
+                    for (int(k, i) ; k>=j ; k--)
+                        a[k+1] = a[k];
+                    break;
+                }
+            }
+            if (j >= 0) {
+                a[j].f = f;
+                a[j].m = m;
+                a[j].d = d;
+                i++;
+            }
+        }
+    }
+    if (matched(tol) && i == 0) {
+        ret.exit = 1;   // requested clock frequency tolerance too low
+        return(ret);
+    }
+    for (j=0 ; j<i ; j++)
+        if (a[j].f > freq)
+            break;
+    if (j == 0) {
+        ret.exit = 2;   // requested clock frequency too low
+        return(ret);
+    }
+    ret.mul = a[j-1].m;
+    ret.div = a[j-1].d;
+    ret.af = a[j-1].f;
+    return(ret);
+}

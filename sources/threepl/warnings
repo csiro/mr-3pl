@@ -1,0 +1,163 @@
+parser/Parser.java:2680: warning: [rawtypes] found raw type: ArrayList
+    ArrayList       inits;
+    ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2681: warning: [rawtypes] found raw type: ArrayList
+    ArrayList       fromlist;
+    ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2682: warning: [rawtypes] found raw type: ArrayList
+    ArrayList       tolist;
+    ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2702: warning: [unchecked] unchecked method invocation: method addInits in class PetriNetNode is applied to given types
+                                       pnn.addInits(inits);
+                                                   ^
+  required: ArrayList<Token>
+  found: ArrayList
+parser/Parser.java:2702: warning: [unchecked] unchecked conversion
+                                       pnn.addInits(inits);
+                                                    ^
+  required: ArrayList<Token>
+  found:    ArrayList
+parser/Parser.java:2744: warning: [unchecked] unchecked method invocation: method addTransition in class PetriNetNode is applied to given types
+         pnn.addTransition(fromlist, tolist, strict, e, b);
+                          ^
+  required: ArrayList<Token>,ArrayList<Token>,boolean,Node,Node
+  found: ArrayList,ArrayList,boolean,Node,Node
+parser/Parser.java:2744: warning: [unchecked] unchecked conversion
+         pnn.addTransition(fromlist, tolist, strict, e, b);
+                           ^
+  required: ArrayList<Token>
+  found:    ArrayList
+parser/Parser.java:2744: warning: [unchecked] unchecked conversion
+         pnn.addTransition(fromlist, tolist, strict, e, b);
+                                     ^
+  required: ArrayList<Token>
+  found:    ArrayList
+parser/Parser.java:2764: warning: [rawtypes] found raw type: ArrayList
+  static final public ArrayList IdentList() throws ParseException {
+                      ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2765: warning: [rawtypes] found raw type: ArrayList
+    ArrayList   list = new ArrayList();
+    ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2765: warning: [rawtypes] found raw type: ArrayList
+    ArrayList   list = new ArrayList();
+                           ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2768: warning: [unchecked] unchecked call to add(E) as a member of the raw type ArrayList
+                      list.add(t);
+                              ^
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:2781: warning: [unchecked] unchecked call to add(E) as a member of the raw type ArrayList
+                               list.add(t);
+                                       ^
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+parser/Parser.java:6963: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+    token_source.ReInit(jj_input_stream);
+                ^
+parser/Parser.java:6992: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+    token_source.ReInit(jj_input_stream);
+                ^
+parser/Parser.java:7030: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+    else token = token.next = token_source.getNextToken();
+                                          ^
+parser/Parser.java:7051: warning: [serial] serializable class LookaheadSuccess has no definition of serialVersionUID
+  static private final class LookaheadSuccess extends java.lang.Error { }
+                       ^
+parser/Parser.java:7057: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+        jj_lastpos = jj_scanpos = jj_scanpos.next = token_source.getNextToken();
+                                                                ^
+parser/Parser.java:7078: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+    else token = token.next = token_source.getNextToken();
+                                          ^
+parser/Parser.java:7089: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+      else t = t.next = token_source.getNextToken();
+                                    ^
+parser/Parser.java:7096: warning: [static] static method should be qualified by type name, ParserTokenManager, instead of by an expression
+      return (jj_ntk = (token.next=token_source.getNextToken()).kind);
+                                               ^
+netlist/Net.java:41: warning: [overrides] Class Net overrides equals, but neither it nor any superclass overrides hashCode method
+public class Net implements NetConstants, TDEConstants {
+       ^
+exec/Queue.java:114: warning: [rawtypes] found raw type: LinkedHashMap
+            inputs = (LinkedHashMap<TDEVar,eapair>[]) new LinkedHashMap[words];
+                                                          ^
+  missing type arguments for generic class LinkedHashMap<K,V>
+  where K,V are type-variables:
+    K extends Object declared in class LinkedHashMap
+    V extends Object declared in class LinkedHashMap
+exec/Queue.java:143: warning: [rawtypes] found raw type: LinkedHashSet
+        resets = (LinkedHashSet<TDEVar>[]) new LinkedHashSet[(words == 0) ? 1 : words]; // possible "null" queue
+                                               ^
++ building jar file
+  missing type arguments for generic class LinkedHashSet<E>
+  where E is a type-variable:
+    E extends Object declared in class LinkedHashSet
+exec/Static.java:88: warning: [rawtypes] found raw type: HashMap
+            inputs = (HashMap<TDEVar,eapair>[]) new HashMap[words];
+                                                    ^
+  missing type arguments for generic class HashMap<K,V>
+  where K,V are type-variables:
+    K extends Object declared in class HashMap
+    V extends Object declared in class HashMap
+exec/Static.java:101: warning: [rawtypes] found raw type: HashSet
+        resets = (HashSet<TDEVar>[]) new HashSet[words];
+                                         ^
+  missing type arguments for generic class HashSet<E>
+  where E is a type-variable:
+    E extends Object declared in class HashSet
+exec/SelectValue.java:74: warning: [rawtypes] found raw type: HashMap
+            inputs = (HashMap<TDEVar,eapair>[]) new HashMap[words];
+                                                    ^
+  missing type arguments for generic class HashMap<K,V>
+  where K,V are type-variables:
+    K extends Object declared in class HashMap
+    V extends Object declared in class HashMap
+exec/Memory.java:128: warning: [rawtypes] found raw type: ArrayList
+            reads = new ArrayList[ports];
+                        ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+exec/Memory.java:129: warning: [rawtypes] found raw type: ArrayList
+            writes = new ArrayList[ports];
+                         ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+netlist/NetListDraw.java:39: warning: [rawtypes] found raw type: ArrayList
+    public static  ArrayList<Gblock>[]  col_blocks = (ArrayList<Gblock>[]) new ArrayList[COLMAX];
+                                                                               ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+netlist/NetListDraw.java:146: warning: [rawtypes] found raw type: ArrayList
+        col_blocks = (ArrayList<Gblock>[]) new ArrayList[COLMAX];
+                                               ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+netlist/NetListDraw.java:593: warning: [rawtypes] found raw type: ArrayList
+            blist = new ArrayList[pins];
+                        ^
+  missing type arguments for generic class ArrayList<E>
+  where E is a type-variable:
+    E extends Object declared in class ArrayList
+32 warnings

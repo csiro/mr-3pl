@@ -1,0 +1,33 @@
+The scanned line must consist of fields (tokens) separated by delimiters of commas
+or spaces (any number of either, i.e. the delimiter pattern is [, ]+ ).
+
+The format string is not the same as that used in scanf, sscanf or fscanf in C.
+It is a string of single characters, one per conversion. Allowed
+conversions are -
+
+\begin{tabular}{| l | l |} 
+\hline
+'d' & integer                                   \\ \hline
+'u' & unsigned integer                          \\ \hline
+'x' & hexadecimal integer                       \\ \hline
+'o' & octal integer                             \\ \hline
+'f' & floating point value                      \\ \hline
+'s' & string                                    \\ \hline
+'.' & convert according to the variable type    \\ \hline
+'*' & skip the token                            \\ \hline
+' ' & ignored                                   \\ \hline
+tab & ignored                                   \\ \hline
+\end{tabular}
+
+The format string must not contain any other characters.
+Spaces or tabs can be included anywhere if desired. Because the scanner cannot match explicit
+fields from the format string and there are no conversion paramaters such as field widths or
+precisions there is no need for a \verb"'%'" escape character. The number of actual
+conversions (i.e. not including the skip) must be equal to the number of output variables.
+
+The format argument may be null or "" in which case tokens will be converted and
+assigned to the variables based on the variable types.
+
+Tokens that are to be converted as hexadecimal values must not have a leading 0x.
+Similarly a leading 0 will not be interpreted as indicating an octal value. The
+conversion character alone decides which radix will be used.

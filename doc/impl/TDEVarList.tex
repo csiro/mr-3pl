@@ -1,0 +1,9 @@
+The TDEVarList class extends class ArrayList. As well as providing a list
+class for TDEVars it provides methods for generating Nets from TDEVars.
+
+The TDEVar class does not implement proper netlist but just provides
+a description of signals or signal arrays connected to TDEs. The TDEVar
+identifiers and WordSpecs imply that 
+WHen the complete TDE list is processed to generate the final netlist
+each instance of a TDEVar must be converted to a Net. Methods in
+TDEVarList do this conversion.

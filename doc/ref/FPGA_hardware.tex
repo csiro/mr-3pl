@@ -1,0 +1,195 @@
+\pagebreak
+
+\chapter{Accessing Specific FPGA Hardware Elements}\label{chap:asfpgahe}
+    
+    FPGA hardware elements can be created directly from 3PL source code.
+    This can be done for the usual common elements that would normally be
+    utilised during code generation or for little used or new elements that
+    are not directly used by the code generator.
+    
+    {\bf Note that state elements, such as flip-flops and RAMs, created this way are
+    outside the control of the normal execution thread mechanism.}
+    
+    There are
+    three main reasons for using these directly created elements -
+    \begin{itemize}
+    \item   Special elements such as Virtex4 I/O serial/parallel converters
+            cannot be directly incorporated into the semantics of the language.
+    \item   We may wish to use low-level components whose inputs are
+            not connected to a normal 3PL execution thread, for example a
+            flip-flop whose clock enable or reset inputs are connected directly
+            to some source.
+    \item   We may wish to use absolute or relative placement of components,
+            something which is very limited in 3PL proper.
+    \item   The compiler may produce combinatorial logic which is sub-optimal
+            and which in a critical case needs to be replaced by hand-coded
+            logic.
+    \end{itemize}
+    In such cases we could wrap the created elements in a 3PL module,
+    procedure or function to provide a normal 3PL code interface to hide
+    these specialised constructs.
+    
+    As an example library io.3pl creates elements that are common to
+    many FPGAs. These include IDDR, ODDR, IDELAY, IODELAY, IDELAYCTRL,
+    ISERDES, SYSMON and some DSP functions. These are all created by the
+    mechanism described below.
+    
+    Where an element is required which is not included in a library the
+    following inbuilt procedures can be used to create it - \\
+    {\bf element()} \autorefph{sec:ipelement}, \\
+    {\bf elementend()} \autorefph{sec:ipelementend}, \\
+    {\bf elementproperty()} \autorefph{sec:ipelementproperty}, \\
+    {\bf elementinput()} \autorefph{sec:ipelmntin}, \\
+    {\bf elementclockinput()} \autorefph{sec:ipelmntinclk} \\
+    {\bf elementoutput()} \autorefph{sec:ipelmntout} \\
+    {\bf elementtsoutput()} \autorefph{sec:ipelmntoutts}.
+    
+    The inbuilt procedure {\bf elementproperty()} only takes strings as
+    value arguments so a number of library procedures are available
+    in xilinx/common.3pl to format other types. These are - \\
+    {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty}, \\
+    {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty}, \\
+    {\bf elementBinProperty()} \autorefph{sec:lpelementBinProperty}, \\
+    {\bf elementHexProperty()} \autorefph{sec:lpelementHexProperty}, \\
+    {\bf elementFloatProperty()} \autorefph{sec:lpelementFloatProperty}, \\
+    {\bf elementStrProperty()} \autorefph{sec:lpelementStrProperty}
+    
+    As an example if we wished to directly use a CLB shift register instead of
+    using using it implicitly with {\bf del()}, we could create it by -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       string(id, "srl123");
+       element("SRL16E", id);
+    \end{lstlisting}
+    where
+    "SRL16E" is the name of the element in the Xilinx library and "srl123" is an
+    optional identifier for the element.
+    We would now connect up each of its ports -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       value({d, ce, q}, "log");
+       static(a, "uint:4");
+       d := .....;
+       a <- .....;
+
+       elementinput(id, "D", d);
+       elementinput(id, "A", a, 1);
+       elementclockinput(id, "CLK", currentclock());
+       elementinput(id, "CE", ce);
+       elementoutput(q <- id, "Q");
+       elementend(id);
+       .... <- q;
+       .
+       .
+    \end{lstlisting}
+    We could have omitted the {\bf id} argument in all the calls above in which
+    case the currently open element would have been correctly implied.
+
+    
+    The call to {\bf element()} creates the element which is retained until the
+    next call to {\bf element()} as the current element. Calls to {\bf
+    elementinput()}  or {\bf elementoutput()} with no {\bf id} apply to the
+    current element. When an id is explicitly used then multiple elements can
+    be created using interleaved calls to the above procedures, though there is
+    probably little advantage in doing that. The arguments to {\bf
+    elementinput()} are -
+    \begin{itemize}
+    \item   the optional element id (string)
+    \item   the port name (string)
+    \item   the signal variable
+    \item   an array format indicator (integer 0 for single signal, 1 for an array
+            where the pins are specified individually, e.g.
+            {\bf (port A0 (direction INPUT))} or 2 for an EDIF
+            array format such as {\bf (port (array (rename A "a[0:11]") 12) (direction INPUT)))}.
+            Unfortunately the required format seems to depend on whether ISE or
+            Vivado are used and also on the specific element.
+    \end{itemize}
+    Input signal variables can be the constants true or false, any value,
+    selectvalue, static or priority variable or an expression. The signal cannot be
+    from a queue read or an expression containing a queue read but can be from a queue
+    variable if the examine operator \verb'?' is used.
+    
+    This process is subject to the following observations -
+    \begin{enumerate}
+    \item   The variables or constants are not checked against the port
+            type for validity, e.g. if an output port was connected to a
+            constant or a static (i.e. the output of the static) this
+            would not be detected until code generation time when a fatal
+            error resulting from multiple net sources would occur.
+    \item   Errors may not be detected until the Xilinx place-and-route
+            software is run at which point an obscure error message
+            would be generated.
+    \item   Elements generated this way cannot be handled by the simulator
+            (howevere the simulator is obsolete and not currently available).
+    \end{enumerate}
+
+    In the example above it would have been sensible to construct a module or
+    procedure so that the code could be reused, for example - 
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module
+       srl16 (value(out) <- value(in), value(ce, "log"), value(addr, "uint:4")) {
+           element("SRL16E");
+           elementinput(, "D", in);
+           elementinput(, "A", addr, 1);
+           elementclockinput(, "CLK", currentclock());
+           elementinput(, "CE", ce);
+           elementoutput(out <- , "Q");
+           elementend();
+       }
+    \end{lstlisting}
+    It makes no difference if this is a module or procedure as there is no in-line
+    code and no queue reads or writes and the calling syntax and argument passing
+    for these are identical.
+    
+    To implement a similar delay for say an 8-bit integer -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module
+       srl16_8 (value(out, "int:8") <- value(in, "int:8"), value(ce, "log"), value(addr, "uint:4")) {
+           value(o, "[8]bits:1");
+           for (int(i) ; i<8 ; i++)
+               srl16(o[i] <- getbit(in, i), ce, addr); 
+           out := cast(o, "int:8");
+       }
+    \end{lstlisting}
+    To access single bits of the input the library function getbit() (stdlib.3pl)
+    has been used. There is no equivalent for assigning bits to the output so a
+    local array of single bits has been defined and then this was cast to the
+    output type.
+    
+    The following code is a simplified example of the use of such a delay. To avoid
+    complicating the example the inputs are assumed to be synchronous with the
+    current clock. 
+    \begin{lstlisting}[gobble=4, language=threepl]
+       iopins(io_pins, "[20]str", {"AB12", "AC13", .......});
+       
+       input(din, "int:8", loc=io_pins[0..7], readdomain=null);
+       input(dvalid, "log", loc=io_pins[8], readdomain=null);
+       static(sum, "int:8");
+       value(del, "int:8");
+       value(step, "log");
+
+       srl16_8(del <- din, step, 5);
+
+       when (dvalid) par {
+           sum <- din + del;
+           assert(step <-);
+       }
+
+       output(,, sum, loc=io_pins[9..16]);
+    \end{lstlisting}
+    
+    In the above example the clock enable is sourced from an instance of the {\bf
+    assert()} \autorefph{sec:ipassert} inbuilt procedure. This procedure asserts the
+    output when the execution stream in which it is contained executes.
+    
+    Alternatively the SRL16E CE could have been driven directly from variable
+    {\bf dvalid}.
+    
+    \begin{lstlisting}[gobble=4, language=threepl]
+       .
+       .
+       srl16_8(del <- din, dvalid, 5);
+
+       when (dvalid)
+           sum <- din + del;
+       .
+       .
+    \end{lstlisting}

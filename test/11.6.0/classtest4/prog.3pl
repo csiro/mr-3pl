@@ -1,0 +1,23 @@
+module "boards/gadget_factory/papilio_one_500.3pl"
+
+module "uarts_c.3pl"
+
+value({tx1, tx2}, "log");
+output(,, tx1, loc=A_pins[0]);
+output(,, tx2, loc=A_pins[1]);
+input(rx1, "log", loc=B_pins[0]);
+input(rx2, "log", loc=B_pins[1]);
+
+queue({q1, q2}, "bits:8");
+
+// can assign class -
+var(uart1, "class");
+uart1 = uarts_c(9600, 8);
+uart1.uart_rx(q1 <- rx1);
+uart1.uart_tx(tx1 <- q1);
+
+// or can use initialisation -
+var(uart2, "class", uarts_c(9600, 8));
+uart2.uart_rx(q2 <- rx2);
+uart2.uart_tx(tx2 <- q2);
+

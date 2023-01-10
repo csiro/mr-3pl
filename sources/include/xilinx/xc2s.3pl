@@ -1,0 +1,31 @@
+// Include file for Xilinx Spartan-II (XC2S) elements
+nosource
+
+presetdirective("postProcessTool", "ise");
+
+source "xilinx/common.3pl"
+module "xilinx/postprocess.3pl"
+module "stdlib.3pl"
+module "xilinx/clocks.3pl"
+module "xilinx/io.3pl"
+
+// Specify allowed special I/O and clock elements valid for
+// this device.
+// Map "elementMap" is in common.3pl.
+elementMap["BUFG"] = true;
+elementMap["DLL"] = true;
+elementMap["DLLE"] = true;
+elementMap["DLLHF"] = true;
+
+leadermodule ("attributes", 100) {
+    attributeprocedure(processPinAttributes);
+}
+
+trailermodule ("constraints", 100) {
+    netlistcommentfromdirs();
+    generateConstraints();
+}
+
+postmodule ("Xilinx postprocessing") {
+    postprocess("xilinx/ise_fpga.cmd", directive("postProcessTool"), 2.1, 10.1);
+}

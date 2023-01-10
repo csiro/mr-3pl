@@ -1,0 +1,66 @@
+module "boards/gadget_factory/papilio_one_500.3pl"
+
+//setdirective("excludeinfo", true);
+
+class(cpu, cpu_api());
+
+static(r, "uint:16", 0x137);
+static(rr, "int:35");
+static(rrr, "uint:6");
+static(rrra, "log");
+cpu.write(r <- "W");
+cpu.read(r, "R");
+
+cpu.write(rr <- "WW");
+cpu.read(rr, "RR");
+cpu.write(rrr, access=rrra <- "WWW");
+cpu.read(rrr, "RRR");
+
+cpu.receive_event(rrra, "EVR");
+
+queue(q, "int:14", mindepth=16, domain=null);
+queue(qo, "int:14", mindepth=16, domain=null);
+static(acc, "log");
+static(count, "uint:5");
+
+cpu.write(q <- "WQ", freecount=true, ilevel=true);
+cpu.read(out=qo, access=acc, count=count <- q, "RQ", wordcount=true, ilevel=true);
+cpu.receive_event(waswritten(q), "EVQ");
+cpu.read(q, "RQO");
+
+var(minit, "[256]int");
+for (int(i) ; i<256 ; i++)
+    minit[i] = i * 3;
+rmemory(m, 1, "uint:8", "uint:16", minit);
+
+cpu.write(m <- "MW", port=0);
+cpu.read(m, "MR", port=0);
+
+
+
+
+
+/*cpu.write_static(r <- "W");
+cpu.read_value("R", r);
+
+cpu.write_static(rr <- "WW");
+cpu.read_value("RR", rr);
+cpu.write_static(rrr, rrra <- "WWW");
+cpu.read_value("RRR", rrr);
+
+cpu.receive_event("EVR", rrra);
+
+queue(q, "int:14", mindepth=16, domain=null);
+
+cpu.write_queue(q <- "WQ", freecount=true, ilevel=true);
+cpu.read_queue("RQ", q, wordcount=true, ilevel=true);
+cpu.receive_event("EVQ", waswritten(q));
+
+var(minit, "[256]int");
+for (int(i) ; i<256 ; i++)
+    minit[i] = i * 3;
+rmemory(m, 1, "uint:8", "uint:16", minit);
+
+cpu.write_memory(m <- "MW", 0);
+cpu.read_memory("MR", m, 0);
+*/

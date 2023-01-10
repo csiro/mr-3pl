@@ -1,0 +1,311 @@
+// Interface for generic alphanumeric LCD displays
+//
+// These come in many sizes and colours, but usually have similar electrical
+// interface and control codes, emulating the Hitachi HD44780 LCD controller.
+//
+// Both the 8-bit and 4-bit electrical interfaces are supported here.
+// Use the 8-bit mode, if wired, as it uses a little less logic.
+// Readback of the display is not supported, and so the R/W pin should be
+// grounded. If the 4-bit interface is to be used, the unused low 4 bits
+// should be grounded.
+//
+// Minimal example (lcd_data_pins[] etc are assumed to be defined):
+//
+//     output(lcd_data, "uint:4",, loc=lcd_data_pins);
+//     output(lcd_rs, "log",, loc=lcd_rs_pin);
+//     output(lcd_en, "log",, loc=lcd_en_pin);
+// 
+//     queue(lcd, lcd_cmd_t);
+//     lcd(lcd_data, lcd_rs, lcd_en <- lcd);
+// 
+//     seq {
+//         str(greeting, "Hello, world");
+//         for (int(i); i < strlen(greeting); ++i)
+//             lcd <<- lcd_char(ord(substring(greeting, i, 1)));
+//         stop();
+//     }
+//
+// This example prints a message. A more efficient and useful example would
+// copy the strings from memory, for example.
+
+
+// Structure for LCD commands
+struct(global.lcd_cmd_t,
+    isdata, "log",			// data or command?
+    data, "uint:8",			// data or command word
+    delay, "log"			// 1.7ms delay (40us otherwise)
+);
+
+
+// Functions for generating LCD commands
+// (DDRAM means display memory, CGRAM means character memory).
+
+// Clear all the display data by writing 0x20 (space code) to all DDRAM
+// address, and set DDRAM address to 0x00 into AC (address counter).
+// Return cursor to the top left of the display.
+// Make the entry mode increment (sh = true)
+
+global function lcd_cmd_clear() {
+    value(cmd, lcd_cmd_t, { false, 0x01, true });
+    return(cmd);
+}
+
+// Set DDRAM address to 0x00 into the address counter.
+// Return cursor to its original site and return display to its original
+// status,if shifted. Contents of DDRAM does not change.
+
+global function lcd_cmd_home() {
+    value(cmd, lcd_cmd_t, { false, 0x02, true });
+    return(cmd);
+}
+
+// Set the moving direction of cursor and display. If ltor is true, the cursor
+// moves to right and DDRAM address increments, otherwise the reverse. If
+// shdisp is true, entire display is shifted each entry, left or right
+// according to id, otherwise it is not shifted.
+ 
+global function lcd_cmd_entry_mode(log(ltor), log(shdisp)) {
+    value(val, "uint:8", 0x04 | (ltor ? 0x02 : 0) | (shdisp ? 0x01 : 0));
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// When display is true, entire display is turned on (but DDRAM is not
+// cleared). The cursor is turned on when curs is true. If blink is true,
+// the cursor blinks.
+
+global function lcd_cmd_display_mode(log(disp), log(curs), log(blink)) {
+    value(val, "uint:8",
+	0x08 | (disp ? 0x04 : 0) | (curs ? 0x02 : 0) | (blink ? 0x01 : 0));
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// Shift the cursor to the right, if curs is true, otherwise left.
+// Shift whole display to the right, if disp is true, otherwise left.
+
+global function lcd_cmd_shift(log(disp), log(curs)) {
+    value(val, "uint:8", 0x10 | (disp ? 0x08 : 0) | (curs ? 0x04 : 0));
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// If bits8 is true, set 8-bit mode, otherwise 4-bit mode.
+// If lines2 is true, set two-line mode, otherwise single line mode.
+// If font5x11 is true, use 5x11 font, otherwise use 5x8 font.
+
+global function lcd_cmd_setup(log(bits8), log(lines2), log(font5x11)) {
+    value(val, "uint:8",
+	0x20 | (bits8 ? 0x10 : 0) | (lines2 ? 0x8 : 0) | (font5x11 ? 0x4 : 0));
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// Set the address of the next read or write to CGRAM (character memory).
+
+global function lcd_cmd_cgram_addr(value(addr, "uint:6")) {
+    value(val, "uint:8", 0x40 | addr);
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// Set the address of the next read or write to DDRAM (display memory).
+// The following function lcd_cmd_move() is more convenient.
+
+global function lcd_cmd_ddram_addr(value(addr, "uint:7")) {
+    value(val, "uint:8", 0x80 | addr);
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// Set the location of the next read or write to DDRAM (display memory)
+// to the given row (vertical) and column (horizontal). 
+//
+// FIXME this probably depends on the array size?
+
+global function lcd_move(value(row, "uint:1", 0), value(col, "uint:5", 0)) {
+    value(val, "uint:8", 0x80 | (row << 6) | col);
+    value(cmd, lcd_cmd_t, { false, val, false });
+    return(cmd);
+}
+
+// Write a character at the current address.
+
+global function lcd_char(value(char, "uint:8")) {
+    value(cmd, lcd_cmd_t, { true, char, false });
+    return(cmd);
+}
+
+
+// Module to communicate with LCD display. The interface style is inferred from
+// the size of the odata argument, which must be either 4 or 8 bits exactly.
+// The display is cleared and configured, then user commands are accepted
+// on lcdpi.
+
+global module lcd(
+    output(odata /* "uint:4" or "uint:8" */),
+    output(ors, "log"),
+    output(oen, "log")
+<-
+    queue(lcdpi, lcd_cmd_t)		// LCD user command queue
+) { 
+    if (size(odata) == 4)
+	lcd_4bit(odata, ors, oen <- lcdpi);
+    else
+	if (size(odata) == 8)
+	    lcd_8bit(odata, ors, oen <- lcdpi);
+	else
+	    exit("LCD data width can only be 4 or 8 bits");
+}
+
+
+// Module to communicate with LCD display (8-bit interface). The display is
+// cleared and configured, then user commands are accepted on lcdpi.
+
+module lcd_8bit(
+    output(odata, "uint:8"),
+    output(ors, "log"),
+    output(oen, "log")
+<-
+    queue(lcdpi, lcd_cmd_t)		// LCD user command queue
+) { 
+
+    // LCD output pins (input not supported: R/W pin must be grounded)
+    // R/S and DATA come from queue examine; EN is generated below
+    queue(lcdp, lcd_cmd_t);		// LCD command queue
+    static(en, "log");
+    oen := en;
+    ors := ?lcdp.isdata;
+    odata := ?lcdp.data;
+
+    // Transmit LCD commands
+    // Bus write is about 300ns but commands take minimum of 40us to interpret
+    // and execute by the LCD module, hence the delays at the end.
+    // Commands such as clear display or cursor to home take 1.64ms.
+    sync {
+	seq {
+	    nop();			// ensure RS setup time
+	    en <- true;			// raise LCD enable
+	    wait(500e-9);		// 480ns min enable length 
+	    en <- false;		// lower LCD enable
+	    wait(50e-6);		// 50us minimum delay between writes
+	    when (?lcdp.delay)		// check for extra delay
+		wait(1.7e-3);		// 1.7ms delay for slow commands
+	    null <<- lcdp;		// discard datum
+	}
+    }
+
+    // LCD startup sequence
+    seq {
+	// do this three times, as per the data sheet, in case it's scrambled
+	wait(40e-3);
+	lcdp <<- lcd_cmd_setup(bits8=true); 
+	wait(4.1e-3);
+	lcdp <<- lcd_cmd_setup(bits8=true);
+	wait(100e-6);
+	lcdp <<- lcd_cmd_setup(bits8=true);
+
+	// now set to 8-bit mode, 
+	lcdp <<- lcd_cmd_setup(bits8=true, lines2=true, font5x11=false);
+
+	// display off; clear display; home cursor
+	lcdp <<- lcd_cmd_display_mode(disp=false, curs=false, blink=false);
+	lcdp <<- lcd_cmd_clear();
+	lcdp <<- lcd_cmd_ddram_addr(addr=0);
+
+	// display on, cursor off; entry left-to-right
+	lcdp <<- lcd_cmd_display_mode(disp=true, curs=false, blink=false);
+	lcdp <<- lcd_cmd_entry_mode(ltor=true, shdisp=false);
+
+	// now send caller's data
+	sync while (true) {
+	    lcdp <<- lcdpi;
+	}
+    }
+}
+
+// Module to communicate with LCD display (4-bit interface). The display is
+// cleared and configured, then user commands are accepted on lcdpi. Note
+// there is a little more logic needed for the 4-bit interface.
+
+module lcd_4bit(
+    output(odata, "uint:4"),
+    output(ors, "log"),
+    output(oen, "log")
+<-
+    queue(lcdpi, lcd_cmd_t)		// LCD user command queue
+) { 
+
+    // LCD output pins (input not supported: R/W pin must be grounded)
+    // R/S and DATA come from queue examine; EN is generated below.
+    // low selects which nibble of the data is presented
+    queue(lcdp, lcd_cmd_t);		// LCD command queue
+    static({en, low, double}, "log");
+    oen := en;
+    ors := ?lcdp.isdata;
+    odata := low ? (?lcdp.data & 0xf) : (?lcdp.data >> 4);
+
+    // Transmit LCD commands
+    // The 8-bit commands are normally split into 4-bit writes, high then
+    // low nibble (double true). The low flag selects which.
+    // Bus write is about 300ns but commands take minimum of 40us to interpret
+    // and execute by the LCD module, hence the delays at the end.
+    // Commands such as clear display or cursor to home take 1.64ms.
+    //
+    // FIXME check timing between nibbles -- maybe it can be faster
+    sync {
+	seq {
+	    nop();			// ensure RS setup time
+	    low <- false;		// select high nibble
+	    en <- true;			// raise LCD enable
+	    wait(500e-9);		// 480ns min enable length 
+	    en <- false;		// lower LCD enable
+	    wait(50e-6);		// 50us minimum delay between writes
+	    when (double) seq {
+		low <- true;		// select low nibble
+		en <- true;		// raise LCD enable
+		wait(500e-9);		// 480ns min enable length 
+		en <- false;		// lower LCD enable
+		wait(50e-6);		// 50us minimum delay between writes
+	    }
+	    when (?lcdp.delay)		// check for extra delay
+		wait(1.7e-3);		// 1.7ms delay for slow commands
+	    null <<- lcdp;		// discard datum
+	}
+    }
+
+    // LCD startup sequence
+    seq {
+	// do this three times, as per the data sheet, in case it's scrambled
+	wait(40e-3);
+	lcdp <<- lcd_cmd_setup(bits8=true); 
+	wait(4.1e-3);
+	lcdp <<- lcd_cmd_setup(bits8=true);
+	wait(100e-6);
+	lcdp <<- lcd_cmd_setup(bits8=true);
+
+	// now set to 4-bit mode
+	lcdp <<- lcd_cmd_setup(bits8=false);
+
+	// wait for completion, then switch to double bus cycles
+	wait_until(queueisempty(lcdp));
+	double <- true;
+
+	// set 4-bit mode, 2 lines, 5x8 font
+	lcdp <<- lcd_cmd_setup(bits8=false, lines2=true, font5x11=false);
+
+	// display off; clear display; home cursor
+	lcdp <<- lcd_cmd_display_mode(disp=false, curs=false, blink=false);
+	lcdp <<- lcd_cmd_clear();
+	lcdp <<- lcd_cmd_ddram_addr(addr=0);
+
+	// display on, cursor off; entry left-to-right
+	lcdp <<- lcd_cmd_display_mode(disp=true, curs=false, blink=false);
+	lcdp <<- lcd_cmd_entry_mode(ltor=true, shdisp=false);
+
+	// now send caller's data
+	sync while (true) {
+	    lcdp <<- lcdpi;
+	}
+    }
+}

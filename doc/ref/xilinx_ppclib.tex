@@ -1,0 +1,84 @@
+\pagebreak
+
+\section{Embedded PowerPC Interface Library - xilinx/ppclib.3pl}
+\label{chap:lmppclib}
+
+    \index{library!xilinx/ppclib.3pl}
+    {\bf This library provides a way of instantiating an embedded PowerPC. The
+    library was under development but work on it has ceased. Its functionality has
+    not been tested!}
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/ppclib.3pl"
+    \end{lstlisting}
+
+
+
+    \subsection{library modules}
+    
+    None.
+
+
+
+    \subsection{library procedures}
+
+         \subsubsection{ppcbr - a PPC405 with OCM}\label{sec:lpppcbr}
+
+            {\bf Library: xilinx/ppclib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               ppcbr (
+                   var({iramp, dramp0, dramp1, dramp2, dramp3}, "->")
+                   <-
+                   int({imsk, dmsk}),
+                   log({iramea, dramea}),
+                   value({cpuclken, cpureset}, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf iramp} pointer to 64 bit instruction RAM\\
+            {\bf dramp0} pointer to data RAM byte 0 (most sig) \\
+            {\bf dramp1} pointer to data RAM byte 1 \\
+            {\bf dramp2} pointer to data RAM byte 2 \\
+            {\bf dramp3} pointer to data RAM byte 3 (least sig)
+
+            {\bf Input parameters:} \\            
+            {\bf imsk} instruction memory size (bytes) in K - each 2K takes a
+                       block RAM - must be 4, 8, 16, 32, 64 or 128\\           
+            {\bf dmsk} data memory size (bytes) in K - each 2K takes a block RAM -
+                       must be 2, 4, 8, 16, 32 or 64\\
+            {\bf iramea} true if instruction ram 2nd port required for external
+                         access\\
+            {\bf dramea} true if data ram 2nd port required for external access\\
+            {\bf cpuclken} enable CPU core clock\\
+            {\bf cpureset} reset the CPU - this should be raised for a clock cycle\\
+
+            {\bf description:} \\
+            This procedure creates an interface to an embedded PowerPC 405. It
+            uses on-chip block RAM for separate instruction and data memory.
+            Both memories are located at address 0. The memory management is
+            disabled. Pointers to the memories are available as output
+            parameters to enable access via the second RAM port.
+            This procedure calls {\bf ppc405} \autorefph{sec:lpppc405} above
+            to create the PPC instance.
+    
+
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+
+    \subsection{library classes}
+    
+        None.
+
+

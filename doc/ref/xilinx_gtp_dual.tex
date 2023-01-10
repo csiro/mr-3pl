@@ -1,0 +1,523 @@
+\pagebreak
+
+\section{Xilinx GTP library - xilinx/gtp\_dual.3pl}
+
+
+    \index{library!xilinx/gtp\_dual.3pl}
+    This library creates GTP dual tiles.
+    
+    This library must be incorporated by using a {\bf module}
+    statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/gtp_dual.3pl"
+    \end{lstlisting}
+            
+    The struct {\bf gtp\_tile\_params} describes the pins and some control
+    parameters for a GTP tile (GTP channel pair).
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gtp_tile_params,
+           loc,                                        "str",
+           {refclkp_pin, refclkn_pin},                 "str",
+           {boost0, boost1},                           "log",
+           {txdiffctrl0, txdiffctrl1},                 "int",
+           {txpreemphasis0, txpreemphasis1},           "int"
+       );
+    \end{lstlisting}
+
+    The following structs are created for GTP data input and output -
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16,
+           data,   "bits:16",  // data
+           k,      "log",      // true if top 8 bits of data form a K-character
+           contin, "log"       // this is a continuation word
+       );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16_e,
+           data,   "bits:16"   // data
+           k,      "log",      // true if top 8 bits of data form a K-character
+           first,  "log",      // previous word was an idle
+           error,  "log"       // disparity error or not-in-table error
+       );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16_ee,
+           data,       "bits:16",  // data
+           k,          "log",      // true if top 8 bits of data form a K-character
+           first,      "log",      // previous word was an idlgtp\_duale
+           disperr,    "[2]log",   // disparity errors
+           niterr,     "[2]log"    // not-in-table errors
+       );
+    \end{lstlisting}
+    
+    The global structure {\bf ds16} is also used and it is created in
+    {\bf stdlib.3pl}. It is 
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.ds16,
+           data,   "bits:16",  // data
+           k,      "log"       // true if top 8 bits of data form a K-character
+       );
+    \end{lstlisting}
+
+
+    \subsection{library modules}
+
+        \subsubsection{gtp\_dual\_16 - a 16-bit dual high-speed serial I/O channel tile}\label{sec:lmgtpdual16}
+
+            {\bf Library: xilinx/gtp\_dual.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               gtp_dual_16 (
+                   queue(out0),
+                   queue(out1),
+                   clock(usrclk2),
+                   value({rxdiag0, rxdiag1}, "[10]log"),
+                   value({txdiag0, txdiag1}, "[2]log")
+                   <-
+                   var(tile, gtp_tile_params),
+                   float(freq, 156.25),
+                   int(run_length),
+                   queue(in0),
+                   queue(in1),
+                   value({txpowerdown0, txpowerdown1, rxpowerdown0, rxpowerdown1}, "uint:2", 0),
+                   value({gtpreset, rxreset0, rxreset1}, "log", false),
+                   value({loopback0, loopback1}, "uint:3", 0),
+                   value({diff0, diff1, pe0, pe1}, "uint:3", 0),
+                   log(los_fsm)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out0} is the data output queue for GTP0.\\
+            {\bf out1} is the data output queue for GTP1.\\
+            {\bf usrclk2} is the user interface clock.\\
+            {\bf rxdiag0} is an array of diagnostic signals for the GTP0 receiver.\\
+            {\bf rxdiag1} is an array of diagnostic signals for the GTP1 receiver.
+            {\bf txdiag0} is an array of diagnostic signals for the GTP0 transmitter.\\
+            {\bf txdiag1} is an array of diagnostic signals for the GTP1 transmitter.
+            
+            {\bf Input parameters:} \\
+            {\bf tile} indicates which GTP\_DUAL tile to use.\\
+            {\bf run\_length} is the maximum data run length.\\
+            {\bf in0} is the data input queue fro GTP0.\\
+            {\bf in1} is the data input queue fro GTP1.\\
+            {\bf txpowerdown0} control GTP0 transmitter powerdown.\\
+            {\bf txpowerdown1} control GTP1 transmitter powerdown.\\
+            {\bf rxpowerdown0} control GTP0 receiver powerdown.\\
+            {\bf rxpowerdown1} control GTP1 receiver powerdown.\\
+            {\bf gtpreset} when true resets the entire GTP\_DUAL tile.\\
+            {\bf rxreset0} when true resets the GTP0 receiver.\\
+            {\bf rxreset1} when true resets the GTP1 receiver.\\
+            {\bf loopback0} controls the GTP0 loopback mode.\\
+            {\bf loopback1} controls the GTP1 loopback mode.\\
+            {\bf diff0} overrides the GTP0 differential output voltage table entry.\\
+            {\bf diff1} overrides the GTP1 differential output voltage table entry.\\
+            {\bf pe0} overrides the GTP0 transmitter pre-emphasis table entry.\\
+            {\bf pe1} overrides the GTP1 transmitter pre-emphasis table entry.\\
+            {\bf los\_fsm} when true instantiates the loss-of-sync FSM
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf Description:} \\
+            This module is both an input and an output interface to a
+            GTP\_dual GTP tile. The data width is 16 bit. A custom
+            protocol is used. This calls {\bf
+            gtp\_dual()} \autorefph{sec:lpgtpdual}, described below.
+            The default external clock frequency is 156.25 MHz (serial
+            rate 3.125Gbit/s) but lower clock frequencies can be used.
+            
+            The particular GTP\_DUAL tile is selected by the argument to input
+            parameter {\bf tile}. This parameter has the following type -
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(global.gtp_tile_params,
+                   loc,                                        "str",
+                   {refclkp_pin, refclkn_pin},                 "str",
+                   {boost0, boost1},                           "log",
+                   {txdiffctrl0, txdiffctrl1},                 "int",
+                   {txpreemphasis0, txpreemphasis1},           "int"
+               );
+            \end{lstlisting}
+
+            where the fields are -
+            \blist
+            \item   loc - the tile location, e.g. "GTP\_DUAL\_X0Y4"
+            \item   refclkp\_pin - the external reference clock positive pin
+            \item   refclkn\_pin - the external reference clock negative pin
+            \item   boost0 - GTP0 TX pre-emphasis boost
+            \item   boost1 - GTP1 TX pre-emphasis boost
+            \item   txdiffctrl0 - GTP0 TX differential Voltage
+            \item   txdiffctrl1 - GTP1 TX differential Voltage
+            \item   txpreemphasis0 - GTP0 TX pre-emphasis
+            \item   txpreemphasis1 - GTP1 TX pre-emphasis
+            \blend
+            
+            {\bf boost0} and {\bf boost1} are logical values which select one of
+            two sets of levels of transmitter high frequency pre-emphasis (see
+            {\bf txpreemphasis0} and {\bf txpreemphasis1} description below)
+
+            {\bf txdiffctrl0} and {\bf txdiffctrl1} are 3 bit values which
+            control the transmitter output voltage swing. These table values can
+            be overridden by input parameters {\bf diff0} and {\bf diff1}. The
+            values are -
+            
+            \begin{tabular}{| c | c |}
+            \hline
+            3-bit value      & transmitter differential swing (mV)  \\
+            \hline
+            \hline
+            000 & 1100 \\
+            \hline
+            001 & 1050 \\
+            \hline
+            010 & 1000 \\
+            \hline
+            011 & 900 \\
+            \hline
+            100 & 800 \\
+            \hline
+            101 & 600 \\
+            \hline
+            110 & 400 \\
+            \hline
+            111 & 0 \\
+            \hline
+            \end{tabular}
+
+            {\bf txpreemphasis0} and {\bf txpreemphasis1} are 3 bit values which
+            control the transmitter high frequency pre-emphasis. These table
+            values can be overridden by input parameters {\bf pe0} and {\bf
+            pe1}. The values are -
+            
+            \begin{tabular}{| c | c | c |}
+            \hline
+            3-bit value & \multicolumn{2}{c|}{transmitter pre-emphasis (\%)} \\
+                        & pre-emphasis boost off & pre-emphasis boost on \\
+                        & boost = false & boost = true \\
+            \hline
+            \hline
+            000 & 2 & 3 \\
+            \hline
+            001 & 2 & 3 \\
+            \hline
+            010 & 2.5 & 4 \\
+            \hline
+            011 & 4.5 & 10.5 \\
+            \hline
+            100 & 9.5 & 18.5 \\
+            \hline
+            101 & 16 & 28 \\
+            \hline
+            110 & 23 & 39 \\
+            \hline
+            111 & 31 & 52 \\
+            \hline
+            \end{tabular}
+            
+            Input parameter {\bf run\_length} is an immediate integer which
+            specifies the maximum contiguous data run for the transmitter. If
+            data input is continuously available such that this length would be
+            exceeded (and the data {\bf contin} field is not true - see above)
+            then an idle sequence is inserted in the output stream. When no data
+            are available for transmission a continuous stream of idles is
+            transmitted. These idles are used by the receiver to lock initially
+            and to continue checking that lock is maintained. If receiver lock
+            is lost then lock can only be regained at the next idle. In the
+            custom protocol used in this interface the idle sequence is a single
+            16-bit word containing a comma byte. If no argument is supplied
+            to parameter {\bf run\_length} then idles will only be inserted
+            when the input queue is unavailable.
+
+            Input parameters {\bf in0} and {\bf in1} are the input data queues
+            for the transmitters. If a transmitter is not used the associated
+            argument is omitted. The type is either the struct {\bf ds16}
+            (defined in stdlib.3pl) or the struct {\bf gt\_16}. The most
+            significant byte of the word may be a K-character, which is
+            signified by setting field {\bf k} true. The byte must be one of the
+            allowed K-characters (this is not checked!). For type {\bf gt\_16}
+            the {\bf contin} field should be true if this word is a continuation
+            word, i.e. it is not the first word in a block. This ensures that
+            despite the run length constraint a block will not be split by
+            inserted idles. At the receiving end the first word following an
+            idle can reset a block boundary.
+            
+            Input parameters {\bf txpowerdown0}, {\bf txpowerdown1}, {\bf
+            rxpowerdown0} and {\bf rxpowerdown1} control transmitter and
+            receiver powerdown - see Xilinx ''Virtex-5 FPGA RocketIO GTP Tranceiver -
+            User Guide`` UG196.
+            
+            Input parameter {\bf gtpreset} when high resets the entire GTP\_DUAL
+            tile including the PLL.
+            
+            Input parameters {\bf rxreset0} and {\bf rxreset1} when high reset
+            the associated receiver.
+            
+            Input parameters {\bf loopback0} and {\bf loopback1} control the
+            loopback mode of each GTP - see Xilinx ''Virtex-5 FPGA RocketIO GTP
+            Tranceiver - User Guide`` UG196.
+
+            Output parameters {\bf out0} and {\bf out0} are the output data
+            queues for the receivers. If the receiver is not used the argument is
+            omitted. The type can be struct {\bf ds16}, struct {\bf gt\_16\_e}
+            or  struct {\bf gt\_16\_ee} depending on the level of error detail
+            required. If a receiver loses sync or byte alignment there is no
+            data output. A word in which a disparity error or a not-in-table
+            error occurs is written to the output queue but the error field is
+            true. If the top byte of a word is a K-character the {\bf k} field
+            is true. If the {\bf first} field is true then this word follows an
+            idle, which information may be used to reset a block boundary. {\bf
+            Important note - the output queues must not block! The destination
+            module must read them at a rate that precludes them ever becoming
+            full, if necessary reading them to null. Generally the read clock
+            domain must have an equal or higher frequency than the user
+            interface clock {\bf ruclk}, but this may be relaxed if it is known
+            that the serial data source has a guaranteed maximum data rate that
+            would allow a lower queue read clock domain.}
+
+            Output parameter {\bf usrclk2} is the user interface clock (default
+            156.25MHz).
+            
+            Output parameters {\bf rxdiag0} and {\bf rxdiag1} provide ten
+            diagnostic outputs for the associated receiver. These are -
+            \blist
+            \item   diag[0] - receiver synchronisation FSM bit 1, if los\_fsm true
+            \item   diag[1] - receiver synchronisation FSM bit 0, if los\_fsm true
+            \item   diag[2] - is true when the upper byte of the current output word
+                    has a disparity error
+            \item   diag[3] - is true when the lower byte of the current output word
+                    has a disparity error
+            \item   diag[4] - is true when the upper byte of the current output word
+                    is a comma
+            \item   diag[5] - is true when the lower byte of the current output word
+                    is a comma
+            \item   diag[6] - rxbytisaligned, which is true when the idles are
+                    word boundary aligned
+            \item   diag[7] - rxcommadet, which is true when a positive or negative comma
+                    is being received
+            \item   diag[8] - ok, which is true when synchronisation is locked and the
+                    byte pair is aligned properly to a 16 bit word
+            \item   diag[9] - idle, which is true when the receiver is idle
+            \blend
+            {\bf diag[0}] and {\bf diag[1]} are both false if {\bf los\_fsm} is
+            false since the loss-of-sync FSM will not have been instantiated.
+            These outputs might be connected to status LEDs to indicate that the
+            receiver is locked and functioning correctly. diag[5] will be true
+            while the receiver is receiving idles but will be false when data
+            are received.
+
+            Output parameters {\bf txdiag0} and {\bf txdiag1} provide two
+            diagnostic outputs for the associated transmitter. These are -
+            \blist
+            \item   diag[0] - is\_k, which is true when a data word with the
+                    K bit set is being transmitted
+            \item   diag[1] - idle, which is true when the receiver is idle
+            \blend
+
+
+
+
+    \subsection{library procedures}
+    
+
+        \subsubsection{gtp\_dual - create a GTP dual high-speed serial I/O channel tile}\label{sec:lpgtpdual}
+
+            {\bf Library: xilinx/gtp\_dual.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               gtp_dual (
+                   // outputs
+                   clock({refclkout, rxrecclk0, txoutclk0, rxrecclk1, txoutclk1}),
+                   value({
+                       drdy, phystatus0, phystatus1, plllkdet, resetdone0, resetdone1,
+                       rxbyteisaligned0, rxbyteisaligned1, rxbyterealign0, rxbyterealign1,
+                       rxchanbondseq0, rxchanbondseq1, rxchanisaligned0, rxchanisaligned1,
+                       rxchanrealign0, rxchanrealign1, rxcommadet0, rxcommadet1, rxelecidle0,
+                       rxelecidle1, rxoversampleerr0, rxoversampleerr1, rxprbserr0, rxprbserr1,
+                       rxvalid0, rxvalid1},        
+                       "log"
+                   ),
+                   value(rxconfigout, "bits:16"),  // port do
+                   value({rxbufstatus0, rxbufstatus1}, "uint:3"),
+                   value({rxchbondo0, rxchbondo1}, "[3]log"),
+                   value({rxclkcorcnt0, rxclkcorcnt1}, "uint:3"),
+                   value({rxdata0, rxdata1}, "[2]bits:8"),
+                   value({rxdisperr0, rxdisperr1, rxnotintable0, rxnotintable1,
+                          rxlossofsync0, rxlossofsync1, rxrundisp0, rxrundisp1,
+                          rxchariscomma0, rxchariscomma1, rxcharisk0, rxcharisk1,
+                          txkerr0, txkerr1, txrundisp0, txrundisp1},
+                          "[2]log"),
+                   value({rxstatus0, rxstatus1}, "uint:3"),
+                   value({txbufstatus0, txbufstatus1}, "[2]log")
+
+                   <-
+
+                   // attributes
+                   str({loc, refclkp_pin, refclkn_pin}),
+                   log({
+                       ac_cap_dis_0, ac_cap_dis_1, chan_bond_seq_2_use_0,
+                       chan_bond_seq_2_use_1, clk_cor_insert_idle_flag_0,
+                       clk_cor_insert_idle_flag_1, clk_cor_keep_idle_0, clk_cor_keep_idle_1,
+                       clk_cor_precedence_0, clk_cor_precedence_1, clk_cor_seq_2_use_0,
+                       clk_cor_seq_2_use_1, clk_correct_use_0, clk_correct_use_1,
+                       comma_double_0, comma_double_1, dec_mcomma_detect_0,
+                       dec_mcomma_detect_1, dec_pcomma_detect_0, dec_pcomma_detect_1,
+                       dec_valid_comma_only_0, dec_valid_comma_only_1, mcomma_detect_0,
+                       mcomma_detect_1, oversample_mode, pci_express_mode_0,
+                       pci_express_mode_1, pcomma_detect_0, pcomma_detect_1, rcv_term_gnd_0,
+                       rcv_term_gnd_1, rcv_term_mid_0, rcv_term_mid_1, rcv_term_vttrx_0,
+                       rcv_term_vttrx_1, rx_buffer_use_0, rx_buffer_use_1,
+                       rx_decode_seq_match_0, rx_decode_seq_match_1, rx_loss_of_sync_fsm_0,
+                       rx_loss_of_sync_fsm_1, termination_ovrd, tx_buffer_use_0,
+                       tx_buffer_use_1
+                   }),
+                   log(tx_diff_boost_0, true),
+                   log(tx_diff_boost_1, true),
+                   int({
+                       align_comma_word_0, align_comma_word_1, chan_bond_1_max_skew_0,
+                       chan_bond_1_max_skew_1, chan_bond_2_max_skew_0, chan_bond_2_max_skew_1,
+                       chan_bond_level_0, chan_bond_level_1, chan_bond_seq_1_1_0,
+                       chan_bond_seq_1_1_1, chan_bond_seq_1_2_0, chan_bond_seq_1_2_1,
+                       chan_bond_seq_1_3_0, chan_bond_seq_1_3_1, chan_bond_seq_1_4_0,
+                       chan_bond_seq_1_4_1, chan_bond_seq_1_enable_0, chan_bond_seq_1_enable_1,
+                       chan_bond_seq_2_1_0, chan_bond_seq_2_1_1, chan_bond_seq_2_2_0,
+                       chan_bond_seq_2_2_1, chan_bond_seq_2_3_0, chan_bond_seq_2_3_1,
+                       chan_bond_seq_2_4_0, chan_bond_seq_2_4_1, chan_bond_seq_2_enable_0,
+                       chan_bond_seq_2_enable_1, clk_cor_seq_1_1_0, clk_cor_seq_1_1_1,
+                       clk_cor_seq_1_2_0, clk_cor_seq_1_2_1, clk_cor_seq_1_3_0,
+                       clk_cor_seq_1_3_1, clk_cor_seq_1_4_0, clk_cor_seq_1_4_1,
+                       clk_cor_seq_1_enable_0, clk_cor_seq_1_enable_1, clk_cor_seq_2_1_0,
+                       clk_cor_seq_2_1_1, clk_cor_seq_2_2_0, clk_cor_seq_2_2_1,
+                       clk_cor_seq_2_3_0, clk_cor_seq_2_3_1, clk_cor_seq_2_4_0,
+                       clk_cor_seq_2_4_1, clk_cor_seq_2_enable_0, clk_cor_seq_2_enable_1,
+                       com_burst_val_0, com_burst_val_1, comma_10b_enable_0, comma_10b_enable_1,
+                       mcomma_10b_value_0, mcomma_10b_value_1, oobdetect_threshold_0,
+                       oobdetect_threshold_1, pcomma_10b_value_0, pcomma_10b_value_1,
+                       sata_burst_val_0,
+                       sata_burst_val_1, sata_idle_val_0, sata_idle_val_1, termination_ctrl
+                   }),
+                   int({   pcs_com_cfg, pma_cdr_scan_0, pma_cdr_scan_1, pma_rx_cfg_0,
+                           pma_rx_cfg_1, prbs_err_threshold_0, prbs_err_threshold_1, 
+                           trans_time_from_p2_0, trans_time_from_p2_1, trans_time_non_p2_0,
+                           trans_time_non_p2_1, trans_time_to_p2_0, trans_time_to_p2_1}),
+                   int(chan_bond_seq_len_0,    1),
+                   int(chan_bond_seq_len_1,    1),
+                   int(clk25_divider,          1),
+                   int(clk_cor_adj_len_0,      1),
+                   int(clk_cor_adj_len_1,      1),
+                   int(clk_cor_det_len_0,      1),
+                   int(clk_cor_det_len_1,      1),
+                   int(clk_cor_max_lat_0,      3),
+                   int(clk_cor_max_lat_1,      3),
+                   int(clk_cor_min_lat_0,      3),
+                   int(clk_cor_min_lat_1,      3),
+                   int(clk_cor_repeat_wait_0,  0),
+                   int(clk_cor_repeat_wait_1,  0),
+                   int(oob_clk_divider,        1),
+                   int(pll_divsel_fb,          1),
+                   int(pll_divsel_ref,         1),
+                   int(pll_rxdivsel_out_0,     1),
+                   int(pll_rxdivsel_out_1,     1),
+                   int(pll_txdivsel_comm_out,  1),
+                   int(pll_txdivsel_out_0,     1),
+                   int(pll_txdivsel_out_1,     1),
+                   int(rx_los_invalid_incr_0,  1),
+                   int(rx_los_invalid_incr_1,  1),
+                   int(rx_los_threshold_0,     4),
+                   int(rx_los_threshold_1,     4),
+                   int(sata_max_burst_0,       7),
+                   int(sata_max_burst_1,       7),
+                   int(sata_max_init_0,       22),
+                   int(sata_max_init_1,       22),
+                   int(sata_max_wake_0,        7),
+                   int(sata_max_wake_1,        7),
+                   int(sata_min_burst_0,       5),
+                   int(sata_min_burst_1,       5),
+                   int(sata_min_init_0,       12),
+                   int(sata_min_init_1,       12),
+                   int(sata_min_wake_0,        4),
+                   int(sata_min_wake_1,        14),
+                   str({   chan_bond_mode_0, chan_bond_mode_1, rx_slide_mode_0,
+                           rx_slide_mode_1, rx_status_fmt_0, rx_status_fmt_1, rx_xclk_sel_0,
+                           rx_xclk_sel_1   }),
+                   // str(pma_com_cfg),
+                   // inputs
+                   clock({
+                       txusrclk0, txusrclk20, rxusrclk0, rxusrclk20,
+                       txusrclk1, txusrclk21, rxusrclk1, rxusrclk21,
+                       clkin, dclk
+                   }),
+                   value({den, dwe, gtpreset, intdatawidth, plllkdeten, pllpowerdown,
+                          prbscntreset0, prbscntreset1, refclkpwrdnb, rxbufreset0, rxbufreset1,
+                          rxcdrreset0, rxcdrreset1, rxcommadetuse0, rxcommadetuse1,
+                          rxdatawidth0, rxdatawidth1, rxdec8b10buse0, rxdec8b10buse1,
+                          rxelecidlereset0, rxelecidlereset1, rxenchansync0, rxenchansync1,
+                          rxenelecidleresetb, rxeneqb0, rxeneqb1, rxenmcommaalign0,
+                          rxenmcommaalign1, rxenpcommaalign0, rxenpcommaalign1,
+                          rxensamplealign0, rxensamplealign1, rxpmasetphase0, rxpmasetphase1,
+                          rxpolarity0, rxpolarity1, rxreset0, rxreset1, rxslide0, rxslide1,
+                          txcomstart0, txcomstart1, txcomtype0, txcomtype1, txdatawidth0,
+                          txdatawidth1, txdetectrx0, txdetectrx1, txelecidle0, txelecidle1,
+                          txenc8b10buse0, txenc8b10buse1, txenpmaphasealign, txinhibit0,
+                          txinhibit1, txpmasetphase, txpolarity0, txpolarity1, txreset0, txreset1
+                          }, "log"
+                   ),
+                   value(daddr, "uint:7"),
+                   value(txconfigin, "bits:16"),   // port di
+                   value({rxchbondi0, rxchbondi1}, "[3]log"),
+                   value({rxeqpole0, rxeqpole1}, "uint:4"),
+                   value({txbypass8b10b0, txbypass8b10b1, txchardispmode0, txchardispmode1, txchardispval0, txchardispval1,
+                          txcharisk0, txcharisk1},
+                          "[2]log"),
+                   value({rxeqmix0, rxeqmix1}, "uint:2"),
+                   value({txdata0, txdata1}, "[2]bits:8"),
+                   value({txenprbstst0, rxenprbstst0,
+                          txenprbstst1, rxenprbstst1},
+                         "uint:2"),  
+                   value({txpowerdown0, rxpowerdown0,
+                          txpowerdown1, rxpowerdown1},
+                         "uint:2"),
+                   value({txpreemphasis0, txpreemphasis1, txdiffctrl0, txdiffctrl1,
+                          txbufdiffctrl0, txbufdiffctrl1, loopback0, loopback1},
+                          "uint:3")
+               ) {
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            See Xilinx documentation.
+
+            {\bf Input parameters:} \\
+            See Xilinx documentation.
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a dual GTP tile. For a simpler interface
+            see {\bf gtp\_dual\_16} \autorefph{sec:lmgtpdual16} above.
+
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+
+
+
+
+    \subsection{library classes}
+    
+        None.

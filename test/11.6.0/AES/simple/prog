@@ -1,0 +1,20 @@
+#! /usr/bin/env python3
+
+import cpu_serial
+
+
+#portName = findserialdev("tty.usbmodem")
+portName = "/dev/tty.usbmodem14201"
+cpu_serial.open_cpu_serial(portName, 0)
+
+ba = bytearray()
+ba += bytes([5])
+cpu_serial.comms_write(0, 2, 0, bytearray(ba));
+
+rba = cpu_serial.comms_read(0, 2, 0)
+print(int.from_bytes(rba, byteorder='little', signed=False))
+
+cpu_serial.close_cpu_serial()
+
+exit(0)
+

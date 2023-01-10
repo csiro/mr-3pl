@@ -1,0 +1,144 @@
+nosource
+
+// Definitions for Avnet MicroZed 7020 Zynq SoM evaluation board
+
+// This is identical to the 7010 version of the board, except that some
+// additional IO pairs and singles from Bank 13 are available on the
+// JX1 and JX2 connectors. On the MicroZed breakout card these signals
+// are available on test points.
+
+part("xc7z020clg400-1");
+
+// DMA  initialbuffer locations and sizes.
+int(global.DMA_base_address_init, 0x2f000000);
+int(global.DMA_buffer_size_init,  0x1000000);
+
+module "xilinx/xc7.3pl"
+module "xilinx/zynq_axi.3pl"
+
+//addncf("CONFIG VCCAUX=\"3.3\";"); XDC equivalent?
+str(lvcmos33, "LVCMOS33");
+
+// board-to-board connectors
+iopins(global.jx1_pair_pins, "[28][2]str", {
+    { "T11", "T10" },	// "JX1 LVDS 0"
+    { "T12", "U12" },
+    { "U13", "V13" },
+    { "V12", "W13" },
+    { "T14", "T15" },
+    { "P14", "R14" },
+    { "Y16", "Y17" },
+    { "W14", "Y14" },
+    { "T16", "U17" },
+    { "V15", "W15" },
+    { "U14", "U15" },
+    { "U18", "U19" },
+    { "N18", "P19" },
+    { "N20", "P20" },
+    { "T20", "U20" },
+    { "V20", "W20" },
+    { "Y18", "Y19" },
+    { "V16", "W16" },
+    { "R16", "R17" },
+    { "T17", "R18" },
+    { "V17", "V18" },
+    { "W18", "W19" },
+    { "N17", "P18" },
+    { "P15", "P16" },	// "JX1 LVDS 23"
+    { "U7",  "V7"  },	// "BANK13 LVDS 0"
+    { "T9",  "U10" },	// "BANK13 LVDS 1"
+    { "V8",  "W8"  },	// "BANK13 LVDS 2"
+    { "T5",  "U5"  }	// "BANK13 LVDS 3"
+}, iostandard=lvcmos33);   
+iopins(global.jx1_single_pins, "[2]str", {
+    "R19", "T19"
+}, iostandard=lvcmos33);
+
+iopins(global.jx2_pair_pins, "[27][2]str", {
+    { "C20", "B20" },	// "JX2 LVDS 0"
+    { "B19", "A20" },
+    { "E17", "D18" },
+    { "D19", "D20" },
+    { "E18", "E19" },
+    { "F16", "F17" },
+    { "L19", "L20" },
+    { "M19", "M20" },
+    { "M17", "M18" },
+    { "K19", "J19" },
+    { "L16", "L17" },
+    { "K17", "K18" },
+    { "H16", "H17" },
+    { "J18", "H18" },
+    { "G17", "G18" },
+    { "F19", "F20" },
+    { "G19", "G20" },
+    { "J20", "H20" },
+    { "K14", "J14" },
+    { "H15", "G15" },
+    { "N15", "N16" },
+    { "L14", "L15" },
+    { "M14", "M15" },
+    { "K16", "J16" },	// "JX2 LVDS 23"
+    { "Y12", "Y13" },	// "BANK13 LVDS 4"
+    { "V11", "V10" },	// "BANK13 LVDS 5"
+    { "V6",  "W6"  }	// "BANK13 LVDS 6"
+}, iostandard=lvcmos33);   
+iopins(global.jx2_single_pins, "[3]str", {
+    "G14", "J15",
+    "V5"		// "BANK13 SE 0"
+}, iostandard=lvcmos33);
+
+
+// breakout board connector 1
+var(global.con1_3_16_pins,  "[14]str", {
+    "R19", "T19", "T11", "T12", "T10", "U12", "U13",
+    "V12", "V13", "W13", "T14", "P14", "T15", "R14"
+});
+var(global.con1_19_38_pins, "[20]str", {
+    "Y16", "W14", "Y17", "Y14", "T16", "V15", "U17", "W15", "U14", "U18",
+    "U15", "U19", "N18", "N20", "P19", "P20", "T20", "V20", "U20", "W20"
+});
+var(global.con1_41_52_pins, "[12]str", {
+    "Y18", "V16", "Y19", "W16", "R16", "T17",
+    "R17", "R18", "V17", "W18", "V18", "W19"
+});
+var(global.con1_55_58_pins, "[4]str",  {
+    "N17", "P15",
+    "P18", "P16"
+});
+
+// breakout board connector 2
+var(global.con2_3_16_pins,  "[14]str", {
+    "G14", "J15", "C20", "B19", "B20", "A20", "E17",
+    "D19", "D18", "D20", "E18", "F16", "E19", "F17"
+});
+var(global.con2_19_34_pins, "[16]str", {
+    "L19", "M19", "L20", "M20", "M17", "K19", "M18", "J19",
+    "L16", "K17", "L17", "K18", "H16", "J18", "H17", "H18"
+});
+var(global.con2_37_48_pins, "[12]str", {
+    "G17", "F19", "G18", "F20", "G19", "J20",
+    "G20", "H20", "K14", "H15", "J14", "G15"
+});
+var(global.con2_51_58_pins, "[8]str", {
+    "N15", "L14", "N16", "L15",
+    "M14", "K16", "M15", "J16"
+});
+
+// breakout board test points
+var(global.tp7_pin,  "str", "U7");
+var(global.tp6_pin,  "str", "T9");
+var(global.tp9_pin,  "str", "V7");
+var(global.tp8_pin,  "str", "U10");
+var(global.tp11_pin, "str", "V8");
+var(global.tp10_pin, "str", "T5");
+var(global.tp13_pin, "str", "W8");
+var(global.tp12_pin, "str", "U5");
+
+var(global.tp15_pin,  "str", "Y12");
+var(global.tp14_pin,  "str", "V11");
+var(global.tp17_pin,  "str", "Y13");
+var(global.tp16_pin,  "str", "V10");
+var(global.tp18_pin,  "str", "V6");
+var(global.tp20_pin,  "str", "W6");
+var(global.tp19_pin,  "str", "V5");

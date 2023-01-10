@@ -1,0 +1,663 @@
+\pagebreak
+
+\chapter{Immediate Statements}\label{chap:immed}
+
+    Immediate statements generate no target code execution threads.
+
+    An immediate variable is one which has been declared with no mode, or
+    explicitly with immediate mode.
+
+
+    \section{immediate mode assignment}\label{sec:im_ass}
+
+        \index{assignment!immediate mode}
+        Immediate assignment is assignment to an immediate variable.
+        An immediate assignment statement has the forms -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable = expression;          // simple assignment
+               variable += expression;         // additive assignment
+               variable -= expression;         // subtractive assignment
+               variable *= expression;         // multiplicative assignment
+               variable /= expression;         // divisional assignment
+               variable %= expression;         // remainder assignment
+               variable &&= expression;        // logical AND assignment
+               variable ||= expression;        // logical OR assignment
+               variable ^^= expression;        // logical XOR assignment
+               variable &= expression;         // bitwise AND assignment
+               variable |= expression;         // bitwise OR assignment
+               variable ^= expression;         // bitwise XOR assignment
+               variable <<= expression;        // left shift assignment
+               variable >>= expression;        // right shift assignment
+               variable++;                     // increment statement
+               variable--;                     // decrement statement
+        \end{lstlisting}
+        Where a variable is a structure or an array, members can
+        be assigned by -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable.field = expression;
+               variable[subscript] = expression;
+               variable.field++;
+               variable.field--;
+               variable[subscript]++;
+               variable[subscript]--;
+        \end{lstlisting}
+        
+        For simple assignment whole structs or arrays can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable = variable;
+               variable = {.......};   // compound value
+        \end{lstlisting}
+        
+        \index{string/type conversion}
+        For simple assignment if the LHS is type "str" and the RHS is
+        type "type" the RHS will be converted to string representation of the
+        type (the same as invoking unbuilt function {\bf typestring()}).
+        If the LHS is type "type" and the RHS is type "str" the string will
+        be converted to a type.
+
+        For the other assignment types the RHS type must be primitive. Types
+        allowed are -
+
+        \begin{tabular}{| l | l | l |}
+        \hline
+                  & LHS & RHS  \\
+        \hline
+        \hline
+        \verb'+=' & int, uint & int, uint  \\
+                  & float & float  \\
+                  & float & int, uint  \\
+                  & str & str, int, uint, float  \\
+        \hline
+        \verb'-=' & int, uint & int, uint \\
+                  & float & float  \\
+                  & float & int, uint  \\
+        \hline
+        \verb'*=' & int, uint & int, uint \\
+                  & float & float  \\
+                  & float & int, uint  \\
+        \hline
+        \verb'/=' & int, uint & int, uint \\
+                  & float & float  \\
+                  & float & int, uint  \\
+        \hline
+        \verb'%=' & int, uint & int, uint \\
+                  & float & int, uint  \\
+        \hline
+        \verb'&&=' & log & log \\
+        \hline
+        \verb'||=' & log & log \\
+        \hline
+        \verb'^^=' & log & log \\
+        \hline
+        \verb'&=' & int, uint, bits & int, uint, bits \\
+        \hline
+        \verb'|=' & int, uint, bits & int, uint, bits \\
+        \hline
+        \verb'^=' & int, uint, bits & int, uint, bits \\
+        \hline
+        \verb'<<=' & int, uint, bits & int, uint \\
+        \hline
+        \verb'>>=' & int, uint, bits & int, uint \\
+        \hline
+        \end{tabular}
+
+        Note that \verb'+=' can be used for string concatenation where the
+        RHS can be one of several types.
+        
+        The logical assignments \verb'&&=' and  \verb'||=' do not perform
+        short-circuit evaluation unlike the equivalent binary operators.
+
+        RHS expressions may contain only immediate variables and constants
+        and related operators and function calls returning immediate values.
+        
+        LHS variable references may have side effects, for example incremented
+        or decremented subscripts or subscripts returned by calls to functions
+        within which enduring state is changed.
+        
+        As a special case a value mode expression whose value is a constant
+        may be assigned to an immediate mode variable. A value mode expression
+        may be tested by calling the inbuilt function {\bf istargconst()}
+        \autorefph{sec:ifistargconst}. These features may be used where
+        either a constant of a variable is passed as an argument to a parameter
+        and immediate conditional code needs to distinguish which is the case.
+
+
+    \section{value mode assignment}\label{sec:im_valass}
+
+        \index{assignment!value mode}
+        Assignment to a value mode variable.
+        is an immediate assignment, it is not executed in the target. It may
+        however create target logic.
+        A value assignment statement has the form -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable := expression;
+        \end{lstlisting}
+        
+        Whole structs or arrays can be assigned by
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable := variable;
+        \end{lstlisting}
+
+        RHS expressions may contain constants, both immediate and target
+        variables and function calls and operators.
+        
+        A value variable is a target variable which represents the value of a
+        target expression. Constants will be converted to equivalent signals in
+        the target logic.
+        
+        A value variable can also be assigned an initial value when created
+        (see {\bf value()} \autorefph{sec:ipvalue})
+        
+        Whether the assignment is of a primitive or a compound type the widths
+        of individual words may differ as long as the primitive types match.
+        Bits and unsigned integers will be padded or truncated as needed.
+        Signed integers will be truncated or sign extended. Signed integers
+        may not be assigned to unsigned integers. Unsigned integers may be
+        assigned to signed integers, but since size adjustments are made
+        by truncation or zero padding the sign of the result may be incorrect
+        unless the LHS is at least one bit larger than the RHS.
+        
+        A value mode variable may be created as type "empty", in which case it
+        can be assigned any type. Following assignment the variable will retain
+        the type of the RHS value assigned to it. Any further assignments to
+        that variable will be subject to type checking as normal. A value
+        variable can be cleared and its type changed to "empty" by calling
+        inbuilt procedure {\bf emptyvalue} \autorefph{sec:ipemptyvalue}.
+        
+        A value variable is usually combinatorial in that it does not itself have
+        intrinsic state in the target device but may explicitly create state
+        devices. For example in the following
+        \begin{lstlisting}[gobble=8, language=threepl]
+               value(v, "log");
+               
+               v := a && b || c;
+        \end{lstlisting}
+        variable {\em v} represents the value of the logical expression and as
+        such is combinatorial.
+        
+        But in the following example
+        \begin{lstlisting}[gobble=8, language=threepl]
+               value(v, "log");
+               
+               v := a;
+        \end{lstlisting}
+        {\bf v} is effectively a pointer to variable {\em a} (though not one that
+        can be used with the indirect operator). The state, or storage, is in {\em
+        a}, not in {\em v}. If {\em a} changes, the value of {\em v} will also
+        change since it simply reflects the value of {\em a}.
+        
+        Value variables are used mainly as 'pointers' to combinatorial
+        expressions that are to be shared. 3PL will not attempt to find
+        common subexpressions and instantiate these once, indeed that can be
+        counter-productive for speed. Value variables as parameters are also
+        a way of passing a variable or expression to or from a module,
+        procedure or function.
+            
+        When a value variable is a compound type each element of the
+        type is separate. Thus a value array can be linked to
+        quite distinct sources, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+               value(a, "[3]uint:8");
+               static(b, "uint:8");
+               queue(c, "uint:8");
+               value(d, "[2]uint:8");
+
+               d[1] := a + 2;
+               a[0] := b;
+               a[1] := c;
+               a[2] := 2 * d[1];
+        \end{lstlisting}
+        The value array {\em a} could now be assigned in total to
+        another value array, whole or in part -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               value(e, "[5]uint:8");
+
+               e[1..3] := a;
+        \end{lstlisting}
+        Each component of the left hand side value variable array is
+        assigned the value of the corresponding right hand side value
+        variable.
+        
+        Value variables can be re-assigned at any time. When a value variable
+        is referenced its current value is used. If a value variable is
+        referenced prior to its first assignment, a temporary link will be put
+        in place and this will be replaced by the first assigned value after
+        which the value variable behaves as described above. This
+        pre-assignment usage is provided to avoid problems associated with
+        cycles of dependence which occur frequently.
+        
+        If the value of a value variable is used prior to assignment the
+        value will be given the current clock domain and the value assigned
+        later must have the same clock domain.
+        
+        Where a value variable is assigned a value following evaluation of that
+        variable, i.e. it has been used prior to assignment, the value assigned
+        must not contain queue reads.
+        
+        Where a value variable is assigned a value following evaluation of that
+        variable, i.e. it has been used prior to assignment, the value assigned
+        must not contain the function {\bf cmemoryread()}
+        \autorefph{sec:ifcmemoryread}. \footnote{This restriction is imposed
+        because of the need to link the execution signal for a statement
+        containing a {\em cramread()} (or {\em cmemoryead()}) to the memory
+        variable itself. The execution signal is used to multiplex the read
+        addresses where multiple reads are involved. Post assignment to a value
+        variable occurs after that execution signal was available. This
+        limitation may be removed in the future}.
+        
+        A value must not be assigned an expression containing {\bf
+        cmemoryread()} \autorefph{sec:ifcmemoryread} if the value is never used
+        as this generates a read access to the memory variable which is never
+        connected to appropriate control logic. This restriction may be removed
+        in future.
+        
+        There is a special case of value assignment which allows a clock variable
+        to be used as a logic value. A clock variable can be assigned to a value
+        mode variable of type {\bf log}.
+        
+        A value variable as a whole has a no clock domain, but the components of a
+        value will each have a clock domain. That clock domain will be determined
+        when the variable is evaluated by examining the clock domains of all
+        ultimate source variables in expressions, i.e. variables that have state
+        such as static mode and queue mode. The components, i.e. array members or
+        structure fields, need not have the same clock domain, though that would
+        be unusual. When a value mode variable is evaluated the value will have
+        the clock domain of the component. If a number of components are accessed
+        in one evaluation, for example a sub-array, they must all have the same
+        clock domain.
+        
+        A value variable may have the clock domains of its components set by
+        passing the {\bf domain} attribute in the variable creation procedure call
+        or by setting it by calling inbuilt procedure {\bf attributes()}. This will
+        establish the clock domains of any components that thus far have no
+        clock domain, all the way back to variables with state such as static mode
+        or queue mode variables. Where such variables already have a clock domain
+        the domain will be compared and if different a fatal error will result.
+        
+        For a discussion of clock domains see \autorefph{subsec:clockdoms}.
+        
+
+
+
+    \section{priority mode assignment}\label{sec:priass}
+    
+        \index{assignment!priority mode}
+        Priority mode variables are always arrays of type {\bf log}. An
+        assignment to a member, or members, of a priority variable array forms
+        an input to the priority encoder where subscript 0 has the highest
+        priority.
+        
+        Assignment of priority mode variable array members has the same syntax
+        as for value variables -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable[i] := expression;
+        \end{lstlisting}
+        
+        The assigned expression, which is an input, must not contain queue
+        reads, but it may contain queue examines and queue availability tests.
+        
+        A priority variable array member may be assigned more than once but the
+        default behaviour is that the final value assigned prior to termination
+        of immediate execution prevails, all other previous assignments being
+        lost. This can be changed by setting attribute "multiplein" to true in
+        which case all assignments will be collected and ORed together on
+        completion of immediate execution to form the input to that priority
+        array member.
+            
+        A priority variable inherits the current clock domain. Values assigned
+        to it must either have the same clock domain. If the value to be
+        assigned has a different clock domain it must be converted by one of
+        the inbuilt functions {\bf sample()} \autorefph{sec:ifsample} or {\bf
+        accept()} \autorefph{sec:ifaccept}.
+
+        A priority variable has a single clock domain for reading and writing.
+        When a priority variable is created using the inbuilt procedure {\bf
+        priority()} \autorefph{sec:ippriority} it has no associated clock domain.
+        The clock domain is established by
+        \blist
+        \item   the first assignment to the variable
+        \item   the first use of the value of the variable
+        \blend
+        
+        {\bf Note that evaluation of the variable in any context, for example
+        in inbuilt or library modules, procedures or functions, will establish
+        a clock domain if the variable does not yet have a clock domain.}
+        This will always be the current clock domain (unless the code has
+        been explicitly written to establish the clock domain of its argument
+        to something other than the current clock domain, in which case
+        this will presumably be well documented).
+        
+        When a priority variable is assigned, the clock domain of the assigned
+        value must be the same as the current clock domain or null.
+        
+        When a priority variable is assigned, If it has no clock domain the
+        current clock domain will be established as the clock domain of the
+        variable. If it has a clock domain it must be the same as the current
+        clock domain.
+        
+        When the value of a priority variable is used that value will have the
+        clock domain of the variable.
+        
+        Note that control structues {\bf waitpri} and {\bf waitprilock} use
+        priority variables for mutual exclusion and provide a more convenient
+        interface than use of priority variables directly
+        \autorefph{sec:waitpri}.
+        
+        
+
+
+
+    \section{output mode unconditional assignment}\label{sec:outputiass}
+    
+        \index{assignment!unconditional!output mode}
+        An output variable represents a connection off-chip via output buffers and
+        pads. Unconditional assignment of output mode variables is used where
+        3-state output is not required.
+
+        Unconditional assignment has the same syntax as for value mode variables -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable := expression;
+        \end{lstlisting}
+        
+        Any component of an output mode variable may only be assigned once,
+        either by default via the 3rd argument to inbuit procedure output() or
+        explicitly by a conditional or unconditional assignment statement.
+        Components such as structure fields or array members may be assigned
+        in separate statements and may be a mixture of conditional and
+        unconditional.
+                
+        In the Xilinx implementation if the source of the output is a static
+        variable then the associated flip-flops can be located in the IOBs. This
+        can be done by a suitable flag to the Xilinx tools but is best done by
+        explicitly setting the IOB attribute to true on the static variable since
+        the 3PL netlist optimiser is then aware of this. If the static varible
+        flip-flops go to other destinations as well as the output buffers then they
+        will be replicated by the 3PL netlist optimiser, the replicants being
+        sourced in parallel and located in IOBs while the originals stay in CLBs.
+        The advantage of this is that the propagation time from flip-flop to pad
+        will be the minimum achievable (controlled also by slew rate and drive
+        current attributes). If this is not the case then a timing constraint from
+        the clock domain to the output pads may need to be provided.
+        
+        If a source for an output mode variable is specified when it is created
+        (3rd argument to {\bf output()}, see \autorefph{sec:ipoutput}) that
+        is equivalent to an initial unconditional assignment of that source
+        to the output mode variable.
+        
+        The assigned expression must not contain queue reads, but it may contain
+        queue examines and queue availability tests. The LHS may have array
+        subscripts, subscript ranges or struct fields. If the value to be assigned
+        has a different clock domain it must be converted by one of the inbuilt
+        functions {\bf sample()} \autorefph{sec:ifsample} or {\bf accept()}
+        \autorefph{sec:ifaccept}.
+          
+        An output variable has a write clock domain but no read clock domain.
+        When an output variable is created using the inbuilt procedure {\bf
+        output()} \autorefph{sec:ipoutput} it has no associated clock domain. Its
+        clock domain is established by the first assignment to the variable (or
+        component of the variable if the type is compound) and is the current
+        clock domain. The RHS exression must also have the current clock domain
+        as its output (read) clock domain. The RHS expressions may be immediate
+        or target mode. 
+        
+        An output mode variable must have at least a {\bf loc} attribute,
+        providing a location for each pad.
+        
+        
+
+
+
+    \section{clock mode assignment}\label{sec:clockass}
+    
+        \index{assignment!clock mode}
+        Assignment of clock mode variables has the same syntax as for value
+        variables -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               variable := variable;
+        \end{lstlisting}
+        but the RHS can only be a clock variable or a function returning
+        a clock variable. An assignment of null is not allowed.
+            
+        The LHS clock variable now becomes an implicit indirect reference to
+        the RHS clock variable. The two variables are now equivalent in all
+        contexts (but the netlist identifier is the RHS variable).
+        
+        These assignments may be chained.
+            
+        Where clock variables are assigned and are also used to set the clock
+        domain, note that logic using that clock will be connected to the
+        clock source determined by the value the clock variable has when
+        immediate execution terminates. Changing the value of a clock variable
+        by assignment, even if accompanied by passing it to {\bf useclock()},
+        will not result in associated code having different clock domains -
+        the code will all be driven by the clock source given by the final
+        value of the clock variable.
+        
+
+
+
+    \section{the {\bf if} control structure}\label{sec:im_if_struct}
+
+        \index{statement!if}
+        The {\bf if} has the format -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               if (expression)
+                   body
+        \end{lstlisting}
+        which executes the body if the test expression is true.
+
+        An alternative form is 
+        \begin{lstlisting}[gobble=8, language=threepl]
+               if (expression)
+                   true_body
+               else
+                   false_body
+        \end{lstlisting}
+        which provides an additional body to be executed when
+        the test expression is false.
+
+        The expression must be immediate and must evaluate to a logical
+        result.
+
+        In the first form the body will be executed if the
+        expression is true. In the second form one of the code
+        bodies will be executed as selected.
+        
+        A body may be a single statement or a statement block in braces ({\em
+        \{\dots\}}).
+        
+        Any target statements generated by execution of one of the bodies will
+        replace this {\em if} statement in the target code. If there are
+        multiple target statements generated then this {\em if} must be
+        enclosed in a {\em seq}, {\em par} or {\em sync} block to control
+        their execution.
+
+
+
+    \section{the {\bf while} control structure}\label{sec:im_while_struct}
+
+        \index{statement!while}
+        The {\bf while} control structure iterates while
+        a test expression is true. The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               while (expression)
+                   body
+        \end{lstlisting}
+        which executes the body while the test expression
+        remains true.
+
+        The expression must be immediate and must evaluate to a logical
+        result.
+        
+        The body may be a single statement or a statement block in braces ({\em
+        \{\dots\}}).
+        
+        Any target statements generated by execution of the body will
+        accumulate as a list of statements to replace this {\em while}
+        statement in the target code. If there are multiple target statements
+        generated then this {\em while} must be enclosed in a {\em seq}, {\em
+        par} or {\em sync} block to control their execution.
+
+
+
+    \section{the {\bf do while} control structure}\label{sec:im_dowhile_struct}
+
+        \index{statement!do while}
+        The {\bf do while} control structure iterates while
+        a test expression is true. The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               do {
+                   body
+               } while (expression);
+        \end{lstlisting}
+        which executes the body while the test expression
+        remains true. This differs from the {\bf while} in
+        that the body is executed at least once.
+
+        The expression must be immediate and must evaluate to a logical
+        result.
+        
+        Any target statements generated by execution of the body will
+        accumulate as a list of statements to replace this {\em do while}
+        statement in the target code. If there are multiple target statements
+        generated then this {\em do while} must be enclosed in a {\em seq},
+        {\em par} or {\em sync} block to control their execution.
+
+
+
+    \section{the {\bf for} control structure}\label{sec:im_for_struct}
+
+        \index{statement!for}
+        The {\bf for} control structure iterates while a test expression is
+        true and provides initialisation and iteration control. The format
+        is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               for (initialisation ; expression ; iteration)
+                   body
+        \end{lstlisting}
+        The initialisation statement must be a single immediate assignment
+        statement or an inbuilt variable creation procedure call. If the latter
+        the resulting variable will be in a local scope containing the loop.
+
+        The expression must be immediate and must evaluate to a logical
+        result.
+        
+        The iteration statement must be a single immediate assignment statement
+        or increment or decrement statement as the C ',' (comma) operator is not
+        implemented in 3PL.
+
+        The body may be a single statement or a statement block in braces
+        ({\em \{\dots\}}).
+
+        Any target statements generated by execution of the body will
+        accumulate as a list of statements to replace this {\em for} statement
+        in the target code. If there are multiple target statements generated
+        then this {\em for} must be enclosed in a {\em seq}, {\em par} or {\em
+        sync} block to control their execution.
+
+
+
+    \section{the {\bf switch} control structure}\label{sec:im_switch_struct}
+
+        \index{statement!switch}
+        The {\bf switch} statement selects a code block
+        by testing the value of an expression against a
+        number of cases. The format is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               switch (expression) {
+               case expression_or_list1:
+                   body1
+               case expression_or_list2:
+                   body2
+               default:
+                   bodyd
+               }
+        \end{lstlisting}
+        each {\em expression\_or\_list} may be a single expression or a
+        comma-separated list of expressions enclosed in braces. The value
+        derived from {\em expression} is compared with the values in each of
+        the case statements and equality results in the associated code body
+        being executed. {\bf expression} may be any immediate primitive type,
+        including float\footnote{floating point equality comparisons require
+        caution as rounding errors in computed values often result in values
+        differing from the exact}. The case values must be of the same type as
+        the test expression, but they need not evaluate to constants. The
+        case values, whether constant or not, need not be unique. If they are
+        repeated the first one encountered (from the top) will be used.
+        
+        {\bf Note that unlike languages such as C or Java the code associated
+        with a case value does not flow on to the next case, i.e. break
+        statements are ignored by the switch and may be used within a
+        switch case code body to exit from an enclosing loop.}
+        
+        Any target statements generated by execution of a body will replace
+        this {\em switch} statement in the target code. If there are multiple
+        target statements generated then this {\em switch} must be enclosed in
+        a {\em seq}, {\em par} or {\em sync} block to control their execution.
+
+
+
+    \section{the {\bf break} statement}\label{sec:im_break_statement}
+
+        \index{statement!break}
+        A {\bf break} statement can only occur within immediate {\bf while},
+        {\bf do while} or {\bf for} loops. It switches immediate execution to
+        the end of the enclosing iterative statement, exiting that statement.
+
+
+
+    \section{the {\bf continue} statement}\label{sec:im_continue_statement}
+
+        \index{statement!continue}
+        A {\bf continue} statement can only occur within immediate {\bf while},
+        {\bf do while} or {\bf for} loops. It switches immediate execution to
+        the end of the enclosing iterative statement to conditionally execute
+        the next iteration.
+
+
+
+    \section{the {\bf return} statement}\label{sec:im_return_statement}
+
+        \index{statement!return}
+        A {\bf return} statement returns from a call to a module, procedure
+        or function. It may also be used to terminate execution of a file module
+        (which is executing via an implicit call) or to terminate execution
+        of an inline module. On returning from the initial file module any
+        trailer modules will then be executed.
+
+        For a module or procedure the syntax is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               return;
+        \end{lstlisting}
+        For a function the syntax is -
+        \begin{lstlisting}[gobble=8, language=threepl]
+               return(v);
+        \end{lstlisting}
+        where the argument is an expression giving the returned value of the
+        function.
+        
+        A module or procedure will of course return to the point
+        at which it was called if code execution simply proceeds past the
+        last statement in its code block. Functions must use {\bf return}
+        to return a value.
+        
+        A {\bf return} statement cannot appear in the following target
+        control structures -
+        \blist
+        \item   branch
+        \item   par
+        \item   seq
+        \item   sync
+        \item   sync when
+        \item   seq do while
+        \item   par do while
+        \item   sync do while
+        \item   seq while
+        \item   par while
+        \item   sync while
+        \item   unless
+        \item   waitpri
+        \item   when
+        \blend
+
+

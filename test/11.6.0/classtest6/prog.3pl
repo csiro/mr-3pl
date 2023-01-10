@@ -1,0 +1,101 @@
+//module "dummy.3pl"
+
+/*
+// Single class reference.
+struct(s,
+    f1, "[3]class"
+);
+var(c, s);
+c.f1[1] = cl();
+
+println(c.f1[1].i[1]);
+
+class cl () {
+    var(i, "[3]int", {22, 33, 44});
+}
+*/
+
+// Simple nested classes
+/*
+var(c1, "class");
+
+c1 = cl();
+
+println(c1.c2.j);
+
+
+class cl () {
+    var(c2, "class");
+    c2 = cc();  // OK, an instance of cc
+        
+    class cc () {
+        int(j, 567);
+    }
+}
+*/
+
+// Complex Nested class references
+struct(s1,
+    f1, "[4]class"
+);
+struct(s2,
+    f2, "[4]class"
+);
+
+var(c, s1);
+c.f1[1] = cl();
+var(ff, type(c));
+println(typevalstring(type(c)));
+ff = c;
+
+class(dddd);
+dddd = c.f1[1].i[2].f2[3];
+println("p2 " + dddd.j + " (567)");
+
+println("p3 " + c.f1[1].i[2].f2[3].j + " (567)");
+
+class cl () {
+    var(i, "[4]s2");
+    i[2].f2[3] = cc();  // OK, an instance of cc
+    
+    class(cccc);
+    cccc = cc();        // another instance of class cc
+    println("p1 " + cccc.j + " (567)"); // variable j from that instance of cc
+    
+    class cc () {
+        int(j, 567);
+    }
+    
+    //global module mmm () { - should give error
+    //}
+}
+
+// non-class test
+/*
+struct(s3,
+    f3, "[3]int"
+);
+struct(s2,
+    f2, "[3]s3"
+);
+struct(s1,
+    f1, "[3]s2"
+);
+
+var(v1, s1);
+var(v2, s2);
+var(v3, s3);
+v3.f3[0] = 22;
+v3.f3[1] = 33;
+v3.f3[2] = 44;
+v2.f2[1] = v3;
+v1.f1[1] = v2;
+
+int(r);
+r = v1.f1[1].f2[1].f3[1];
+println(r);
+
+//println("XX");
+println(v1.f1[1].f2[1].f3[1]);
+*/
+

@@ -1,0 +1,576 @@
+
+This class represents an element, for example a flip-flop,
+a gate or a block of RAM.
+
+
+{\bf String cellname} - the element name to be used in the netlist, e.g.
+"FDRS" or "AND2".
+
+{\bf String ident} - a unique identifier string of the form "b123" (see
+{\bf icount} below).
+
+
+{\bf private static HashMap\verb'<'String, Ports\verb'>' celldecls} -  a
+map of cell types. The map key is the cell name and the value is class {\bf
+Ports} describing the input and output ports. Ports contains 3 sets,
+inputs, outputs and 3-state outputs. Each of these sets contains Strings
+giving the port names.
+
+
+{\bf HashSet\verb'<'String\verb'>' inportset} - this is a set of the input
+pins for the element. It will be a common set for the element type stored
+in an instance of the {\bf Ports} class kept in a static map {\bf
+celldecls} (see below).
+
+{\bf HashSet\verb'<'String\verb'>' outportset} - like inportset above this
+is a set of output pins for the element.
+
+{\bf HashSet\verb'<'String\verb'>' tsportset} -  like inportset above this
+is a set of 3-state output pins for the element.
+
+The above sets are the same sets as those contained in the Ports class in
+the 'celldecls' map indexed by the cell name of this instance. When a port
+connection is added to an element the port name is checked against the
+appropriate set and if not present is added. Since the port sets are shared
+among elements with the same cell name the port sets for an element type
+are built up by usage and are not pre-defined. This can be a problem where
+nested gates are combined into a single gate during optimisation since that
+element prototype might not have been encountered during netlist building.
+For that reason AND, OR, XOR, XNOR gates and LUTs are initialised in map
+{\bf celldecls} for number of inputs from 1 to the LUT width
+(XTDECode.initialise())
+
+{\bf HashMap\verb'<'String, Net\verb'>' inports} - a map
+of input ports where the map key is the port name and the value is an
+instance of class Net.
+
+{\bf HashMap\verb'<'String, Net\verb'>' outports} -  a
+map of 2-state output ports where the map key is the port name and the
+value is an instance of class Net.
+
+{\bf HashMap\verb'<'String, Net\verb'>' tsports} -  a map
+of 3-state output ports where the map key is the port name and the value
+is an instance of class Net.
+
+Maps 'inports', 'outports' and 'tsports' represent the input and output
+connections to the element. The keys to these maps are the port name
+strings and the associated values are the connected nets (class 'Net').
+
+
+{\bf Gtype element\_type} - a gate type enum used to identify elements
+that can be optimised. The gate type enums are defined in class {\bf
+NetConstants}.
+
+{\bf private static ArrayList\verb'<'Element\verb'>' instances = new
+ArrayList\verb'<'Element\verb'>'(20000)} - a list of all elements in the
+netlist. Optimisable elements are added to the front of the list and a
+count of these is kept in static variable {\bf ocount}.
+Elements whose type is NONE are added at the end of the list, all others
+being inserted at the front. Thus the elements that are labeled as being
+subject to optimisation are located at the head of list 'instances'. The
+number of such entries in the list is given by 'ocount'. This scheme avoids
+traversing the whole list of elements when performing an optimisation pass.
+
+{\bf String expression} - if a logical expression was used to generate a
+property, for example an expression for a LUT, then that expression is
+stored here. It is kept in this field for display purposes but is
+translated into a hexadecimal string and stored in field 'property\_init'
+for later inclusion in the netlist file as an INIT property to initialise
+the element (LUT contents or flip-flop initial state).
+
+{\bf String property\_init} - properties of the element. This might be
+initialisation for a LUT or a flip-flop.
+
+{\bf public static Element gnd} \\
+{\bf public static Element vcc} -
+publicly available GND and VCC elements. These are assigned in the
+constructor XElements() where also publicly available Nets {\bf LO} and
+{\bf HI} are created and connected to their output ports.
+
+{\bf int count = 0} - this is a counter used for the schematic netlist
+display to identify elements shown more than once in the schematic in
+which case they are coloured to highlight the fact.
+
+{\bf private static int ocount = 0} - count of optimisable elements -
+see above.
+
+{\bf private static int icount = 0} - unique integer for generating cell
+identifiers (see {\bf ident} above). It is incremented after each use.
+
+NOTE: when 3PL is run repeatedly via the GUI, class TDECode and all
+subclasses down to the class specific to the FPGA family are
+constructed afresh. Thus all static variables are re-created. Classes
+Element and Net are NOT reconstructed and hence static variables in
+these classes must be explicitly re-initialised on each run! In the case
+of this class this is done by method init().
+
+
+The following subsections describe constructors and methods. Many
+simple methods which only provide read or write access to class
+variables are omitted.
+
+\subsection{constructors}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public Element (String name) { makeElement(name, null, Gtype.NONE); }
+    \end{lstlisting}
+
+    Construct a general element. These are given the gate type
+    Gtype.NONE and are not subject to nelist optimisation. Parameter
+    {\bf name} is the element name, e.g. "IBUF". The resulting element
+    is given an arbitrary unique netlist block name of the form "b123".
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public Element (String name, String bname) { makeElement(name, bname, Gtype.NONE); }
+    \end{lstlisting}
+
+    Construct a general element. These are given the gate type
+    Gtype.NONE and are not subject to nelist optimisation. The block
+    name must be unique. Parameter {\bf name} is the element name, e.g.
+    "IBUF". Parameter {\bf bname} is the netlist block name.
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public Element (String name, Gtype element_type) { makeElement(name, null, element_type); }
+    \end{lstlisting}
+
+    Construct a gate element. The gate type is used to direct netlist
+    optimisation. Parameter {\bf name} is the element name, e.g. "IBUF".
+    Parameter {\bf element\_type} is the element gate type, e.g.
+    Gtype.MUXCY The resulting element is given an arbitrary unique
+    netlist block name of the form "b123".
+
+    Each of these constructors calls the common private method
+    {\bf makeElement()}. Each element is added to the static list
+    {\bf instances}, optimisable elements at the front of the list
+    to avoid traversing the whole list during optimisation.
+
+\subsection{method init()}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public static void init () {
+            icount = 0; // unique integer for identifiers
+            ocount = 0; // count of optimisable elements
+            celldecls = new HashMap<String, Ports>();
+            instances = new ArrayList<Element>(20000);
+        }
+    \end{lstlisting}
+
+    This method initialises static variables. This must be done
+    by a method, rather than during class initialisation, to
+    allow code generation to be restarted when 3PL is repeatedly run
+    interactively from the GUI.
+
+\subsection{method putCelldecl()}
+
+    There are two signatures for this.
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public static void putCelldecl (String name, int nports) {
+            celldecls.put(name, gatePorts(nports));
+        }
+    \end{lstlisting}
+
+    This method puts a logic gate cell declaration in the cell map.
+    Normally the cell map is filled during calls to the constructors
+    for class {\bf Element}, but gate elements are entered explicitly
+    to ensure that gate of all possible widths are present. This is
+    because optimisation might reduce say an AND3 gate to an AND2 gate
+    but the latter may not have been encountered in calls to the
+    constructor.
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public static void putCelldecl (String name, ArrayList inports, ArrayList outports) {
+            .
+            .
+            .
+        }
+    \end{lstlisting}
+
+    This method puts a general cell declaration in the cell map. This
+    is used for elements specific to particular FPGAs, e.g. MULT18X18
+    or DSP48E and ensures that all inputs and outputs are included in
+    the definition even if they are not included during a call to
+    a constructor.
+
+\subsection{method gatePorts()}
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public static Ports gatePorts (int n) {
+            Ports   p = new Ports();
+            p.outports.add("O");
+            for (int i=0 ; i<n ; i++)
+                p.inports.add("I" + i);
+            return(p);
+        }
+    \end{lstlisting}
+
+    This method creates a port class for a gate element. The parameter
+    indicates the number of input ports and there is one output port.
+
+\subsection{adding inputs}
+
+    To add a single Net to a named port -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInput (String port, Net n) {
+            switch (element_type) {
+            case AND:
+            case OR:
+            case XOR:
+                break;
+            default:
+                inportset.add(port);
+            }
+            if (n == null)
+                return;
+            inports.put(port, n);
+            n.connect(this, port, PortType.INPORT);
+        }
+    \end{lstlisting}
+    AND, OR and XOR gates have varying numbers of inputs and are subject
+    to changes to the number of inputs during optimisation, so the input
+    port set should not be touched. It can be assumed that the input
+    port sets for all these gates that are within the accepted number of
+    inputs for the FPGA family will have been already created. For all
+    others the port string is added to the set of inports for this
+    element type. The last statement creates a reciprocal link from the
+    Net to this element.
+
+    To add an array of Nets -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInputArray (String port, Net[] n) {
+            if (n == null)
+                return;
+            for (int i=0 ; i<n.length ; i++)
+                addInput(port + i, n[i]);
+        }
+    \end{lstlisting}
+    The port string has "0", "1" etc. appended.
+
+    To add an array of Nets with most significant bit padding -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInputArray (String port, Net[] n, int size, Net pad) {
+            int portnum = 0;
+            int asize = (n == null) ? 0 : n.length;
+            for (int i=0 ; i<asize ; i++)
+                addInput(port + portnum++, n[i]);
+            for (int i=asize ; i<size ; i++)
+                addInput(port + portnum++, pad);
+        }
+    \end{lstlisting}
+    The port string has "0", "1" etc. appended. If the array is smaller
+    than the designated size the remaining inputs are connected to
+    Net {\bf pad}. If the array is null all inputs are connected to
+    Net {\bf pad}.
+
+    To add an array of Nets with least significant bit padding -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInputArrayTop (String port, Net[] n, int size, int max, Net pad) {
+            int npad = max - size;
+            int asize = (n == null) ? 0 : n.length;
+            int portnum = 0;
+            for (int i=0 ; i<npad ; i++)
+                addInput(port + portnum++, pad);
+            for (int i=0 ; i<size ; i++)
+                addInput(port + portnum++, (i < asize) ? n[i] : Net.LO);
+        }
+    \end{lstlisting}
+    If the Net array is smaller than {\bf size} then the most
+    significant bits are padded as well.
+
+    To add an array of Nets across two different ports -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInputArray (
+            String  port1,
+            String  port2,
+            Net[]   n,
+            int     size1
+        ) {
+            int portnum1 = 0;
+            int portnum2 = 0;
+            int asize = (n == null) ? 0 : n.length;
+            for (int i=0 ; i<asize ; i++)
+                if (i < size1)
+                    addInput(port1 + portnum1++, n[i]);
+                else
+                    addInput(port2 + portnum2++, n[i]);
+        }
+    \end{lstlisting}
+    Parameter {\bf port1} is the first input port identifying string
+    head. Parameter {\bf port2} is the second input port identifying
+    string head. Parameter {\bf n} is the net array. Parameter {\bf
+    size1} is the number of ports using the first head string.
+
+    To add an array of Nets across two different ports with most
+    significant bit padding -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addInputArray (
+            String  port1,
+            String  port2,
+            Net[]   n,
+            int     size1,
+            int     size,
+            Net     pad
+        ) {
+            int portnum1 = 0;
+            int portnum2 = 0;
+            int asize = (n == null) ? 0 : n.length;
+            for (int i=0 ; i<asize ; i++)
+                if (i < size1)
+                    addInput(port1 + portnum1++, n[i]);
+                else
+                    addInput(port2 + portnum2++, n[i]);
+            for (int i=asize ; i<size ; i++)
+                if (i < size1)
+                    addInput(port1 + portnum1++, pad);
+                else
+                    addInput(port2 + portnum2++, pad);
+        }
+    \end{lstlisting}
+
+
+
+\subsection{adding outputs}
+
+    For output Net and Net arrays these follow the same pattern as
+    for inputs above -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addOutput (String port, Net n) {
+            outportset.add(port);
+            if (n == null)
+                return;
+            if (n.getNumOutputs() != 0)
+                throw new ExEx("net 2nd source");
+            outports.put(port, n);
+            n.connect(this, port, PortType.OUTPORT);
+        }
+    \end{lstlisting}
+    There is a builtin check here to ensure that the Net is not
+    connected to any other element outputs. The last statement creates a
+    reciprocal link from the Net to this element.
+
+    And similarly -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addOutputArray (String port, Net[] n)
+        public void addOutputArray (String port1, String port2, int size1, Net[] n)
+    \end{lstlisting}
+
+    For 3-state outputs -
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addTS (String port, Net n) {
+            tsportset.add(port);
+            if (n == null)
+                return;
+            tsports.put(port, n);
+            n.connect(this, port, PortType.TSPORT);
+        }
+    \end{lstlisting}
+
+
+\subsection{method removeNet}
+
+    This method removes a Net connected to an Element. The argument
+    is the port to which the Net is connected.
+    \begin{lstlisting}[gobble=4, language=java]
+        public void removeNet (String port) {
+            if (inports.containsKey(port)) {
+                inports.get(port).disconnect(this, port);
+                inports.remove(port);
+            } else if (outports.containsKey(port)) {
+                outports.get(port).disconnect(this, port);
+                outports.remove(port);
+            } else if (tsports.containsKey(port)) {
+                tsports.get(port).disconnect(this, port);
+                tsports.remove(port);
+            } else
+                throw new ExEx("net not connected to element");
+        }
+    \end{lstlisting}
+    The code checks the input, output and 3-state port maps in turn
+    looking for the port name string as key. Inputs are searched first
+    as they are the more numerous. The get() method returns the Net
+    and the disconnect() method removes the Element from the Net.
+    The remove() then removes the key and associated value ()Net from
+    the particular Element port map.
+
+
+\subsection{method remapInputs}
+
+    This method re-names the input ports of a gate Element. It is
+    required when one or more inputs have been removed as a result
+    of optimisation.
+    \begin{lstlisting}[gobble=4, language=java]
+        public void remapInputs () {
+            int         n = inports.size();
+            HashMap     ports_new = new HashMap();
+            Net         inet;
+            int         i = 0;
+            for (Map.Entry me : inports.entrySet()) {
+                String      newport = "I" + i++;
+                String      port = (String)me.getKey();
+                inet = (Net)me.getValue();
+                inet.changePort(this, port, newport);
+                ports_new.put(newport, inet);
+            }
+
+            inports = ports_new;
+            cellname = element_type.toString() + n;
+
+            Ports p;
+            if (celldecls.containsKey(cellname)) {
+                p = celldecls.get(cellname);
+                inportset = p.inports;
+                outportset = p.outports;
+                tsportset = p.tsports;
+            } else {
+                // Remapped wide gates may not have declared cell
+                // set entries - dont worry as wide gates will
+                // be converted so will never need these sets anyway.
+                inportset = null;
+                outportset = null;
+                tsportset = null;
+            }
+        }
+    \end{lstlisting}
+    The input port map is traversed and the Nets are placed in a new map
+    where the keys (port names) are allocated sequentially as "I0",
+    "I1" etc. That new map is then assigned as a replacement input port
+    map. The Element cell name is changed to reflect the ne winput count,
+    e.g. "AND5" may now be "AND3". The new cell name is now checked
+    in the cell declaration map and if present the port sets for the
+    Element are assigned from that map. If not present it means that
+    the gate is a wide gate which has not been entered in
+    the cell declaration map since it will be converted to use available
+    library elements later.
+
+\subsection{method changeElement()}
+
+    This method changes an element. This is used during optimisation to
+    change an element into another. Previous connections are optionally
+    stripped. Parameter {\bf name} is the new element name, e.g. "INV".
+    Parameter {\bf element\_type} is the element gate type, e.g.
+    Gtype.INV. Parameter {\bf strip} if true results in the element being
+    stripped of input and output Nets. An example might be an XOR2 gate
+    with one input connected to VCC being changed to an INV of the
+    other input.
+
+    \begin{lstlisting}[gobble=4, language=java]
+        public void changeElement (String name, Gtype element_type, boolean strip) {
+            Ports   p;
+            if (strip)
+                strip();
+            cellname = name;
+            this.element_type = element_type;
+            if (celldecls.containsKey(name))
+                p = celldecls.get(name);
+            else {
+                p = new Ports();
+                celldecls.put(name, p);
+            }
+            if (strip) {
+                inports = new HashMap<String, Net>();
+                outports = new HashMap<String, Net>();
+                tsports = new HashMap<String, Net>();
+            }
+            inportset = p.inports;
+            outportset = p.outports;
+            tsportset = p.tsports;
+        }
+    \end{lstlisting}
+    The Element is first optionally stripped of all inputs and outputs,
+    depending on boolean argument {\bf strip}. The cell name string
+    and element type are then overwritten from the supplied arguments.
+    If the new element is contained in the cell declaration map then
+    the ports sets are obtained from that map, otherwise new sets are
+    created for the named cell. If the element has been stripped of
+    connections then new port maps are created, otherwise the existing
+    port maps remain. The port sets are then assigned from the sets
+    obtained from the cell declarations map.
+
+\subsection{method strip()}
+
+    This method disconnects the Element from all input and output
+    nets and then clears all input and output port maps. This is used
+    prior to deleting an Element or changing all its port
+    connections during optimisation.
+    \begin{lstlisting}[gobble=4, language=java]
+        public void strip () {
+            for (Map.Entry me : inports.entrySet()) {
+                String      pinname  = (String)me.getKey();
+                Net         net = (Net)me.getValue();
+                net.disconnect(this, pinname);
+            }
+            inports.clear();
+            for (Map.Entry me : outports.entrySet()) {
+                String      pinname  = (String)me.getKey();
+                Net         net = (Net)me.getValue();
+                net.disconnect(this, pinname);
+            }
+            outports.clear();
+            for (Map.Entry me : tsports.entrySet()) {
+                String      pinname  = (String)me.getKey();
+                Net         net = (Net)me.getValue();
+                net.disconnect(this, pinname);
+            }
+            tsports.clear();
+        }
+    \end{lstlisting}
+
+\subsection{method addExpression()}
+
+    This method adds an expression to a LUT. The expression string
+    is kept for display purposes and is also translated into a
+    property value for LUT initialisation. Parameter {\bf s} is the
+    expression string.
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addExpression (String s) {
+            expression = s;
+            property_init = Functions.bit_pattern(s, TDECode.lutwidth);
+        }
+    \end{lstlisting}
+
+\subsection{method addProperty()}
+
+    This method adds a property for LUT initialisation. Parameter
+    {\bf s} is the property string.
+    \begin{lstlisting}[gobble=4, language=java]
+        public void addProperty (String s) {
+            if (s == null)
+                return;
+            if (property_init != null)
+                throw new ExEx("element INIT property multiply defined");
+            property_init = s;
+        }
+    \end{lstlisting}
+
+
+
+\subsection{methods for writing to the netlist file}
+
+    Method
+    \begin{lstlisting}[gobble=4, language=java]
+        static public void outputCells (PrintWriter pw, String view)
+    \end{lstlisting}
+    outputs the cell port definitions to the EDIF netlist.
+    Only cells which have been instantiated are written out.
+    Some cells may have been optimised out such that no instances
+    remain in which case they are not written to the EDIF file cell
+    definition section. Parameter {\bf pw} is the output interface to
+    the EDIF netlist file and Parameter {\bf view} is the EDIF view
+    parameter (the string "view\_1" seems to be required and this
+    originates in codegen.TDEList.ncode()).
+
+    Method
+    \begin{lstlisting}[gobble=4, language=java]
+        static public void outputInstances (PrintWriter pw, String view)
+    \end{lstlisting}
+    outputs all Elements to the EDIF netlist.
+
+    Method
+    \begin{lstlisting}[gobble=4, language=java]
+        static public void outputConstraints (String group, PrintWriter pw)
+    \end{lstlisting}
+    outputs all element constraints for a group. Parameter {\bf pw} is
+    the output interface to the constraint file for the group (name.ncf
+    for group "n" and name.ucf for group "u"). Note that this method is
+    called from netlist.xilinx.XTDECode() which also writes net
+    constraints and general constraints to constraint files.

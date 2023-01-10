@@ -1,0 +1,1046 @@
+\pagebreak
+
+\section{FPGA to CPU interface Library File - xilinx/cpu.3pl}
+\label{chap:lmxilcpulib}
+
+    \index{library!xilinx/cpu.3pl}
+    This library provides a class for basic FPGA-CPU interface for platforms
+    which provide a communications path between a CPU and FPGA. This includes
+    the zynq FPGA and various FPGA prototype boards which have a USB port for
+    configuration loading and serial data communications. These procedures allow
+    the CPU to read and write static variables, queues and memories and the FPGA
+    to interrupt the CPU.
+    
+    This library contains alternative interfaces for reading and writing 3PL
+    variables from the CPU. There are class procedures which are mode-specific - \\
+            \hspace*{1cm}{\bf CPU\_API.read\_value()}\\
+            \hspace*{1cm}{\bf CPU\_API.read\_queue()}\\
+            \hspace*{1cm}{\bf CPU\_API.read\_memory()}\\
+            \hspace*{1cm}{\bf CPU\_API.write\_static()}\\
+            \hspace*{1cm}{\bf CPU\_API.write\_queue()}\\
+            \hspace*{1cm}{\bf CPU\_API.write\_memory()}\\
+    and there are generic class procedures - \\
+            \hspace*{1cm}{\bf CPU\_API.read()}  \\          
+            \hspace*{1cm}{\bf CPU\_API.write()}\\
+    
+    The former have the advantage that the mode of the variable being accessed
+    is reflected in the procedure identifer and this may improve the readability
+    the source code. On the other hand the latter are generic and shorter.
+    
+    There are DMA class modules for reading and writing CPU memory from the
+    FPGA -\\
+            \hspace*{1cm}{\bf CPU\_API.dma\_read()} \\
+            \hspace*{1cm}{\bf CPU\_API.dma\_write()}\\
+    and an interrupt class module and an interrupt class procedure -\\
+            \hspace*{1cm}{\bf CPU\_API.sigint()}\\
+            \hspace*{1cm}{\bf CPU\_API.interrupt()}\\
+            
+    For example the following three examples are equivalent - 
+
+    \begin{lstlisting}[gobble=12, language=threepl]
+        cpu_api.read_queue(entries, , acc <- q, "QR", true, 10 );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=12, language=threepl]
+        cpu_api.read_queue(entries, , acc <- q, "QR", wordcount=true, ilevel=10 );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=12, language=threepl]
+        cpu_api.read(count=entries, access=acc <- q, "QR", wordcount=true, ilevel=10);
+    \end{lstlisting}
+    
+    A more detailed description of use of this class can be found in
+    (\autorefph{ch:serialcpu}) for platforms with a USB serial link to the
+    FPGA and (\autorefph{ch:zynqcpu}) for Zynq platforms. These sections
+    include both C and Python3 coding examples.
+    
+    
+    This library is incorporated by using a {\bf source} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       source "xilinx/cpu.3pl"
+    \end{lstlisting}
+    {\bf however this library is already included via xilinx/uart\_cpu.3pl
+    (\autorefph{chap:lmuartcpulib}) or xilinx/zynq\_axi.3pl
+    (\autorefph{chap:lmzynqaxilib}) and so should not be included directly by
+    application programs.}
+
+    
+    \includegraphics{cpu}
+
+    
+    xilinx/zynq\_axi.3pl is included in -\\
+    boards/avnet/microzed\_7010.3pl\\
+    boards/avnet/microzed\_7020.3pl\\
+    boards/digilent/zybo.3pl
+    
+    xilinx/uart\_cpu.3pl is included in -\\
+    boards/avnet/aes\_sp3a\_eval400.3pl\\
+    board/gadget\_factory/papilio\_one\_100.3pl\\
+    board/gadget\_factory/papilio\_one\_250.3pl\\
+    board/gadget\_factory/papilio\_one\_500.3pl\\
+    board/gadget\_factory/papilio\_pro\_lx4.3pl\\
+    board/gadget\_factory/papilio\_pro\_lx9.3pl
+    
+    The class for the FPGA interface is created by -
+    
+    \begin{lstlisting}[gobble=4, language=threepl]
+    class(cpu, CPU_API());
+    \end{lstlisting}
+
+    cpu.3pl -
+    \blist   
+    \item   defines class {\bf busCommon} which is used to describe each
+            interface.    
+    \item   creates an instance of class {\bf CPU\_CODEGEN} whose procedures
+            create the logic to implement each type of interface.        
+    \item   creates an instance of class {\bf CPU\_API} whose modules
+            provide the application program interface. Procedures within
+            this class create instances of {\bf busCommon} and add them to
+            an interface list. {\bf busCommon} contains all the information
+            necessary to create a CPU interface. Class {\bf CPU\_API} in
+            turn assigns module create\_bus\_interfaces() as a trailer
+            module.
+    \blend
+    
+    Module create\_bus\_interfaces() executes at the end of immediate execution
+    (it is a trailer module). It creates the basic CPU interface logic by
+    calling module {\bf cpu\_interface} and then traverses the interface list
+    and creates code for each interface via procedures in class {\bf
+    CPU\_CODEGEN}.
+    
+    {\bf CPU\_API}, {\bf CPU\_CODEGEN}, {\bf create\_bus\_interfaces} and
+    {\bf cpu\_interface} are defined in both UART\_CPU.3pl and zynq\_axi.3pl,
+    as the underlying interface logic is quite different for the two platforms.
+
+
+
+
+
+
+    \subsection{class library modules}
+            
+                
+        \subsubsection{CPU\_API.signal\_interrupt - interrupt from a signal}\label{sec:lpcpusigint}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+
+                module
+                signal_interrupt (str(event), value(sig, "log")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            {\bf event} is the event identifier string.\\
+            {\bf sig} is the signal causing the event.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure generates a module which will cause a CPU interrupt
+            when its input signal {\bf sig} is asserted.
+            The argument to parameter {\bf event} is an identifier with
+            which to refer to the interrupt in the CPU interface software.
+
+            See also class procedure {\bf interrupt()}
+            \autorefph{sec:lpcpuint} which generates a CPU interrupt when
+            executed in the FPGA.
+    
+     
+     
+     
+     
+        \subsubsection{CPU\_API.dma\_read - DMA transfer to FPGA from CPU}\label{sec:lpcpudmar}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                module
+                dma_read (
+                    queue(data, "bits:64")      // read data
+                    <-
+                    queue(address, "uint:32"),  // memory address
+                    queue(burstlen, "uint:4"),  // burst length - 1
+                    int(bus)                    // HP bus 0 to 3
+                ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            {\bf data} is the queue to which data from the transfer is returned.\\
+
+            {\bf Input parameters:} \\
+            {\bf address} is a queue supplying the read address.\\
+            {\bf burstlen} is a queue giving the burst length in the case of Zynq.\\
+            {\bf bus} is the HP bus, 0 to 3, in the case of Zynq.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure generates a module which reads data from the CPU
+            memory.
+            
+            In the case of a platform with a serial interface only one input
+            argument, {\bf address}, is valid - {\bf burstlen} and {\bf bus} must
+            not be given arguments. When an address becomes available on the
+            {\bf address} input queue and the output {\bf data} queue is not
+            full a DMA transfer (read) will take place. For a serial interface
+            platform this is not a real DMA transfer but is carried out in
+            software by a separate CPU thread.
+
+            For the Zynq When an address and a burstlength become available on
+            the {\bf address} and {\bf burstlen} input queues and the output
+            {\bf data} queue is not full, a DMA transfer (read) will take place.
+            The HP bus selected cannot be used for any other interfaces.
+
+            See also class module {\bf CPU\_API.dma\_write()}
+            \autorefph{sec:lpcpudmaw} which generates a DMA write module.
+
+
+
+        \subsubsection{CPU\_API.dma\_write - DMA transfer from FPGA to CPU}\label{sec:lpcpudmaw}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                module
+                dma_write (
+                    queue(data, "bits:64"),     // write data
+                    queue(address, "uint:32"),  // memory address
+                    queue(burstlen, "uint:4"),  // burst length - 1
+                    int(bus)                    // HP bus 0 to 3
+                ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            None.
+
+            {\bf Input parameters:} \\
+            {\bf data} is a queue supplying data for the transfer.\\
+            {\bf address} is a queue supplying the read address.\\
+            {\bf burstlen} is a queue giving the burst length in the case of Zynq.\\
+            {\bf bus} is the HP bus, 0 to 3, in the case of Zynq.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure generates a module which writes data to the CPU
+            memory.
+            
+            In the case of a platform with a serial interface only two input
+            arguments, {\bf data} and {\bf address}, are valid - {\bf burstlen}
+            and {\bf bus} must not be given arguments. When data and an address
+            become available on the {\bf data} and {\bf address} input queues a
+            DMA transfer (read) will take place. For a serial interface platform
+            this is not a real DMA transfer but is carried out in software by a
+            separate CPU thread.
+
+            For the Zynq When data an address and a burstlength become available
+            on the {\bf data}, {\bf address} and {\bf burstlen} input queues a
+            DMA transfer (write) will take place. The HP bus selected cannot be
+            used for any other interfaces.
+
+            See also class module {\bf CPU\_API.dma\_read()}
+            \autorefph{sec:lpcpudmar} which generates a DMA read module.
+
+
+
+    
+    \subsection{class library procedures}
+            
+                
+        \subsubsection{CPU\_API.interrupt - interrupt procedure}\label{sec:lpcpuint}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+
+                procedure
+                interrupt (str(event)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            
+            none.
+
+            {\bf Input parameters:} \\
+            {\bf event} is the event identifier string.\\
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure generates an interrupt when executed in the FPGA.
+            The argument to parameter {\bf event} is an identifier with
+            which to refer to the interrupt in the CPU interface software.
+
+            See also class module {\bf signal\_interrupt()}
+            \autorefph{sec:lpcpusigint} which creates a module which sources an
+            interrupt from a signal.
+
+
+
+
+
+        \subsubsection{CPU\_API.read - a CPU-readable interface}\label{sec:lpcpurd}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                procedure
+                read (
+                        static(access, "log"),
+                        varargs
+                        <- 
+                        str(name),
+                        var(in),
+                        varargs
+                    ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf access} is an optional static logical variable which is true
+            for one clock cycle following a CPU read.
+            {\bf varargs} optional output, parameters {\bf out} and {\bf count}.\\
+
+            {\bf Input parameters:} \\
+            {\bf in} is the value, queue, cmemory or rmemory mode variable
+            to be read.\\
+            {\bf name} is a string identifier for the interface.\\
+            {\bf varargs} optional input parameters {\bf wordcount}, {\bf ilevel} and
+                {\bf port}.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which provides a CPU-readable
+            interface for the the CPU for  3PL variables of mode value, static,
+            queue, cmemory or rmemory.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the input data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the input data type must not exceed 1016 bits (127 bytes).
+            
+            The module is created at the end of immediate execution from
+            arguments queued by this procedure. It can be any type, primitive or
+            compound.
+                        
+            It is a common wrapper for the procedures \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            
+            Parameter {\bf name} is a string identifier that can be used
+            in the CPU code to refer to this interface.
+            
+            Parameter {\bf in} is the input variable or expression to be read
+            by the CPU.
+           
+            Optional input and output varargs parameters are -
+            
+            \begin{tabular}{| l | l | l |}
+            \hline
+                    & input varargs         & output varargs    \\
+            \hline \hline
+            value   &                       &                   \\
+            static  &                       &                   \\
+            \hline
+            queue   &   wordcount ilevel    & out count         \\
+            \hline
+            cmemory & port                  &                   \\
+            rmemory &                       &                   \\
+            \hline
+            \end{tabular}
+
+
+
+
+            
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries Value or Static mode}
+
+                
+                \input{cpu_rv}
+                        
+
+
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries Queue mode}
+                        
+
+
+                \input{cpu_rq}
+                        
+
+
+            
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries cmemory or rmemory mode}
+            
+                        
+                \input{cpu_rm}
+            
+
+
+
+
+
+
+
+
+        \subsubsection{CPU\_API.write - a CPU-writable interface}\label{sec:lpcpuwr}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                procedure
+                write (
+                        var(out),
+                        varargs
+                        <- 
+                        str(name),
+                        varargs
+                    ) {
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the target variable to be written to \\
+            {\bf varargs} optional output parameter {\bf access} \\
+
+            {\bf Input parameters:} \\
+            {\bf name} is a string identifier for the interface.\\
+            {\bf varargs} optional input parameters {\bf freecount}, {\bf ilevel}, {\bf port}
+            and {\bf reset}.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure provides a write interface for the the CPU for 
+            3PL variables of mode static, queue, cmemory or rmemory.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the input data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the input data type must not exceed 1016 bits (127 bytes).
+            
+            The module is created at the end of immediate execution from
+            arguments queued by this procedure. It can be any type, primitive or
+            compound.
+                        
+            It is a common wrapper for the procedures \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            
+            Parameter {\bf name} is a string identifier that can be used
+            in the CPU code to refer to this interface.
+            
+            Parameter {\bf out} is the output variable to be written to
+            by the CPU.
+
+            The only optional output parameter is {\bf access} which must have
+            a static mode argument of type "log". If this optional parameter is
+            given an argument then parameter {\bf out} may be omitted. In that
+            case the write serves only to generate a single cycle pulse to
+            the {\bf access} argument in the FPGA.
+           
+            Optional input varargs parameters are -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+                    & input varargs             \\
+            \hline \hline
+            static  &                           \\
+            \hline
+            queue   & freecount ilevel reset    \\
+            \hline
+            cmemory & port                      \\
+            rmemory &                           \\
+            \hline
+            \end{tabular}
+
+
+
+
+
+            
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries Static mode}
+
+                        
+                \input{cpu_ws}
+                        
+            
+
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries Queue mode}
+                        
+
+
+                \input{cpu_wq}
+                        
+            
+
+            
+            \vspace{\baselineskip}\vspace{\baselineskip}
+            {\Large \bfseries cmemory or rmemory mode}
+            
+                \input{cpu_wm}
+
+
+
+
+
+
+        \subsubsection{CPU\_API.read\_memory - a CPU-readable interface
+                                            to a memory}\label{sec:lpcpurdmem}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_api.read_memory (
+                   static(access, "log")
+                   <-
+                   str(name),
+                   var(mem),
+                   int(port)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf access} is an optional access indicator.\\        
+
+            {\bf Input parameters:} \\
+            {\bf name} is a string identifier for the interface.\\
+            {\bf mem} is the cmemory or rmemory variable.\\
+            {\bf port} is memory port, 0 or 1, to be used for the read.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which allows the CPU to read
+            from a registered output memory (rmemory) or a CLB memory (cmemory)
+            via the GP1 AXI bus.
+            
+            This procedure can be called via the more cryptic and general
+            procedure {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} instead.
+
+            \input{cpu_rm}
+            
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+
+
+
+            
+
+            
+                
+
+
+
+
+
+        \subsubsection{CPU\_API.read\_queue - a CPU read from a queue
+                                        variable}\label{sec:lpcpurdqueue}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_api.read_queue (
+                   static(access, "log"),
+                   static(count),
+                   queue(out)
+                   <-
+                   str(name),
+                   queue(in),
+                   log(wordcount),
+                   var(ilevel)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf access} is an optional access indicator.\\        
+            {\bf count} is an optional queue occupancy count.\\
+            {\bf out} is an optional output queue.\\
+
+            {\bf Input parameters:} \\            
+            {\bf name} is a string identifier for the interface.\\
+            {\bf in} is the input queue.\\            
+            {\bf wordcount} is an optional flag to enable the number of words
+            available in the queue to be determined.\\
+            {\bf ilevel} is an optional argument to allow the queue buffer level
+            at which an interrupt occurs to be set.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which is an interface to allow the CPU
+            to read a queue variable. The module is created at the end of immediate
+            execution from arguments queued by this procedure. The queue can be any
+            type, primitive or compound. When the CPU reads from the queue a datum
+            is removed from the queue buffer. If the CPU reads from the specified
+            address when the queue is empty the read will return all ones .
+            
+            This procedure can be called via the more cryptic and general
+            procedure {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} instead.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the input data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the input data type must not exceed 1016 bits (127 bytes).
+
+            \input{cpu_rq}
+
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+
+
+
+
+        \subsubsection{CPU\_API.read\_value - CPU read from a
+                                                value}\label{sec:lpcpurdvalue}
+            Parameter {\bf in} is the queue-mode input variable.
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_api.read_value (
+                   static(access, "log")
+                   <-
+                   str(name),
+                   value(in)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf access} is an optional static logical variable which is true
+            for one clock cycle following a CPU read.
+
+            {\bf Input parameters:} \\
+            {\bf name} is a symbolic identifier string for the bus object.\\
+            {\bf in} is a value to be read by the CPU. It takes its type from
+            the argument. It must not contain queue reads. It may have any
+            clock domain.
+        
+            {\bf In-line target execution:} \\
+            no
+            
+            {\bf description:} \\
+            This procedure creates a module which provides a CPU-readable
+            interface to a value.
+            
+            Parameter {\bf name} is a string identifier that can be used
+            in the CPU code to refer to this interface.
+            
+            \input{cpu_rv}
+
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+           
+
+
+
+
+
+        \subsubsection{CPU\_API.receive\_event - interrupt the CPU}\label{sec:lprcvevent}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_receive_event (name, value(sig, "log")) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf name} is the interrupt event identifier string. \\
+            {\bf sig} is an interrupt signal
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure connects a target variable of type log to the interrupt
+            logic to drive the CPU interrupt on execution. The signal may
+            be any clock domain and may be true for any period, the false to
+            true transition causing the interrupt.
+            
+                This procedure can be called more than once for the same event number, the
+                signals from the instances being ORed. Parameter {\bf in} is the queue-mode
+                input variable. Because the signals are ORed a long signal may mask several
+                shorter ones so the interrupt signal should be kept short.
+            
+            On running info2c on the .json file the following C functions will have been
+            defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            function                     &                    \\ \hline \hline
+            fpga\_{\em name}\_enable()   & enable interrupt   \\ \hline
+            fpga\_{\em name}\_disable()  & disable interrupt  \\ \hline 
+            fpga\_{\em name}\_wait()     & wait on interrupt  \\ \hline  
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               value(sig, "log");
+
+               cpu_receive_event("EV1", sig);
+               .
+               .
+               assert(sig <-);
+               .
+            \end{lstlisting}
+            then for zynq the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog_fpga.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   .
+                   .
+                   fpga_open(portName, INTERRUPTS);
+                   .
+                   .
+                   fpga_EV1_wait(fpga);
+                   .
+            \end{lstlisting}
+
+            This procedure creates no in-line target code so the current clock domain
+            when this procedure is called is not relevant. The clock domain is not
+            changed by this procedure,
+            
+            {\bf The support CPU software for the UART CPU interface is still
+            under development, but application code wil be similar to the
+            above.}
+            
+            See also - \\
+            {\bf interrupt()} Parameter {\bf in} is the queue-mode input variable.
+            \autorefph{sec:lpinterrupt} \\
+
+
+
+            
+
+        \subsubsection{CPU\_API.write\_memory - a CPU-writable interface
+                                            to a memory}\label{sec:lpcpuwrmem}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_write_memory (
+                   var(mem)
+                   <-
+                   str(name),
+                   int(port)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf mem} is the cmemory or rmemory variable.\\
+
+            {\bf Input parameters:} \\
+            {\bf name} is a string identifier for the interface.\\
+            {\bf port} is memory port, 0 or 1, to be used for the write. For
+            cmemory port 1 is read-only.
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which allows the CPU to write
+            to a registered output memory (rmemory) or a CLB memory (cmemory)
+            via the AXI GP1 bus.
+            
+            This procedure can be called via the more cryptic and general
+            procedure {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} instead.
+            
+            \input{cpu_wm}
+
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+
+
+           
+
+
+
+        \subsubsection{CPU\_API.write\_queue - a CPU write to a queue
+                                            variable}\label{sec:lpcpuwrqueue}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               cpu_write_queue (
+                   queue(out)
+                   <-
+                   str(name),
+                   log(freecount),
+                   var(ilevel),
+                   value(reset, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the queue written to from the CPU. It takes its type
+            from the argument.
+
+            {\bf Input parameters:} \\            
+            {\bf name} is a string identifier for the interface.\\
+            {\bf freecount} is an optional flag to enable the number of free spaces
+            available in the queue to be determined.\\
+            {\bf ilevel} is an optional argument to allow the queue buffer level
+            at which an interrupt occurs to be set.\\
+            {\bf reset} is an optional queue reset.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which writes to a queue variable from
+            the CPU. The module is created at the end of immediate execution from
+            arguments queued by this procedure. The queue can be any type, primitive
+            or compound (including type null). When the CPU writes to the bus data
+            address given by {\bf daddr} a datum is appended to the queue buffer. If
+            the CPU writes to the specified address when the queue is full the data
+            is lost.
+            
+            This procedure can be called via the more cryptic and general
+            procedure {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} instead.
+            
+            \input{cpu_wq}
+            
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.write\_static()} \autorefph{sec:lpcpuwrstat} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+
+
+            
+
+            
+                
+        \subsubsection{CPU\_API.write\_static - a CPU-writable static
+                                            variable}\label{sec:lpcpuwrstat}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+                global procedure
+                cpu_write_static (
+                    static(out)
+                    static(access, "log")
+                    <-
+                    str(name)
+                ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the static variable to be written to by the CPU. It
+            takes its type from the argument.The argument may be omitted if only
+            an access signal is required.\\
+            {\bf access} is a static logical variable which is true for one clock
+            cycle following a CPU write to. This argument is optional.\\
+
+            {\bf Input parameters:} \\
+            {\bf name} is a string identifier for the interface.\\
+        
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates a module which allows the CPU to write to a
+            static variable. The module is created at the end of immediate
+            execution from arguments queued by this procedure. The variable can
+            be any type, primitive or compound.
+                       
+            The optional output parameter {\bf access} must have a static mode
+            argument of type "log". If this optional parameter is given an
+            argument then an argument to parameter {\bf out} may be omitted. In
+            that case the write serves only to generate a single cycle pulse to
+            the {\bf access} argument in the FPGA.
+                        
+            \input{cpu_ws}
+
+            See also - \\
+            {\bf CPU\_API.read()} \autorefph{sec:lpcpuread} \\
+            {\bf CPU\_API.write()} \autorefph{sec:lpcpuwrite} \\
+            {\bf CPU\_API.read\_value()} \autorefph{sec:lpcpurdvalue} \\
+            {\bf CPU\_API.read\_queue()} \autorefph{sec:lpcpurdqueue} \\
+            {\bf CPU\_API.write\_queue()} \autorefph{sec:lpcpuwrqueue} \\
+            {\bf CPU\_API.read\_memory()} \autorefph{sec:lpcpurdmem} \\
+            {\bf CPU\_API.write\_memory()} \autorefph{sec:lpcpuwrmem} \\
+            {\bf CPU\_API.dma\_write()} \autorefph{sec:lmzynqwrdma} \\
+            {\bf CPU\_API.dma\_read()} \autorefph{sec:lmzynqrddma} \\
+
+
+
+
+
+        \subsubsection{CPU\_API.interrupt - interrupt the CPU}\label{sec:lpinterrupt}
+
+            {\bf Library: xilinx/cpu.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               interrupt (var(v)) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            none
+
+            {\bf Input parameters:} \\            
+            {\bf v} is an event interrupt event string identifier or the
+            interrupt event number, 0 to 15.
+        
+            {\bf In-line target execution:} \\
+            yes
+
+            {\bf description:} \\
+            This procedure
+            causes an interrupt event. It executes in one cycle.
+            
+            The in-line code for this procedure executes in the current clock
+            domain which is unchanged on exiting the procedure.
+            
+            On running info2c on the .json file the following C functions will have been
+            defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            function                    &                   \\ \hline \hline
+            fpga\_{\em name}\_enable()  & enable interrupt  \\ \hline
+            fpga\_{\em name}\_disable() & disable interrupt \\ \hline 
+            fpga\_{\em name}\_wait()    & wait on interrupt \\ \hline  
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               .
+               .
+               interrupt("EV2");
+               .
+               .
+            \end{lstlisting}
+            then \\
+            info2c prog \\
+            is run, the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog_fpga.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   .
+                   .
+                   fpga_open(portName, INTERRUPTS);
+                   .
+                   .
+                   fpga_EV2_wait(fpga);
+                   .
+            \end{lstlisting}
+            
+            See also \\
+            {\bf CPU\_API.receive\_event()} \autorefph{sec:lprcvevent} \\
+
+
+
+
+    \subsection{class library functions}
+    
+    None.
+

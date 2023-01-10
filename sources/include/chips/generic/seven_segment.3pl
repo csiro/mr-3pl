@@ -1,0 +1,77 @@
+
+// Generic multiplexed 7-segment LED display
+//
+// Output oseg connects to or drives the anodes of a multiplexed array of
+// traditional 7-segment LED displays (or similar). It should have type
+// "bits:7". The LSB of seg drives segment 'a', the MSB drives segment 'g'.
+//
+// Output odig drives the cathodes, usually via an external transistor; a digit
+// is enabled when its corresponding bit in dig is true. The number of bits
+// in dig should match the number of 7-segment digits. The LSB of dig enables
+// the least significant digit. 
+//
+// The value of inum is displayed, in hexadecimal. Flag szero if true
+// suppresses leading zeros. The multiplexed display is scanned approximately
+// at rate (in Hz).
+//
+// Typical usage:
+//     value(number, "uint:16");
+//     output(seg, "bits:7",, loc=disp_seg_pins);
+//     output(dig, "bits:4",, loc=disp_dig_pins);
+//     seven_segment(seg, dig <- number);
+
+global module seven_segment(
+    output(oseg, "bits:7"),
+    output(odig)
+<-
+    var(inum),
+    var(szero, "log", true),
+    float(rate, 200.0)
+) {
+    int(digits, size(odig));
+    static(num, "uint:" + 4 * digits);
+    static(seg, "bits:7");
+    static(dig, "uint:" + digits);
+
+    // LUT for 7-segment display: bits are gfedcba
+    static(lut, "[16]bits:7", {
+        0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07,
+        0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71
+    });
+
+    // LED array multiplexer
+    seq {
+	dig <- 1;
+	seq while (true) {
+
+	    // suppress zero flag
+	    static(sz, "log");
+
+	    // digit selector shifts from MSB to LSB
+	    when (dig == 1) par {
+		dig <- (1 << (digits - 1));
+		when (<inum)
+		    num <- cast(inum, type(num));
+		sz <- szero;
+	    } else par {
+		dig <- dig >> 1;
+		num <- num << 4;
+	    }
+
+	    // present value to LED digit, suppress leading zero
+	    value(val, "uint:4", (num >> (4 * (digits - 1))) & 0xf);
+	    when ((val != 0) || (dig == 1))
+		sz <- false;
+	    when (sz)
+		seg <- 0;
+	    else
+		seg <- lut[val];
+
+	    wait(1.0/rate);
+	}
+    }
+
+    oseg := seg;
+    odig := dig;
+}
+

@@ -1,0 +1,520 @@
+\pagebreak
+
+Abbreviations - \\
+I M - inbuilt module \\
+I P - inbuilt procedure \\
+I F - inbuilt function \\
+L M - library module \\
+L P - library procedure \\
+L F - library function \\
+L C - library class \\
+L CM - library class module\\
+L CP - library class procedure\\
+L CF - library class function\\
+
+
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:ifabs]{abs} & I F & absolute value function & \refp{sec:ifabs} \\
+\hyperref[sec:ifaccept]{accept} & I F & ignore clock domain differences & \refp{sec:ifaccept} \\
+\hyperref[sec:ifacos]{acos} & I F & trigonometric arc cosine function & \refp{sec:ifacos} \\
+\hyperref[sec:ipaddmodeatt]{addmodeattribute} & I P & add attribute to the mode attribute map & \refp{sec:ipaddmodeatt} \\
+\hyperref[sec:lpaddncfline]{addncfline} & L P & add line to NCF file & \refp{sec:lpaddncfline} \\
+\hyperref[sec:ifaddsub]{addsub} & I F & conditionally add or subtract & \refp{sec:ifaddsub} \\
+\hyperref[sec:lpaddxdcline]{addxdcline} & L P & add line to XDC file & \refp{sec:lpaddxdcline} \\
+\hyperref[sec:ipappend]{append} & I P & append a list entry & \refp{sec:ipappend} \\
+\hyperref[sec:ipappendall]{appendall} & I P & append entries from another list & \refp{sec:ipappendall} \\
+\hyperref[sec:lpappncf]{append\_ncf\_file} & L P & append a file to the NCF file & \refp{sec:lpappncf} \\
+\hyperref[sec:ipargadjust]{argadjust} & I P & adjust arguments for arithmetic operations & \refp{sec:ipargadjust} \\
+\hyperref[sec:ifarglist]{arglist} & I F & pass lists, arrays or maps of arguments & \refp{sec:ifarglist} \\
+\hyperref[sec:lfargstomap]{argstomap} & L F & create a map from key=value arguments & \refp{sec:lfargstomap} \\
+\hyperref[sec:lmarraytoqueue]{array\_to\_queue} & L M & serialise an array to a queue & \refp{sec:lmarraytoqueue} \\
+\hyperref[sec:ifarraytostr]{arraytostr} & I F & convert an integer array to a string & \refp{sec:ifarraytostr} \\
+\hyperref[sec:ifarraytype]{arraytype} & I F & array type of a variable or expression & \refp{sec:ifarraytype} \\
+\hyperref[sec:ifasin]{asin} & I F & trigonometric arc sine function & \refp{sec:ifasin} \\
+\hyperref[sec:ipassert]{assert} & I P & assert a value mode variable for a clock cycle & \refp{sec:ipassert} \\
+\hyperref[sec:lpassign]{assign} & L P & generalised assignment & \refp{sec:lpassign} \\
+\hyperref[sec:lfasyncqueuespaces]{asyncqueuespaces} & L F & space count for asynchronous queue & \refp{sec:lfasyncqueuespaces} \\
+\hyperref[sec:lfasyncqueuewords]{asyncqueuewords} & L F & word count for asynchronous queue & \refp{sec:lfasyncqueuewords} \\
+\hyperref[sec:ifatan]{atan} & I F & single argument trigonometric arc tangent function & \refp{sec:ifatan} \\
+\hyperref[sec:ifatan2]{atan2} & I F & two argument trigonometric arc tangent function & \refp{sec:ifatan2} \\
+\hyperref[sec:ifattribute]{attribute} & I F & get an attribute from a variable & \refp{sec:ifattribute} \\
+\hyperref[sec:ipattributeproc]{attributeprocedure} & I P & register a procedure to handle attributes & \refp{sec:ipattributeproc} \\
+\hyperref[sec:ifattributes]{attributes} & I F & get the attributes of a variable & \refp{sec:ifattributes} \\
+\hyperref[sec:ipattributes]{attributes} & I P & assign attributes to a variable & \refp{sec:ipattributes} \\
+\hyperref[sec:ifbiasedexponent]{biasedexponent} & I F & target float biased exponent & \refp{sec:ifbiasedexponent} \\
+\hyperref[sec:ifbiasedexponentwidth]{biasedexponentwidth} & I F & width of target float biased exponent & \refp{sec:ifbiasedexponentwidth} \\
+\hyperref[sec:lfbintogray]{bin\_to\_gray} & L F & convert binary count to gray count & \refp{sec:lfbintogray} \\
+\hyperref[sec:lfbitset]{bitset} & L F & test if a bit is set & \refp{sec:lfbitset} \\
+\hyperref[sec:ifbitsfor]{bitsfor} & I F & number of bits to represent an integer - DEPRECATED! & \refp{sec:ifbitsfor} \\
+%    \hyperref[sec:lfbram2]{bram2} & L F & create extended dual-port registered output memory & \refp{sec:lfbram2} \\
+\hyperref[sec:lmcapture]{capture} & L M & capture a data sequence & \refp{sec:lmcapture} \\
+\hyperref[sec:ifcast]{cast} & I F & cast a value to a new type or type width & \refp{sec:ifcast} \\
+\hyperref[sec:lfcdatas]{cdatas} & L F & generate C name array for 3PL enum type & \refp{sec:lfcdatas} \\
+\hyperref[sec:ifceil]{ceil} & I F & round float to nearest integer towards $+\infty$ & \refp{sec:ifceil} \\
+\hyperref[sec:ipchange]{change} & I P & change a list entry & \refp{sec:ipchange} \\
+\hyperref[sec:lpcinclude]{cinclude} & L P & convert a C include file & \refp{sec:lpcinclude} \\
+\hyperref[sec:ipclass]{class} & I P & create a variable of type "class" & \refp{sec:ipclass} \\
+\hyperref[sec:lpclkdcm]{clkdcm} & L P & create a DCM digital clock manager & \refp{sec:lpclkdcm} \\
+\hyperref[sec:lpclkdlle]{clkdlle} & L P & create an extended Spartan2, Virtex or VirtexE DLL& \refp{sec:lpclkdlle} \\
+\hyperref[sec:lpclkdllhf]{clkdllhf} & L P & create a high frequency Spartan2, Virtex or VirtexE DLL& \refp{sec:lpclkdllhf} \\
+\hyperref[sec:lpclkdll]{clkdll} & L P & create a DLL delay-locked loop clock manager & \refp{sec:lpclkdll} \\
+\hyperref[sec:lpmmcma]{clkmmcm\_adv} & L P & create an advanced MMCM multi-mode clock manager & \refp{sec:lpmmcma} \\
+\hyperref[sec:lpmmcmb]{clkmmcm\_base} & L P & create a basic MMCM multi-mode clock manager & \refp{sec:lpmmcmb} \\
+\hyperref[sec:ipclock]{clock} & I P & create one or more clock variable & \refp{sec:ipclock}   \\
+\hyperref[sec:lfclockused]{clockused} & L F & determine if a clock variable has been used & \refp{sec:lfclockused}   \\
+\hyperref[sec:lpclockbufg]{clockbufg} & L P & a BUFG clock buffer & \refp{sec:lpclockbufg} \\
+\hyperref[sec:lpclockbufio]{clockbufio} & L P & a local clock buffer & \refp{sec:lpclockbufio} \\
+\hyperref[sec:ipclockfromexpr]{clockfromexpr} & I P & drive a clock from an expression & \refp{sec:ipclockfromexpr} \\
+\hyperref[sec:lpclockmuxbuffer]{clockmuxbuffer} & L P & a clock mux/buffer & \refp{sec:lpclockmuxbuffer} \\
+\hyperref[sec:lpclockmuxbufferdis]{clockmuxbufferdisable} & L P & a clock mux/buffer with disable & \refp{sec:lpclockmuxbufferdis} \\
+\hyperref[sec:lfclockparams]{clock\_params} & L P & derive clock synthesis parameters & \refp{sec:lpclockparams} \\
+\hyperref[sec:lfclockparams]{clock\_params} & L F & derive clock synthesis parameters & \refp{sec:lfclockparams} \\
+\hyperref[sec:ipclose]{close} & I P &close a file & \refp{sec:ipclose} \\
+\hyperref[sec:ipcmemory]{cmemory} & I P & create a combinatorial output memory & \refp{sec:ipcmemory}   \\ 
+\hyperref[sec:ifcmemoryread]{cmemoryread} & I F & read a combinatorial output memory & \refp{sec:ifcmemoryread} \\
+\hyperref[sec:ipcmemorywrite]{cmemorywrite} & I P & write to a combinatorial output memory & \refp{sec:ipcmemorywrite} \\     
+\hyperref[sec:ifcomponentpointer]{componentpointer} & I F & get a pointer to a static variable component & \refp{sec:ifcomponentpointer} \\
+%\hyperref[sec:ipconnect]{connect} & I P & connect two signals & \refp{sec:ipconnect} \\
+\end{tabular}
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:ifcomponenttype]{componenttype} & I F & get the type of a variable component & \refp{sec:ifcomponenttype} \\
+\hyperref[sec:ifcopy]{copy} & I F & copy a list or map & \refp{sec:ifcopy} \\
+\hyperref[sec:ifcosin]{cos} & I F & trigonometric cosine function & \refp{sec:ifcosin} \\
+
+\hyperref[chap:lmxilcpulib]{cpu\_api} & L C & a CPU/FPGA interface class (UART, ZYNQ) & \refp{chap:lmxilcpulib} \\
+\hyperref[sec:lmzynqrddma]{cpu\_api.dma\_read} & L CM & DMA transfer from memory to FPGA (ZYNQ) & \refp{sec:lmzynqrddma} \\
+\hyperref[sec:lmzynqwrdma]{cpu\_api.dma\_write} & L CM & DMA transfer from FPGA to memory (ZYNQ) & \refp{sec:lmzynqwrdma} \\
+\hyperref[sec:lpcpurd]{cpu\_api.read} & L CP & a CPU-readable interface (UART, ZYNQ) & \refp{sec:lpcpurd} \\
+\hyperref[sec:lpcpurdmem]{cpu\_api.read\_memory} & L CP & a CPU-readable interface to a memory (UART, ZYNQ) & \refp{sec:lpcpurdmem} \\
+\hyperref[sec:lpcpurdqueue]{cpu\_api.read\_queue} & L CP & CPU read from a queue variable (UART, ZYNQ) & \refp{sec:lpcpurdqueue} \\
+\hyperref[sec:lpcpurdvalue]{cpu\_api.read\_value} & L CP & CPU read from a value (UART, ZYNQ) & \refp{sec:lpcpurdvalue} \\
+\hyperref[sec:lprcvevent]{cpu\_api.receive\_event} & L CP & interrupt the CPU (UART, ZYNQ) & \refp{sec:lprcvevent} \\
+\hyperref[sec:lpcpuwr]{cpu\_api.write} & L CP & a CPU-writable interface (UART, ZYNQ) & \refp{sec:lpcpuwr} \\
+\hyperref[sec:lmzynqdmabufr]{cpu\_api.write\_dma\_buffer} & L CM & DMA transfer to CPU RAM (ZYNQ) & \refp{sec:lmzynqdmabufr} \\
+\hyperref[sec:lpcpuwrmem]{cpu\_api.write\_memory} & L CP & a CPU-writable interface to a memory (UART, ZYNQ) & \refp{sec:lpcpuwrmem} \\
+\hyperref[sec:lpcpuwrqueue]{cpu\_api.write\_queue} & L CP & a CPU write to a queue variable (UART, ZYNQ) & \refp{sec:lpcpuwrqueue} \\
+\hyperref[sec:lpinterrupt]{cpu\_api.api.interrupt} & L CP & interrupt the CPU (UART, ZYNQ) & \refp{sec:lpinterrupt} \\
+
+\hyperref[sec:lmcrc32]{crc32} & L M & Virtex5 and later 32 bit CRC & \refp{sec:lmcrc32} \\
+\hyperref[sec:lmcrc64]{crc64} & L M & Virtex5 and later 64 bit CRC & \refp{sec:lmcrc64} \\
+\hyperref[sec:lmcrc816]{crc\_8\_16} & L M & 16 bit CRC from 8 bit data & \refp{sec:lmcrc816} \\
+\hyperref[sec:lmcrc1616]{crc\_16\_16} & L M & 16 bit CRC from 16 bit data & \refp{sec:lmcrc1616} \\
+\hyperref[sec:lmcrcblock]{crcblock} & L M & block 32 bit data with a CRC & \refp{sec:lmcrcblock} \\
+\hyperref[sec:lmcrcunblock]{crcunblock} & L M & unblock 32 bit data with a CRC & \refp{sec:lmcrcunblock} \\
+\hyperref[sec:lmcread]{cread} & L M & read combinatorial output memory to a queue & \refp{sec:lmcread} \\
+\hyperref[sec:ifcspan]{cspan} & I F & head string selected by characters not in a set & \refp{sec:ifcspan} \\
+\hyperref[sec:lfctypes]{ctypes} & L F & converts 3PL types to C types & \refp{sec:lfctypes} \\
+\hyperref[sec:ifcurrentclock]{currentclock} & I F & get the current clock variable & \refp{sec:ifcurrentclock} \\
+\hyperref[sec:ifcurrentelement]{currentelement} & I F & get the current element identifier & \refp{sec:ifcurrentelement} \\
+\hyperref[sec:lmcwrite]{cwrite} & L M & write combinatorial output memory from queue & \refp{sec:lmcwrite} \\
+\hyperref[sec:lmdcireset]{dcireset} & L M & reset DCI pins & \refp{sec:lmdcireset} \\
+\hyperref[sec:lfdeglitch]{deglitch} & L F & deglitch an input signal & \refp{sec:lfdeglitch} \\
+\hyperref[sec:ifdeflate]{deflate} & I F & compress a string & \refp{sec:ifdeflate} \\
+\hyperref[sec:lfdelay]{delay} & L F & fixed delay & \refp{sec:lfdelay} \\
+\hyperref[sec:imdel]{del} & I M & variable length delay line & \refp{sec:imdel} \\
+\hyperref[sec:lfdel]{del} & L F & variable length delay line & \refp{sec:lfdel} \\
+\hyperref[sec:lmdemultiplex]{demultiplex} & L M & demultiplex a source & \refp{sec:lmdemultiplex} \\
+\hyperref[sec:lmdemultiplex]{demultiplex\_e} & L M & demultiplex a source using port number & \refp{sec:lmdemultiplex} \\
+\hyperref[sec:lmdemultiplex]{demultiplex\_l} & L M & demultiplex a source using port bit & \refp{sec:lmdemultiplex} \\
+\hyperref[sec:ipdesignname]{designname} & I P & change the design name & \refp{sec:ipdesignname} \\
+\hyperref[sec:ifdimension]{dimension} & I F & dimension - get a dimension of an array or size of a map or list & \refp{sec:ifdimension} \\
+\hyperref[sec:ifdimensions]{dimensions} & I F & get the number of dimensions of an array & \refp{sec:ifdimensions} \\
+\hyperref[sec:ipdirective]{directive} & I P & enter a directive & \refp{sec:ipdirective} \\
+\hyperref[sec:ifdirective]{directive} & I F & get the value of a directive & \refp{sec:ifdirective} \\
+\hyperref[sec:ifdirectives]{directives} & I F & get the global directives map & \refp{sec:ifdirectives} \\
+\hyperref[sec:ifdirexists]{direxists} & I F & determine if a directive exists & \refp{sec:ifdirexists} \\
+\hyperref[sec:lmdivide]{divide} & L M & pipelined integer division-remainder & \refp{sec:lmdivide} \\
+\hyperref[sec:ipdivrem]{divrem} & I P & combined quotient and remainder & \refp{sec:ipdivrem} \\
+\hyperref[sec:ifdomain]{domain} & I F & get the clock domain for a variable & \refp{sec:ifdomain} \\
+\hyperref[sec:lpdsp48]{dsp48} & L P & create a DSP48 block for Virtex4 FPGAs & \refp{sec:lpdsp48} \\
+\hyperref[sec:lpdsp48a]{dsp48a} & L P & create a DSP48 block for Spartan6 FPGAs & \refp{sec:lpdsp48a} \\
+\hyperref[sec:lpdsp48e]{dsp48e} & L P & create a DSP48E block for Virtex5 FPGAs & \refp{sec:lpdsp48e} \\
+\hyperref[sec:lpdsp48e1]{dsp48e1} & L P & create a DSP48E1 block for Virtex6 FPGAs & \refp{sec:lpdsp48e1} \\
+\hyperref[sec:lmdspaddsub]{dspaddsub} & L M & DSP add/subtract & \refp{sec:lmdspaddsub} \\
+\hyperref[sec:lmdspcounter]{dspcounter} & L M & DSP counter & \refp{sec:lmdspcounter} \\
+\hyperref[sec:lmdsplog]{dsplog} & L M & DSP logical operation & \refp{sec:lmdsplog} \\
+\hyperref[sec:lmdspmul]{dspmul} & L M & DSP multiply & \refp{sec:lmdspmul} \\
+\hyperref[sec:lmdspmuladd]{dspmuladd} & L M & DSP multiply and add & \refp{sec:lmdspmuladd} \\
+\hyperref[sec:lmdspmulsub]{dspmulsub} & L M & DSP multiply and subtract & \refp{sec:lmdspmulsub} \\
+\hyperref[sec:lmdspsubmul]{dspsubmul} & L M & DSP subtract and multiply & \refp{sec:lmdspsubmul} \\
+\hyperref[sec:ifdutycycle]{dutycycle} & I F & get the duty cycle of a clock variable & \refp{sec:ifdutycycle} \\
+\end{tabular}
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:ifelapsedtime]{elapsedtime} & I F & get the elapsed time & \refp{sec:ifelapsedtime} \\
+\hyperref[sec:ipelement]{element} & I P & add an element to the EDIF netlist & \refp{sec:ipelement} \\
+\hyperref[sec:lpelementaddncf]{elementaddncf} & L P & add constraint to NCF file for an element & \refp{sec:lpelementaddncf} \\
+\hyperref[sec:lpelementBinProperty]{elementBinProperty} & L P & add a property of type "int" to an element in binary format & \refp{sec:lpelementBinProperty} \\
+\hyperref[sec:lpelementcheck]{elementcheck} & I P & check that a Xilinx element is allowed in the current device family & \refp{sec:lpelementcheck} \\
+\hyperref[sec:lfelementcheck]{elementcheck} & I F & check that a Xilinx element is allowed in the current device family & \refp{sec:lfelementcheck} \\
+\hyperref[sec:ipelmntinclk]{elementclockinput} & I P & connect a clock input signal to an EDIF netlist element & \refp{sec:ipelmntinclk} \\
+\hyperref[sec:ipelementend]{elementend} & I P & complete construction of an EDIF netlist element & \refp{sec:ipelementend} \\
+\hyperref[sec:lpelementFloatProperty]{elementFloatProperty} & L P & add a property of type "float" to an element & \refp{sec:lpelementFloatProperty} \\
+\hyperref[sec:lpelementHexProperty]{elementHexProperty} & L P & add a property of type "int" to an element in hexadecimal format & \refp{sec:lpelementHexProperty} \\
+\hyperref[sec:ipelmntin]{elementinput} & I P & connect an input signal to an EDIF netlist element & \refp{sec:ipelmntin} \\
+\hyperref[sec:lpelementIntProperty]{elementIntProperty} & L P & add a property of type "int" to an element & \refp{sec:lpelementIntProperty} \\
+\hyperref[sec:lpelementLogProperty]{elementLogProperty} & L P & add a property of type "log" to an element & \refp{sec:lpelementLogProperty} \\
+\hyperref[sec:ipelmntout]{elementoutput} & I P & connect an output signal to an EDIF netlist element & \refp{sec:ipelmntout} \\
+\hyperref[sec:ipelementproperty]{elementproperty} & I P & set an element property & \refp{sec:ipelementproperty} \\
+\hyperref[sec:lpelementStrProperty]{elementStrProperty} & L P & add a property of type "str" to an element & \refp{sec:lpelementStrProperty} \\
+\hyperref[sec:ipelmntoutts]{elementtsoutput} & I P & connect a 3-state output signal to an EDIF netlist element & \refp{sec:ipelmntoutts} \\
+\hyperref[sec:ipemptyvalue]{emptyvalue} & I P & clear a value-mode variable & \refp{sec:ipemptyvalue} \\
+\hyperref[sec:ifendswith]{endswith} & I F & a string is the tail of another & \refp{sec:ifendswith} \\
+\hyperref[sec:ifentries]{entries} & I F & get the number of entries in a list or map - DEPRECATED & \refp{sec:ifentries} \\
+\hyperref[sec:ipenum]{enum} & I P & create an enumerated type & \refp{sec:ipenum} \\
+\hyperref[sec:ipenumv]{enumv} & I P & create an enumerated type & \refp{sec:ipenumv} \\
+\hyperref[sec:ifenv]{env} & I F & get the environment variables & \refp{sec:ifenv} \\
+\hyperref[sec:ipexec]{exec} & I P & execute a command & \refp{sec:ipexec} \\
+\hyperref[sec:ifexists]{exists} & I F & determine if an identifier is recognised - DEPRECATED! & \refp{sec:ifexists} \\
+\hyperref[sec:ipexit]{exit} & I P & terminate execution & \refp{sec:ipexit} \\
+\hyperref[sec:ifexp]{exp} & I F & e to a power & \refp{sec:ifexp} \\
+\hyperref[sec:iffamily]{family} & I F & string identifying platform & \refp{sec:iffamily} \\
+\hyperref[sec:ipexport]{export} & I P & export a 'core' & \refp{sec:ipexport} \\
+\hyperref[sec:ipexternal]{external} & I P & declare a signal as an EDIF port & \refp{sec:ipexternal} \\
+\hyperref[sec:lmfadd]{fadd} & L M & floating add & \refp{sec:lmfadd} \\
+\hyperref[sec:lmfdiv]{fdiv} & L M & floating divide & \refp{sec:lmfdiv} \\
+\hyperref[sec:lpfdre]{fdre} & L P & Create an FDRE flip-flop & \refp{sec:lpfdre} \\
+\hyperref[sec:lpfdre]{fdrse} & L P & Create an FDRSE flip-flop & \refp{sec:lpfdrse} \\
+\hyperref[sec:lpfdse]{fdse} & L P & Create an FDSE flip-flop & \refp{sec:lpfdse} \\
+\hyperref[sec:lpfdce]{fdce} & L P & Create an FDCE flip-flop & \refp{sec:lpfdce} \\
+\hyperref[sec:lpfdpe]{fdpe} & L P & Create an FDPE flip-flop & \refp{sec:lpfdpe} \\
+\hyperref[sec:lmfifo]{fifo} & L M & a fifo with static interface & \refp{sec:lmfifo} \\
+\hyperref[sec:ipfile]{file} & I P & create file variables & \refp{sec:ipfile} \\
+\hyperref[sec:iffilecanread]{filecanread} & I F & check if a file is readable & \refp{sec:iffilecanread} \\
+\hyperref[sec:iffilecanwrite]{filecanwrite} & I F & check if a file is writable & \refp{sec:iffilecanwrite} \\
+\hyperref[sec:iffiledelete]{filedelete} & I F & delete a file & \refp{sec:iffiledelete} \\
+\hyperref[sec:iffileexists]{fileexists} & I F & check if a file exists & \refp{sec:iffileexists} \\
+\hyperref[sec:iffilegetparent]{filegetparent} & I F & get the path to the file & \refp{sec:iffilegetparent} \\
+\hyperref[sec:iffileisdir]{fileisdir} & I F & check if a file is a directory & \refp{sec:iffileisdir} \\
+\hyperref[sec:iffileisfile]{fileisfile} & I F & check if a file is a file & \refp{sec:iffileisfile} \\
+\hyperref[sec:iffilelastmod]{filelastmod} & I F & get the time of last modification & \refp{sec:iffilelastmod} \\
+\hyperref[sec:iffilelength]{filelength} & I F & get the file length in bytes & \refp{sec:iffilelength} \\
+\hyperref[sec:iffilelist]{filelist} & I F & get a list of files and directories & \refp{sec:iffilelist} \\
+\hyperref[sec:iffilelistdirs]{filelistdirs} & I F & get a list of directories & \refp{sec:iffilelistdirs} \\
+\hyperref[sec:iffilelistfiles]{filelistfiles} & I F & get a list of files & \refp{sec:iffilelistfiles} \\
+\hyperref[sec:iffilemkdir]{filemkdir} & I F & create a directory & \refp{sec:iffilemkdir} \\
+\hyperref[sec:iffilerename]{filerename} & I F & rename a file or directory & \refp{sec:iffilerename} \\
+\hyperref[sec:iffilesetreadonly]{filesetreadonly} & I F & set a file or directory read-only & \refp{sec:iffilesetreadonly} \\
+\hyperref[sec:iffind]{find} & I F & find a substring using a regular expression & \refp{sec:iffind} \\
+\hyperref[sec:iffirst]{first} & I F & get the first value of an enum & \refp{sec:iffirst} \\
+\hyperref[sec:ipfloat]{float} & I P & create immediate floating point variables & \refp{sec:ipfloat} \\
+\hyperref[sec:iffloatisnegative]{floatisnegative} & I F & sign of target float & \refp{sec:iffloatisnegative} \\
+\hyperref[sec:iffloor]{floor} & I F & round float to nearest integer towards $-\infty$ & \refp{sec:iffloor} \\
+\end{tabular} 
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:lmfmul]{fmul} & L M & floating multiply & \refp{sec:lmfmul} \\
+\hyperref[sec:lmfneg]{fneg} & L M & negate a floating point value & \refp{sec:lmfneg} \\
+\hyperref[sec:ifformat]{format} & I F & format values into a string & \refp{sec:ifformat} \\
+\hyperref[sec:lfforcecast]{forcecast} & L F & force a prohibited cast & \refp{sec:lfforcecast} \\
+\hyperref[sec:ipfprintf]{fprintf} & I P & print a formatted line to an output file & \refp{sec:ipfprintf} \\
+\hyperref[sec:iffrequency]{frequency} & I F & get the frequency of a clock variable & \refp{sec:iffrequency} \\
+\hyperref[sec:ipfscanf]{fscanf} & I P & scan a line from a file into variables & \refp{sec:ipfscanf} \\
+\hyperref[sec:lmfsub]{fsub} & L M & floating subtract & \refp{sec:lmfsub} \\
+\hyperref[sec:lpgenerateconstraints]{generateConstraints} & I F & generate constraint file entries from I/O mode variable attributes & \refp{sec:lpgenerateconstraints} \\
+\hyperref[sec:ifget]{get} & I F & get a list or map entry & \refp{sec:ifget} \\
+\hyperref[sec:lfgetbit]{getbit} & L F & get a bit & \refp{sec:lfgetbit} \\
+\hyperref[sec:ifgetfield]{getfield} & I F & get the nth field from a struct & \refp{sec:ifgetfield} \\
+\hyperref[sec:lfgetiostandard]{getiostandard} & L F & get the I/O standard for a pin or pins & \refp{sec:lfgetiostandard} \\
+\hyperref[sec:lmgtcustom16]{gt\_custom\_16}& L M & a 16-bit Rocket high-speed serial I/O channel & \refp{sec:lmgtcustom16} \\
+\hyperref[sec:lpgtpdual]{gtp\_dual}& L M & create a GTP dual high-speed serial I/O channel tile & \refp{sec:lpgtpdual} \\
+\hyperref[sec:lmgtpdual16]{gtp\_dual\_16}& L M & a 16-bit dual high-speed serial I/O channel tile & \refp{sec:lmgtpdual16} \\
+\hyperref[sec:ifhadeof]{hadeof} & I F & had EOF on the last file read & \refp{sec:ifhadeof} \\
+\hyperref[sec:ifhasfield]{hasfield} & I F & check if a struct has a specific field & \refp{sec:ifhasfield} \\
+\hyperref[sec:ifhasnext]{hasnext} & I F & is there a next value of an enum & \refp{sec:ifhasnext} \\
+\hyperref[sec:ifhasqueuereads]{hasqueuereads} & I F & does an argument contain queue reads & \refp{sec:ifhasqueuereads} \\
+\hyperref[sec:ifhasprev]{hasprev} & I F & is there a previous value of an enum & \refp{sec:ifhasprev} \\
+\hyperref[sec:ifhead]{head} & I F & get the head of a string & \refp{sec:ifhead} \\
+\hyperref[sec:lpiddr]{iddr} & L P & input double data rate interface & \refp{sec:lpiddr} \\
+\hyperref[sec:lpidelay]{idelay} & L P & input data delay & \refp{sec:lpidelay} \\
+\hyperref[sec:ipident]{ident} & L P &  extract an identifier from an argument & \refp{sec:ipident} \\
+\hyperref[sec:ifidentifier]{identifier} & I F & get the identifier of a variable & \refp{sec:ifidentifier} \\
+\hyperref[sec:ipimport]{import} & I P & import a 'core' & \refp{sec:ipimport} \\
+\hyperref[sec:ifimtotargtype]{imtotargtype} & I F & convert an immediate type to a target type & \refp{sec:ifimtotargtype} \\
+\hyperref[sec:ipincludedir]{includedir} & I P & add directory for include path & \refp{sec:ipincludedir} \\
+\hyperref[sec:ifincldirs]{includedir} & I F & get the directories searched for module and source files & \refp{sec:ifincldirs} \\
+\hyperref[sec:lfincrdecr]{incrdecr} & L F & dynamically increment or decrement & \refp{sec:lfincrdecr} \\
+\hyperref[sec:ipinput]{input} & I P & create an input mode variable & \refp{sec:ipinput} \\
+\hyperref[sec:ipint]{int} & I P &  create one or more immediate integer variables & \refp{sec:ipint} \\
+\hyperref[sec:ifinttohexstring]{inttohexstring} & I F & get a hex string representing an integer & \refp{sec:ifinttohexstring} \\
+\hyperref[sec:lpioconstraint]{IOconstraint} & L P & add an I/O constraint to the constraints file & \refp{sec:lpioconstraint} \\
+\hyperref[sec:lpiodelay]{iodelay} & L P & input/output data delay & \refp{sec:lpiodelay} \\
+\hyperref[sec:lpiopins]{iopins} & L P & create FPGA pin specifications & \refp{sec:lpiopins} \\
+\hyperref[sec:lfisclear]{isclear} & L F & verify a run of clear bits & \refp{sec:lfisclear} \\
+\hyperref[sec:lpiserdes]{iserdes} & L P & input deserialiser & \refp{sec:lpiserdes} \\
+\hyperref[sec:ifisnull]{isnull} & I F & determine if null & \refp{sec:ifisnull}   \\
+\hyperref[sec:ifisread]{isread} & I F & determine when a queue variable is read & \refp{sec:ifisread} \\
+\hyperref[sec:ifissigned]{issigned} & I F & determine if a type is signed & \refp{sec:ifissigned}   \\
+\hyperref[sec:lfisset]{isset} & L F & verify a run of set bits & \refp{sec:lfisset} \\
+\hyperref[sec:ifiswritten]{iswritten} & I F & determine when a static or queue variable is written & \refp{sec:ifiswritten} \\
+\hyperref[sec:ifisstruct]{isstruct} & I F & determine if a variable type is a struct & \refp{sec:ifisstruct} \\
+\hyperref[sec:ifistargconst]{istargconst} & I F & check if a value mode variable is a constant & \refp{sec:ifistargconst}   \\
+\hyperref[sec:lmitof]{itof} & L M & convert an integer to a floating point value & \refp{sec:lmitof} \\
+\hyperref[sec:lfjsontype]{jsontype} & L F & generate a JSON string from a 3PL type & \refp{sec:lfjsontype} \\
+\hyperref[sec:iflast]{last} & I F & get the last value of an enum & \refp{sec:iflast} \\
+\hyperref[sec:lfsr]{lfsr} & L F & linear feedback shift register & \refp{sec:lfsr} \\
+\hyperref[sec:iflistattrs]{listattributes} & I F & get a list of variable attributes & \refp{sec:iflistattrs} \\
+\hyperref[sec:ipliststt]{liststacks} & I P & list the current state of the body and scope stacks & \refp{sec:ipliststt} \\
+\hyperref[sec:iflistvars]{listvars} & I F & get a list of variables & \refp{sec:iflistvars} \\
+\hyperref[sec:iflocation]{location} & I F & get the current source location & \refp{sec:iflocation} \\
+\hyperref[sec:iplog]{log} & I P & create one or more immediate logical variables & \refp{sec:iplog} \\
+\hyperref[sec:iflog]{log} & I F & natural logarithm & \refp{sec:iflog} \\
+\hyperref[sec:lplowskew]{lowskew} & L P & request low skew secondary clock routing & \refp{sec:lplowskew} \\
+\hyperref[sec:lflszeros]{lszeros} & L F & count least significant zero bits& \refp{sec:lflszeros} \\
+\end{tabular}
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:lpsimpleclock]{simpleclock} & L P & create a clock of specified frequency & \refp{sec:lpsimpleclock} \\
+\hyperref[sec:ifmantissa]{mantissa} & I F & target float mantissa & \refp{sec:ifmantissa} \\
+\hyperref[sec:ifmantissawidth]{mantissawidth} & I F & width of target float mantissa & \refp{sec:ifmantissawidth} \\
+\hyperref[sec:ifmatch]{match} & I F & find substrings using a regular expression & \refp{sec:ifmatch} \\
+\hyperref[sec:ifmatched]{matched} & I F & determine if a parameter has an argument & \refp{sec:ifmatched} \\
+\hyperref[sec:ifmax]{max} & I F & maximum of integers & \refp{sec:ifmax} \\
+\hyperref[sec:lpmaxdelay]{maxdelay} & L P & specify max delay between timing groups & \refp{sec:lpmaxdelay} \\
+\hyperref[sec:lfmaxval]{maxval} & L F & target maximum value & \refp{sec:lfmaxval} \\
+\hyperref[sec:ifmaxvalue]{maxvalue} & I F & maximum value of a target type & \refp{sec:ifmaxvalue} \\
+\hyperref[sec:ifmemoryaddresstype]{memoryaddresstype} & I F & get the address type of a memory variabl & \refp{sec:ifmemoryaddresstype} \\
+\hyperref[sec:ifmemorydatatype]{memorydatatype} & I F & get the data type of a memory variable & \refp{sec:ifmemorydatatype} \\
+\hyperref[sec:ifmin]{min} & I F & minimum of integers & \refp{sec:ifmin} \\
+\hyperref[sec:lfminval]{minval} & L F & target minimum value & \refp{sec:lfminval} \\
+\hyperref[sec:ifminvalue]{minvalue} & I F & minimum value of a target type & \refp{sec:ifminvalue} \\
+\hyperref[sec:ifmod]{mod} & I F & modulus of integer or float & \refp{sec:ifmod} \\
+\hyperref[sec:ifmode]{mode} & I F & the mode of a variable & \refp{sec:ifmode} \\
+\hyperref[sec:ipmsg]{msg} & I P & print a message & \refp{sec:ipmsg} \\
+\hyperref[sec:lmmultiplex]{multiplex} & L M & multiplex sources & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lmmultiplex]{multiplex\_e} & L M & multiplex sources giving port number & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lmmultiplex]{multiplex\_l} & L M & multiplex sources giving port bit & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lmmultiplex]{multiplexp} & L M & multiplex queues with priority & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lmmultiplex]{multiplexp\_e} & L M & multiplex queues with priority giving port number & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lmmultiplex]{multiplexp\_l} & L M & multiplex queues with priority giving port bit & \refp{sec:lmmultiplex} \\
+\hyperref[sec:lfmultiplexstruct]{multiplex\_struct\_e} & L F & multiplex output type with uint & \refp{sec:lfmultiplexstruct} \\
+\hyperref[sec:lfmultiplexstruct]{multiplex\_struct\_l} & L F & multiplex output type with log array & \refp{sec:lfmultiplexstruct} \\
+\hyperref[sec:lmmultiply]{multiply} & L M & pipelined multiply & \refp{sec:lmmultiply} \\
+\hyperref[sec:lfmux]{mux} & L F & multiplex inputs & \refp{sec:lfmux} \\
+\hyperref[sec:ipnegclock]{negclock} & I P & create a negative clock & \refp{sec:ipnegclock} \\
+\hyperref[sec:lpnetaddncf]{netaddncf} & L P & add constraint to NCF file for a net & \refp{sec:lpnetaddncf} \\
+\hyperref[sec:lpncfromd]{netlistcommentfromdirs} & I P & directives to nelist comment & \refp{sec:lpncfromd} \\
+\hyperref[sec:ifnext]{next} & I F & get the next value of an enum & \refp{sec:ifnext} \\
+\hyperref[sec:ipnop]{nop} & I P & a no-operation (delay) & \refp{sec:ipnop} \\
+\hyperref[sec:ifnullarg]{nullarg} & I F & omit an unmatched parameter & \refp{sec:ifnullarg} \\
+\hyperref[sec:ifnumfields]{numfields} & I F & get the number of field in a struct & \refp{sec:ifnumfields} \\
+\hyperref[sec:ifnuminargs]{numinargs} & I F & number of input arguments & \refp{sec:ifnuminargs} \\
+\hyperref[sec:ifnumoutargs]{numoutargs} & I F & number of output arguments & \refp{sec:ifnumoutargs} \\
+\hyperref[sec:ifnumwords]{numwords} & I F & number of words in a variable, expression or type & \refp{sec:ifnumwords} \\
+\hyperref[sec:lpoddr]{oddr} & L P & output double data rate interface & \refp{sec:lpoddr} \\
+\hyperref[sec:ifoffset]{offset} & I F & point offset of a fixed point value & \refp{sec:ifoffset} \\
+\hyperref[sec:iford]{ord} & I F & get the ordinal of an enum or a character& \refp{sec:iford} \\
+\hyperref[sec:ipopen]{open} & I P & open a file & \refp{sec:ipopen} \\
+\hyperref[sec:ipoutput]{output} & I P & create an output mode variable & \refp{sec:ipoutput} \\
+\hyperref[sec:ippart]{part} & L P & specify the FPGA & \refp{sec:ippart} \\
+\hyperref[sec:lmpdelay]{pdelay} & L M & delay pipeline data & \refp{sec:lmpdelay} \\
+\hyperref[sec:ifperiod]{period} & I F & get the period of a clock variable & \refp{sec:ifperiod} \\
+\hyperref[sec:lpperioddiv]{period\_div} & L P & timing group for divided clock & \refp{sec:lpperioddiv} \\
+\hyperref[sec:lpperiodmul]{period\_mul} & L P & timing group for divided clock & \refp{sec:lpperiodmul} \\
+\hyperref[sec:lmpfifo]{pfifo} & L M & a prewrite fifo with static interface & \refp{sec:lmpfifo} \\
+\hyperref[sec:lmpllb]{pll\_base} & L M & create a series-7 basic PLL & \refp{sec:lmpllb} \\
+\hyperref[sec:ifportdomain]{portdomain} & I F & get the port clock domain for a memory variable & \refp{sec:ifportdomain} \\
+\hyperref[sec:lppostprocess]{postprocess} & I F & post-process the netlist file & \refp{sec:lppostprocess} \\
+\hyperref[sec:ifpow]{pow} & I F & raise to a power & \refp{sec:ifpow} \\
+\hyperref[sec:lpppc405]{ppc405} & L P & a power PC 405 core & \refp{sec:lpppc405} \\
+\hyperref[sec:lpppcbr]{ppcbr} & L P & a PPC405 with OCM & \refp{sec:lpppcbr} \\
+\hyperref[sec:ippresetdirective]{presetdirective} & I P & enter a directive during parsing & \refp{sec:ippresetdirective} \\
+\hyperref[sec:ifprev]{prev} & I F & get the previous value of an enum & \refp{sec:ifprev} \\
+\hyperref[sec:ifprevclock]{prevclock} & I F & get the previous clock variable & \refp{sec:ifprevclock} \\
+\hyperref[sec:ifprimtypestring]{primtypestring} & I F & type of a primitive variable as a string & \refp{sec:ifprimtypestring} \\
+\end{tabular}
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:lpprintattrs]{printattributes} & L P & print a list of variable attributes & \refp{sec:lpprintattrs} \\
+\hyperref[sec:lpprintdirs]{printdirs} & L P & print a list of directives & \refp{sec:lpprintdirs} \\
+\hyperref[sec:ipprintf]{printf} & I P & print a formatted line to stdout & \refp{sec:ipprintf} \\
+\hyperref[sec:ipprintln]{println} & I P & print a line & \refp{sec:ipprintln} \\
+\hyperref[sec:lpprintvars]{printvars} & L P & print a list of variables & \refp{sec:lpprintvars} \\
+\hyperref[sec:ifprielse]{prielse} & I F & else case value for priority variable & \refp{sec:ifprielse} \\
+\hyperref[sec:ippriority]{priority} & I P & create a priority variable & \refp{sec:ippriority} \\
+\hyperref[sec:lpprocPinAtt]{processPinAttributes} & L P & process pin attributes & \refp{sec:lpprocPinAtt} \\
+\hyperref[sec:lfptr2expr]{ptr2expr} & L F & a pointer to an expression & \refp{sec:lfptr2expr} \\
+\hyperref[sec:lppullup]{pullup} & L P & connect pullups to a bus & \refp{sec:lppullup} \\
+\hyperref[sec:ippriunlock]{priunlock} & I P & unlock priority execution & \refp{sec:ippriunlock} \\
+\hyperref[sec:ippulse]{pulse} & I P & generate a pulse - DEPRECATED! & \refp{sec:ippulse} \\
+\hyperref[sec:ipput]{put} & I P & put a map entry & \refp{sec:ipput} \\
+\hyperref[sec:ipputall]{putall} & I P & put entries from another map & \refp{sec:ipputall} \\
+\hyperref[sec:lcqdr2ram]{qdr2\_ram} & L C & external QDR2 RAM class & \refp{sec:lcqdr2ram} \\
+\hyperref[sec:lcqdr2ramread]{qdr2\_ram.read} & L CM & read from external QDR2 RAM & \refp{sec:lcqdr2ramread} \\
+\hyperref[sec:lcqdr2ramread]{qdr2\_ram.readp} & L CM & read from external QDR2 RAM with priority & \refp{sec:lcqdr2ramread} \\
+\hyperref[sec:lcqdr2ramwrite]{qdr2\_ram.write} & L CM & write to external QDR2 RAM & \refp{sec:lcqdr2ramwrite} \\
+\hyperref[sec:lcqdr2ramwrite]{qdr2\_ram.writep} & L CM & write to external QDR2 RAM with priority & \refp{sec:lcqdr2ramwrite} \\
+\hyperref[sec:lcqdr2ramqdel]{qdr2\_ram.incr\_qdel} & L CP & increment Q input delay & \refp{sec:lcqdr2ramqdel} \\
+\hyperref[sec:lcqdr2ramqdel]{qdr2\_ram.decr\_qdel} & L CP & decrement Q input delay & \refp{sec:lcqdr2ramqdel} \\
+\hyperref[sec:lcqdr2ramqdel]{qdr2\_ram.reset\_qdel} & L CP & reset Q input delay & \refp{sec:lcqdr2ramqdel} \\
+\hyperref[sec:lcqdr2ramcqdel]{qdr2\_ram.incr\_cqdel} & L CP & increment CQ input delay & \refp{sec:lcqdr2ramcqdel} \\
+\hyperref[sec:lcqdr2ramcqdel]{qdr2\_ram.decr\_cqdel} & L CP & decrement CQ input delay & \refp{sec:lcqdr2ramcqdel} \\
+\hyperref[sec:lcqdr2ramcqdel]{qdr2\_ram.reset\_cqdel} & L CP & reset CQ input delay & \refp{sec:lcqdr2ramcqdel} \\
+\hyperref[sec:lcqdr2ramncqdel]{qdr2\_ram.incr\_\_cqdel} & L CP & increment \_CQ input delay & \refp{sec:lcqdr2ramncqdel} \\
+\hyperref[sec:lcqdr2ramncqdel]{qdr2\_ram.decr\_\_cqdel} & L CP & decrement \_CQ input delay & \refp{sec:lcqdr2ramncqdel} \\
+\hyperref[sec:lcqdr2ramncqdel]{qdr2\_ram.reset\_\_cqdel} & L CP & reset \_CQ input delay & \refp{sec:lcqdr2ramncqdel} \\
+\hyperref[sec:ipqueue]{queue} & I P & create one or more queue variables & \refp{sec:ipqueue} \\
+\hyperref[sec:lpqueuearray]{queuearray} & L P & construct an array of queues & \refp{sec:lpqueuearray} \\
+\hyperref[sec:ifqueuedepth]{queuedepth} & I F & get the depth of a queue & \refp{sec:ifqueuedepth} \\
+\hyperref[sec:ifqueueisempty]{queueisempty} & I F & determine if a queue is empty & \refp{sec:ifqueueisempty} \\
+\hyperref[sec:ifqueuemaxdepth]{queuemaxdepth} & I F & get the maximum allowed depth of a queue & \refp{sec:ifqueuemaxdepth} \\
+\hyperref[sec:ifqueuemindepth]{queuemindepth} & I F & get the minimum allowed depth of an asynchronous queue & \refp{sec:ifqueuemindepth} \\
+\hyperref[sec:ifqueuereadstatus]{queuereadstatus} & I F & get the read status of an asynchronous queue & \refp{sec:ifqueuereadstatus} \\
+\hyperref[sec:ifqueuespaces]{queuespaces} & I F & get the number of free spaces in a queue & \refp{sec:ifqueuespaces} \\
+\hyperref[sec:ifqueuewords]{queuewords} & I F & get the number of entries in a queue & \refp{sec:ifqueuewords} \\
+\hyperref[sec:ifqueuewritestatus]{queuewritestatus} & I F & get the write status of an asynchronous queue & \refp{sec:ifqueuewritestatus} \\
+\hyperref[sec:ifrandom]{random} & I F & a random number & \refp{sec:ifrandom} \\
+\hyperref[sec:ifreadbyte]{readbyte} & I F & read a byte from an input file & \refp{sec:ifreadbyte} \\
+\hyperref[sec:ifreaddomain]{readdomain} & I F & get the read clock domain for a variable & \refp{sec:ifreaddomain} \\
+\hyperref[sec:ifreadln]{readln} & I F & read a line from an input file & \refp{sec:ifreadln} \\
+\hyperref[sec:ifreadbyte]{readbyte} & I F & read a byte from an input file & \refp{sec:ifreadbyte} \\
+\hyperref[sec:ipref]{ref} & I P & create one or more variables & \refp{sec:ipref} \\
+\hyperref[sec:ipremove]{remove} & I P & remove a list entry & \refp{sec:ipremove} \\
+\hyperref[sec:ipremovedirective]{removedirective} & I P & remove a directive & \refp{sec:ipremovedirective} \\
+\hyperref[sec:ifreplace]{replace} & I F & replace left substring & \refp{sec:ifreplace} \\
+\hyperref[sec:ifreplaceall]{replaceall} & I F & replace all substrings & \refp{sec:ifreplaceall} \\
+\hyperref[sec:ipreset]{reset} & I P & reset a static or queue variable & \refp{sec:ipreset} \\
+\hyperref[sec:ifresetoutput]{resetoutput} & I F & get the reset output of a queue & \refp{sec:ifresetoutput} \\
+\hyperref[sec:imresync]{resync} & I M & resynchronise a level & \refp{sec:imresync} \\
+\hyperref[sec:lfresync]{resync} & L F & resynchronise a pulse or level to another clock & \refp{sec:lfresync} \\
+\hyperref[sec:lfreverse]{reverse} & L F & reverse a value & \refp{sec:lfreverse} \\
+\hyperref[sec:iprmemory]{rmemory} & I P & create a registered output memory & \refp{sec:iprmemory} \\
+\hyperref[sec:ifrmemoryout]{rmemoryout} & I F & get value of a reg output memory & \refp{sec:ifrmemoryout} \\
+\hyperref[sec:iprmemoryread]{rmemoryread} & I P & read reg output memory & \refp{sec:iprmemoryread} \\
+\hyperref[sec:iprmemorywrite]{rmemorywrite} & I P & write to reg output memory & \refp{sec:iprmemorywrite} \\
+\end{tabular}
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:ifround]{round} & I F & round float or fixed to nearest integer & \refp{sec:ifround} \\
+\hyperref[sec:iprpt]{rpt} & I P & print to the report file & \refp{sec:iprpt} \\
+%    \hyperref[sec:lfrramout2]{rramout2} & L F & get value of extended dual-port reg output memory & \refp{sec:lfrramout2} \\
+\hyperref[sec:lmrread]{rread} & L M & read reg output memory to a queue & \refp{sec:lmrread} \\
+%    \hyperref[sec:lprread2]{rread2} & L P & read from extended dual-port reg output memory & \refp{sec:lprread2} \\
+\hyperref[sec:lmrwrite]{rwrite} & L M & write reg output memory from a queue & \refp{sec:lmrwrite} \\
+%    \hyperref[sec:lprwrite2]{rwrite2} & L P & write to extended dual-port reg output memory & \refp{sec:lprwrite2} \\
+\hyperref[sec:ifsample]{sample} & L F & sample an expression & \refp{sec:ifsample} \\
+\hyperref[sec:ipsscanf]{sscanf} & I P & scan a string into variables & \refp{sec:ipsscanf} \\
+\hyperref[sec:ipscanf]{scanf} & I P & scan a line from stdin into variables & \refp{sec:ipscanf} \\
+\hyperref[sec:lfselect]{select} & L F & a combinatorial selector & \refp{sec:lfselect} \\
+%    \hyperref[sec:ipselect]{select} & I P & a combinatorial selector with arbitration & \refp{sec:ipselect} \\
+\hyperref[sec:ifselecta]{selecta} & I F & a combinatorial selector from arrays & \refp{sec:ifselecta} \\
+%    \hyperref[sec:ipselecta]{selecta} & I P & a combinatorial selector from arrays & \refp{sec:ipselecta} \\
+\hyperref[sec:ipselectvalue]{selectvalue} & I P & create one or more selectvalue variables & \refp{sec:ipselectvalue} \\
+\hyperref[sec:lmsequence]{sequence} & L M & generate a sequence & \refp{sec:lmsequence} \\
+\hyperref[sec:lfsequence]{sequence} & L F & generate a sequence & \refp{sec:lfsequence} \\
+\hyperref[sec:ipsetdirective]{setdirective} & I P & enter a directive - DEPRECATED! & \refp{sec:ipsetdirective} \\
+\hyperref[sec:lpsetiostandard]{setiostandard} & L P & set the I/O voltage standard for a pin or pins & \refp{sec:lpsetiostandard} \\
+\hyperref[sec:ipshell]{shell} & I P & execute a command in a shell & \refp{sec:ipshell} \\
+\hyperref[sec:ifsignum]{signum} & I F & sign function & \refp{sec:ifsignum} \\
+%    \hyperref[sec:ipsimread]{simread} & I P & read from a file during simulation & \refp{sec:ipsimread} \\
+%    \hyperref[sec:ipsimwrite]{simwrite} & I P & write to a file during simulation & \refp{sec:ipsimwrite} \\
+\hyperref[sec:ifsin]{sin} & I F & trigonometric sine function & \refp{sec:ifsin} \\
+\hyperref[sec:ifsize]{size} & I F & get the size in bits & \refp{sec:ifsize} \\
+\hyperref[sec:lmsort]{sort} & L M & generate a parallel Batcher sort network & \refp{sec:lmsort} \\
+\hyperref[sec:ifspan]{span} & I F & head string selected by characters in a set & \refp{sec:ifspan} \\
+\hyperref[sec:ipspecial]{special} & I P & vendor-specific special functions & \refp{sec:ipspecial} \\
+\hyperref[sec:lmspimaster]{spi\_master} & L M & SPI master transmitter/receiver & \refp{sec:lmspimaster} \\
+\hyperref[sec:lmspislave]{spi\_slave} & L M & SPI slave transmitter/receiver & \refp{sec:lmspislave} \\
+\hyperref[sec:ifsplit]{split} & I F & split a string into substrings & \refp{sec:ifsplit} \\
+\hyperref[sec:ipsprintf]{sprintf} & I P & copy a formatted line to a string variable & \refp{sec:ipsprintf} \\
+\hyperref[sec:lfsprintf]{sprintf} & L F & return a formatted line from variables & \refp{sec:lfsprintf} \\
+\hyperref[sec:ifsqrt]{sqrt} & I F & immediate square root & \refp{sec:ifsqrt} \\
+\hyperref[sec:lmsqrt]{sqrt} & L M & target integer square root & \refp{sec:lmsqrt} \\
+\hyperref[sec:ifstacktrace]{stacktrace} & I F & get the current stack trace & \refp{sec:ifstacktrace} \\
+\hyperref[sec:ipstart]{start} & I P & set the start condition for execution threads & \refp{sec:ipstart} \\
+\hyperref[sec:ifstartswith]{startswith} & I F & a string is the head of another & \refp{sec:ifstartswith} \\
+\hyperref[sec:ipstatemachine]{statemachine} & I P & create a state machine - DEPRECATED! & \refp{sec:ipstatemachine} \\
+\hyperref[sec:ipstatic]{static} & I P & create one or more static variables & \refp{sec:ipstatic} \\
+\hyperref[sec:ipstop]{stop} & I P & stop a target execution stream & \refp{sec:ipstop} \\
+\hyperref[sec:ipstr]{str} & I P & create one or more immediate string variables & \refp{sec:ipstr} \\
+\hyperref[sec:ifstrtoarray]{strtoarray} & I F & convert a string to an array of integers & \refp{sec:ifstrtoarray} \\
+\hyperref[sec:ifstof]{strtofloat} & I F & convert a string to a float & \refp{sec:ifstof} \\
+\hyperref[sec:ifstoi]{strtoint} & I F & convert a string to an integer & \refp{sec:ifstoi} \\
+\hyperref[sec:ifstot]{strtotype} & I F & convert a string to a type & \refp{sec:ifstot} \\
+\hyperref[sec:lmstretch]{stretch} & L M & generate a long pulse from a transition & \refp{sec:lmstretch} \\
+\hyperref[sec:ifstrlen]{strlen} & I F & find the length of a string & \refp{sec:ifstrlen} \\
+\hyperref[sec:ifstrpos]{strpos} & I F & find leftmost surefpbstring position & \refp{sec:ifstrpos} \\
+\hyperref[sec:ifstrrpos]{strrpos} & I F & find rightmost substring position & \refp{sec:ifstrrpos} \\
+\hyperref[sec:ipstruct]{struct} & I P &  create a struct & \refp{sec:ipstruct} \\
+\hyperref[sec:lmssubsecondclocks]{subsecond\_clocks} & L M & millisecond and microsecond clocks & \refp{sec:lmssubsecondclocks} \\
+\hyperref[sec:ifsubstitute]{substitute} & I F & substitute characters & \refp{sec:ifsubstitute} \\
+\hyperref[sec:ifsubstring]{substring} & I F & get a substring & \refp{sec:ifsubstring} \\
+\hyperref[sec:lfsvnversion]{svn\_version} & L F & get the current subversion version number & \refp{sec:lfsvnversion} \\
+\hyperref[sec:lmsysmon]{sysmon} & L M & Virtex-5 system monitor & \refp{sec:lmsysmon} \\
+\hyperref[sec:iftail]{tail} & I F & get the tail of a string & \refp{sec:iftail} \\
+\hyperref[sec:iftan]{tan} & I F & trigonometric tangent function & \refp{sec:iftan} \\
+\hyperref[sec:iftargconsttoimmed]{targconsttoimmed} & I F & convert a value mode constant to immediate & \refp{sec:iftargconsttoimmed} \\
+\hyperref[sec:iftargtoimtype]{targtoimtype} & I F & convert a target type to an immediate type & \refp{sec:iftargtoimtype} \\
+\hyperref[sec:iptexit]{texit} & I P & print stack trace and terminate execution & \refp{sec:iptexit} \\
+\hyperref[sec:iftime]{time} & I F & get the date and time & \refp{sec:iftime} \\
+\hyperref[sec:iftimestring]{timestring} & I F & get the date and time as a string & \refp{sec:iftimestring} \\
+\end{tabular}
+
+\pagebreak
+
+\begin{tabular}{l l l l}
+\hyperref[sec:lmtimebase]{timebase} & L M & decadic interval pulses & \refp{sec:lmtimebase} \\
+\hyperref[sec:iftoarray]{toarray} & I F & convert to a one-dimensional array & \refp{sec:iftoarray} \\
+\hyperref[sec:iftodegree]{todegree} & I F & convert radian to degree & \refp{sec:iftodegree} \\
+\hyperref[sec:iftolower]{tolower} & I F & convert string to lower case & \refp{sec:iftolower} \\
+\hyperref[sec:iftoradian]{toradian} & I F & convert degree to radian & \refp{sec:iftoradian} \\
+\hyperref[sec:iftostring]{tostring} & I F & string value & \refp{sec:iftostring} \\
+\hyperref[sec:iftoupper]{toupper} & I F & convert string to upper case & \refp{sec:iftoupper} \\
+\hyperref[sec:lftopulse]{to\_pulse} & L F & generate a pulse from a transition & \refp{sec:lftopulse} \\
+\hyperref[sec:lmtopulse]{to\_pulse} & L M & generate a pulse from a transition & \refp{sec:lmtopulse} \\
+\hyperref[sec:iptrace]{trace} & I P & print a stack trace & \refp{sec:iptrace} \\
+\hyperref[sec:iftrunc]{trunc} & I F & truncate float or fixed to nearest integer towards zero & \refp{sec:iftrunc} \\
+\hyperref[sec:lftruthtable]{truthtable} & L F & an expression from a truth table & \refp{sec:lftruthtable} \\
+\hyperref[sec:lmtwsrecv]{tws\_recv} & L M & two wire serial receiver & \refp{sec:lmtwsrecv} \\
+\hyperref[sec:lmtwssend]{tws\_send} & L M & two wire serial transmitter & \refp{sec:lmtwssend} \\
+\hyperref[sec:iptype]{type} & I P & create a type variable & \refp{sec:iptype} \\
+\hyperref[sec:iftype]{type} & I F & type of a variable or expression & \refp{sec:iftype} \\
+\hyperref[sec:iftypeiseq]{typeisequal} & I F & compare two types for equality & \refp{sec:iftypeiseq} \\
+\hyperref[sec:iftypestring]{typestring} & I F & type of a variable as a string & \refp{sec:iftypestring} \\
+\hyperref[sec:iftypeval]{typeval} & I F & value of a variable of type "type" & \refp{sec:iftypeval} \\
+\hyperref[sec:iftypevalstr]{typevalstring} & I F & value of a variable of type "type" as a string & \refp{sec:iftypevalstr} \\
+\hyperref[sec:lpuartbrc16]{uart\_brc16} & L P & create baud rate clocks & \refp{sec:lpuartbrc16} \\
+\hyperref[sec:lmuartrx]{uart\_rx} & L M & general UART receiver & \refp{sec:lmuartrx} \\
+\hyperref[sec:lmsuartrx]{uart\_rx} & L M & simple UART receiver & \refp{sec:lmsuartrx} \\
+\hyperref[sec:lmuarttx]{uart\_tx} & L M & general UART transmitter & \refp{sec:lmuarttx} \\
+\hyperref[sec:lmsuarttx]{uart\_tx} & L M & simple UART transmitter & \refp{sec:lmsuarttx} \\
+\hyperref[sec:ipuseclock]{useclock} & I P & set the current clock & \refp{sec:ipuseclock} \\
+\hyperref[sec:ifused]{used} & I F & target value which is "true" when a function executes & \refp{sec:ifused} \\
+\hyperref[sec:ipvalue]{value} & I P & create one or more value variables & \refp{sec:ipvalue} \\
+\hyperref[sec:ipvar]{var} & I P & create one or more variables & \refp{sec:ipvar} \\
+\hyperref[sec:ifvarexists]{varexists} & I F & determine if a variable exists & \refp{sec:ifvarexists} \\
+\hyperref[sec:ifvarlist]{varlist} & I F & return a list of target mode variables & \refp{sec:ifvarlist} \\
+\hyperref[sec:lpwait]{wait} & L P & wait for a time period & \refp{sec:lpwait} \\
+\hyperref[sec:lpwaituntil]{wait\_until} & L P & wait on a logical value & \refp{sec:lpwaituntil} \\
+\hyperref[sec:lpwaitwhile]{wait\_while} & L P & wait on a logical value & \refp{sec:lpwaitwhile} \\
+\hyperref[sec:ifwasassigned]{wasassigned} & L P & determine if variable has been assigned & \refp{sec:ifwasassigned} \\
+\hyperref[sec:ifwaswritten]{waswritten} & I F & determine when a static or queue variable has been written & \refp{sec:ifwaswritten} \\
+\hyperref[sec:ifwidth]{width} & I F & get the width of a primitive type - DEPRECATED! & \refp{sec:ifwidth} \\
+\hyperref[sec:ifwords]{words} & I F & get the size in words & \refp{sec:ifwords} \\
+\hyperref[sec:ipwritebyte]{writebyte} & I P & write a byte to a file & \refp{sec:ipwritebyte} \\
+\hyperref[sec:ifwritedomain]{writedomain} & I F & get the write clock domain for a variable & \refp{sec:ifwritedomain} \\
+\hyperref[sec:ipwriteln]{writeln} & I P & write a line to a file & \refp{sec:ipwriteln} \\
+\hyperref[sec:lczbtram]{zbt\_ram} & L C & external ZBT RAM class & \refp{sec:lczbtram} \\
+\hyperref[sec:lczbtramread]{zbt\_ram.read} & L CM & read from external ZBT RAM & \refp{sec:lmextzbtramread} \\
+\hyperref[sec:lczbtramread]{zbt\_ram.readp} & L CM & read from external ZBT RAM with priority & \refp{sec:lmextzbtramread} \\
+\hyperref[sec:lczbtramwrite]{zbt\_ram.write} & L CM & write to external ZBT RAM & \refp{sec:lmextzbtramwrite} \\
+\hyperref[sec:lczbtramwrite]{zbt\_ram.writep} & L CM & write to external ZBT RAM with priority & \refp{sec:lmextzbtramwrite} \\
+\hyperref[sec:lpzynqps]{zynq\_ps} & I M & instantiate ZYNQ CPU & \refp{sec:lpzynqps} \\
+\end{tabular}
+
+

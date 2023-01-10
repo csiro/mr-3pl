@@ -1,0 +1,241 @@
+// Pipelined integer multiply library
+nosource
+
+global module
+multiply (queue(prod) <- value(m1), value(m2), value(reset, "log")) {
+    log({m1_signed, m2_signed});
+    switch (primtypestring(m1)) {
+    case "uint": // do nothing
+    case "int":
+        if (istargconst(m1)) {
+            if (targconsttoimmed(m1) < 0)
+                m1_signed = true;
+        } else
+            m1_signed = true;
+    default:
+        texit("module multiply(): 1st input argument not int or uint");
+    }
+    switch (primtypestring(m2)) {
+    case "uint": // do nothing
+    case "int":
+        if (istargconst(m2)) {
+            if (targconsttoimmed(m2) < 0)
+                m2_signed = true;
+        } else
+            m2_signed = true;
+    default:
+        texit("module multiply(): 2nd input argument not int or uint");
+    }
+    if (primtypestring(prod) != "uint" && primtypestring(prod) != "int")
+        texit("module multiply(): output argument not int or uint");
+    int(m1_width, width(m1));
+    int(m2_width, width(m2));
+
+    if (m1_signed || m2_signed) {
+        if (primtypestring(prod) != "int")
+            texit("module multiply(): product unsigned with signed input arg");
+        if (!istargconst(m1) && !m1_signed) {
+            m1_width++;
+            m1 := cast(m1, "int:"+m1_width);
+        }
+        if (!istargconst(m2) && !m2_signed) {
+            m2_width++;
+            m2 := cast(m2, "int:"+m2_width);
+        }
+
+        if (istargconst(m1)) {
+            int(mult, targconsttoimmed(m1));
+            multiply_and_c(prod <- m2, mult, true, mult<0, nullarg(reset));
+        } else if (istargconst(m2)) {
+            int(mult, targconsttoimmed(m2));
+            multiply_and_c(prod <- m1, mult, true, mult<0, nullarg(reset));
+        } else if (m2_width > m1_width)
+            multiply_and(prod <- m2, m1, true, nullarg(reset));
+        else
+            multiply_and(prod <- m1, m2, true, nullarg(reset));
+    } else {
+        if (istargconst(m1))
+            multiply_and_c(prod <- m2, targconsttoimmed(m1), false, false, nullarg(reset));
+        else if (istargconst(m2))
+            multiply_and_c(prod <- m1, targconsttoimmed(m2), false, false, nullarg(reset));
+        else if (m2_width > m1_width)
+            multiply_and(prod <- m2, m1, false, nullarg(reset));
+        else
+            multiply_and(prod <- m1, m2, false, nullarg(reset));
+    }
+
+    if (matched(reset))
+        when(reset)
+            reset(prod);
+
+
+    module
+    multiply_and (queue(prod) <- value(m1), value(m2), log(signed), value(reset, "log")) {
+        if (width(m2) == 1) {
+            prod <<- (m2 != 0) ? m1 : 0;
+            return;
+        }
+
+        struct(s,
+            m1,     type(m1),
+            pprod,  type(m1),
+            m2,     "bits:"+(width(m2)-1)
+        );
+        queue(next, s);
+        if (matched(reset))
+            when(reset)
+                reset(next);
+
+        sync {
+            next.m1 <<- m1;
+            next.pprod <<- ((m2 & 1) != 0) ? m1 : 0;
+            next.m2 <<- cast(m2, "bits:"+width(m2)) >> 1;
+        }
+        multiply_add(prod <- next, 1, signed, nullarg(reset));
+    }
+
+    module
+    multiply_add (queue(prod) <- queue(prev), int(shift), log(signed), value(reset, "log")) {  
+        int(m2_width, width(prev.m2));
+
+        if (!signed && (m2_width == 1)) {
+            // unsigned - end of pipeline - last stage
+            // return result.
+            prod <<- prev.pprod + ((prev.m2 != 0) ? prev.m1<<shift : 0);
+            return;
+        }
+
+        // more pipeline stages
+        int(m2_decr, (m2_width == 1) ? 0 : 1);
+        int(add_width, width(prev.m1)+shift+1);
+        struct(s,
+            m1,     type(prev.m1),
+            pprod,  (signed?"int:":"uint:")+add_width,
+            m2,     "bits:"+(m2_width-m2_decr)
+        );
+        queue(next, s);
+        if (matched(reset))
+            when(reset)
+                reset(next);
+
+        if (m2_width == 1) {
+            // signed - end of pipeline - last add stage
+            // extra subtract stage through multiply_sub()
+            sync {
+                next.m1 <<- prev.m1;
+                next.m2 <<- prev.m2;
+                next.pprod <<- prev.pprod + ((prev.m2!=0) ? (prev.m1<<shift) : 0);
+            }
+            multiply_sub(prod <- next, add_width-width(prev.m1));
+            return;
+        } else {  
+            // signed or unsigned - next stage in pipeline
+            sync {
+                next.m1 <<- prev.m1;
+                next.m2 <<- prev.m2 >> 1;
+                next.pprod <<- prev.pprod + ((getbit(prev.m2, 0)!=0) ? prev.m1<<shift : 0);
+            }
+            multiply_add(prod <- next, shift+1, signed, nullarg(reset));
+        }
+    }
+
+    module
+    multiply_sub(queue(prod) <- queue(prev), int(lshift)) {
+        prod <<- prev.pprod - ((prev.m2!=0) ? prev.m1 << lshift : 0);
+    }
+
+    module
+    multiply_and_c (queue(prod) <- value(m1), int(m2), log({signed, lt0}), value(reset, "log")) {
+        if (m2 == 0) {
+            sync {    // multiply by 0
+                prod <<- 0;
+                null <<- m1;
+            }
+            return;
+        }
+
+        int(l2, size(m2));
+        if (m2 < 0)
+            m2 = m2 & ((1 << l2) - 1);
+        int(shift);
+        while (((m2 & 1) == 0) && (l2 != 0)) {
+            m2 = m2 >> 1;
+            l2--;
+            shift++;
+        }
+
+        if (m2 == 1) {  // single set bit - no adders required
+            prod <<- lt0 ? (0 - (m1 << shift)) : (m1 << shift);
+            return;
+        }
+
+        struct(s,
+            m1,     type(m1),
+            pprod,  (signed?"int:":"uint")+(width(m1)+shift)
+        );
+        queue(next, s);
+        if (matched(reset))
+            when(reset)
+                reset(next);
+
+        sync {
+            next.m1 <<- m1;
+            next.pprod <<- m1 << shift;
+        }
+        m2 = m2 >> 1;
+        l2--;
+        shift++;
+        multiply_add_c(prod <- next, m2, l2, shift, signed, lt0, nullarg(reset));
+    }
+
+    module
+    multiply_add_c (queue(prod) <- queue(prev), int({m2, l2, shift}), log({signed, lt0}), value(reset, "log")) {  
+        while (((m2 & 1) == 0) && (l2 != 0)) {
+            m2 = m2 >> 1;
+            l2--;
+            shift++;
+        }
+
+        if ((m2 == 1) && !lt0) { // only 1 bit remaining and +ve multiplier?
+            // unsigned - end of pipeline - last stage
+            // return result.
+            prod <<- prev.pprod + (prev.m1 << shift);
+            return;
+        }
+
+        // more pipeline stages
+        int(add_width, width(prev.m1)+shift+1);
+        struct(s,
+            m1,     type(prev.m1),
+            pprod,  (signed?"int:":"uint:")+add_width
+        );
+        queue(next, s);
+        if (matched(reset))
+            when(reset)
+                reset(next);
+
+        if (m2 == 1) {
+            // only 1 bit remaining and must be -ve multiplier -
+            // extra subtract stage through multiply_sub()
+            sync {
+                next.m1 <<- prev.m1;
+                next.pprod <<- prev.pprod + (prev.m1 << shift);
+            }
+            multiply_sub_c(prod <- next, shift+1);
+            return;
+        } else {
+            // more than 1 bit remaining -
+            // next stage in pipeline
+            sync {
+                next.m1 <<- prev.m1;
+                next.pprod <<- prev.pprod + (prev.m1 << shift);
+            }
+            multiply_add_c(prod <- next, m2, l2, shift, signed, lt0, nullarg(reset));
+        }
+    }
+
+    module
+    multiply_sub_c(queue(prod) <- queue(prev), int(lshift)) {
+        prod <<- prev.pprod - (prev.m1 << lshift);
+    }
+}

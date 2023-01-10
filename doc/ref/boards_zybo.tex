@@ -1,0 +1,50 @@
+\pagebreak
+
+\section{Digilent Zybo Evaluation Board Header File - boards/digilent/zybo.3pl}
+
+    
+    These library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "boards/digilent/zybo.3pl"
+    \end{lstlisting}
+    
+    The following are included -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/xc7.3pl"
+       source "xilinx/zynq_axi.3pl"
+    \end{lstlisting}
+    
+    Module zynq\_ps() is called as a trailer module (defined in
+    xilinx/zynq\_axi.3pl). It instantiates the Zynq CPU and connects up the DDR
+    RAM and some general purpose I/O pins. It also derives a 100MHz clock from
+    the CPU which is the bus clock and is available as {\bf c100}.
+    
+    See header file for I/O pins.
+    
+
+
+
+
+    \subsection{library modules}
+    
+        None.
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+
+    \subsection{library classes}
+    
+        None.

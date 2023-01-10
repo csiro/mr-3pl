@@ -1,0 +1,792 @@
+// Machine Vision library
+// FIXME this file is partly HYMOD specific and obselete
+
+struct(global.conpix,
+    {data, vr}, "log"
+);
+
+// Outputs:
+//	queue out        pixel
+//      static ovrun    output double buffer queue has been overrun
+//      static idle     frame grabbing state is idle
+//      static f0       in interlaced mode (fields FALSE) high for field 0
+//      static vlock    vertical lock indicator
+//      static hlock    horizontal lock indicator
+//
+// Inputs:
+//      value run       start frame grabbing (single frame or continuous)
+//      value enable    enable video chip
+//	log fields	treat fields as frames
+//      log lock_ignore do not wait for VLOCK and HLOCK when starting
+//
+// Pixel values from 'y' do not include 0x00 or 0xFF which are reserved
+// for control purposes.
+
+struct(global.pix,
+    y,      "uint:8",   // pixel luminance
+    cr,     "uint:8",   // pixel chrominance
+    field0, "log",      // true for 1st field
+    hr,     "log",      // horizontal reset (last pixel of line)
+    vr,     "log"       // vertical reset (last pixel of field)
+);
+
+struct(global.pixa,
+    extends,    pix,
+    address,    "uint:20"
+);
+
+global module
+mezzpix (
+    queue(out, pix),
+    value({ovrun, idle, f0, vlock, hlock}, "log")
+    <-
+    value({run, enable, reset}, "log"),
+    log({fields, lock_ignore})
+) {
+    // Mezzanine clock 1 - camera clock
+    //
+    clocksignal(mclk, mclk_in);
+    clockinput("AL17", "mclk_in");
+    clkdlle("DLL0S", "mclk_in", "mclk", "mclk");
+    addclock(bus_clk, mclk);
+    lowskew("mclk");
+    clockperiod("mclk", "MCLK", "74");
+
+    clock(mclk);    // select camera clock
+
+
+    struct(vi,
+        y,  "uint:8",
+        cr, "uint:8"
+    );
+
+    // External connnections from mezzanine
+    //
+    value(vid_in, vi); externin(vid_in, mezzb_pins[0..15]);
+    value(href_in, "log"); externin(href_in, mezzb_pins[22]);
+    value(vref_in, "log"); externin(vref_in, mezzb_pins[23]);
+    value(vs_in, "log"); externin(vs_in, mezzb_pins[25]);
+    value(rts0_in, "log"); externin(rts0_in, mezzb_pins[28]);
+    value(rts1_in, "log"); externin(rts1_in, mezzb_pins[29]);
+    static(enable_, "log"); externout(enable_,, mezzb_pins[21]);
+        enable_ <- resync(enable);
+    static(_oenable, "log", false); externout(_oenable,, mezzb_pins[20]);
+
+    static(vid, vi);
+    static(href, "log");
+    static(vref, "log");
+    static(vs,  "log");
+    static(rts0, "log");
+    static(rts1, "log");
+    
+    value(run_enable, "log");
+    if (matched(run))
+        resync(run_enable <- run);
+    else
+        run_enable := true;
+    value(reset_, "log");
+    if (matched(reset))
+        resync(reset_ <- reset);
+    else
+        reset_ := false;
+    value(ireset, "log");
+    ireset := lock_ignore ? reset_ : reset_ || !rts0 || !rts1;
+       
+    vid <- vid_in;
+    href <- href_in;
+    vref <- vref_in;
+    vs <- vs_in;
+    rts0 <- rts0_in;
+    rts1 <- rts1_in;
+    
+    value(running, "log");
+    value({hr, vr}, "log");
+    static(f, "log");
+    static(endf, "log");
+    value(valid, "log");
+    static(fy, "uint:9");
+    static(ovrun_, "log");
+    queue(outm, pix);
+
+    when (ireset) par {
+        reset(fy);
+        reset(outm);
+        reset(ovrun_);
+    }
+
+    resync(vlock <- rts0);
+    resync(hlock <- rts1);
+
+    if (fields) {
+        statemachine(
+	    run_idle,   run_wait,   run_enable,
+	    run_wait,   run_run,    vr,
+	    run_run,    run_idle,   vr && !run_enable,
+            ireset
+        );
+        running := run_run;
+        resync(idle <- run_idle);
+        f0 := true;
+    } else {
+        statemachine(
+	    run_idle,   run_wait1,  run_enable,
+	    run_wait1,  run_wait2,  f,
+	    run_wait2,  run_f0,     !f,
+	    run_f0,     run_f1,     f,
+	    run_f1,     run_idle,   !f && !run_enable,
+	    run_f1,     run_f0,     !f && run_enable,
+            ireset
+        );
+	running := run_f0 || run_f1;
+        resync(idle <- run_idle);
+        resync(f0 <- run_f0);
+    }
+
+    hr := to_pulse(!href);
+    when (hr)
+        fy++;
+    when (!vref)
+        reset(fy);
+    vr := (fy == 288) && hr;
+
+    when (to_pulse(!vs))
+        f <- !href;
+
+    when (delay(vr))
+        endf <- true;
+    when (delay(!vref, 2))
+        reset(endf);
+
+    valid := href && vref && !endf && running;
+
+    when (valid) par {
+        outm.y <<- delay(vid.y);
+        outm.cr <<- delay(vid.cr);
+        outm.field0 <<- f;
+        outm.hr <<- hr;
+        outm.vr <<- vr;
+    }
+
+    if (matched(ovrun)) {
+        when (valid && !>outm)
+	    ovrun_ <- true;
+        resync(ovrun <- ovrun_);
+    }
+    
+    clock();    // return to previous clock
+    
+    buffer(out <- outm);
+}
+
+// Add memory addresses to a pixel stream
+//
+// Parameters:
+// Outputs:
+//	out			output pixel stream
+// Inputs:
+//	int line_length		number of pixels in line
+//	int interlacing         0 - field 0 and field 1 interlaced
+//                              1 - field 0 and field 1 concatenated
+//                              2 - field 0 and field 1 alternate
+//	in			input pixel stream
+//	reset			reset
+global module
+pixmaddr (
+    queue(out, pixa)
+    <-
+    int({line_length, interlacing}),
+    queue(in, pix), value(reset, "log")
+) {
+    switch (interlacing) {
+    case 0:
+        out.address <<- fsaddr(line_length, true, <in && >out, in.hr, in.vr, in.field0, reset);
+    case 1:
+        out.address <<- fsaddr(line_length, false, <in && >out, in.hr, in.vr, in.field0, reset);
+    case 2:
+        out.address <<- fsaddr(line_length, false, <in && >out, in.hr, in.vr, 0, reset);
+    default:
+        texit("pixmaddr(): parameter 'interlacing' has illegal value " + interlacing);
+    }
+    out.y <<- in.y;
+    out.cr <<- in.cr;
+    out.field0 <<- in.field0;
+    out.hr <<- in.hr;
+    out.vr <<- in.vr;
+    if (matched(reset)) {
+        when (reset)
+            reset(out);
+    } else
+        reset := false;
+}
+
+// Generate next frame store address.
+// This generates interlaced and non-interlaced packed frame store
+// addresses for lines of any length and is used when line lengths are not
+// a power of 2 and unpacked frames are too large for the RAM size.
+// 'line_length' is usually 720 for the input mezzanine board.
+//
+// Output:
+//	ADDR[funcdim(address_length)]	address
+// Inputs:
+//	int line_length		length of lines
+//	log interlaced          interlace select
+//	step			increment address
+//	hr			horizontal reset (last pixel of line)
+//	vr			vertical reset (last pixel of field)
+//	field1			is field1 (interlaced only)
+//	reset			reset to zero
+//
+// If 'interlaced' is true (default) pixels field 0 is stored interlaced
+// with field 1 to form a frame.
+// If 'interlaced' is false, field1 is stored following field 0.
+global function
+fsaddr (
+    int(line_length),
+    log(interlaced, true),
+    value({step, hr, vr, field1, reset}, "log")
+) {
+    str(atype, "uint:20");
+    static(next_line, atype);
+    static(line_start, atype);
+    static(address, atype);
+
+    if (!matched(field1) && interlaced)
+	texit("fsaddr: field1 not connected but interlacing selected");
+
+    // Interlaced
+    // ----------
+    // If is not HR, increment address.
+    // If is HR 
+    //	if not VR, jump to the next line in this field (skip 1).
+    //	if  VR and field is 0, go to 'line_length'
+    //	(end of field 0, want address of 1st line in field 1).
+    // 	if VR and field is 1, go to 0 (no selection
+    //	in selt2(){}).
+    // Non-interlaced
+    // --------------
+    // If is not HR, increment address.
+    // If is HR 
+    //	if not VR, jump to the next line.
+    // 	if VR, go to 0 (no selection in selt1(){}).
+    //
+    // Note that if VR, will also be HR.
+    [
+        when (step && hr)
+            line_start <- address;
+        if (interlaced) {
+	    next_line <- line_start + 2 * line_length;
+            when (step && hr && vr && field1)
+                address <- line_length;
+            when (step && hr && vr && !field1)
+                reset(address);
+        } else {
+	    next_line <- line_start + line_length;
+            when (step && hr && vr && !field1)
+                reset(address);
+        }
+        when (step && !hr)
+            address++;
+        when (step && hr && !vr)
+            address <- next_line;
+
+        if (matched(reset))
+            when (reset) par {
+                reset(next_line);
+                reset(line_start);
+                reset(address);
+            }
+    ]
+    return(address);
+}
+
+// Pixel window.
+// Maximum image width 4096.
+// Outputs:
+//	out mode value, type "[][]" of input type
+//			window output
+// Inputs:
+//	pix mode value, type "int:", "uint:" or "bits"
+//                  input pixel
+//	lastx mode value, type "uint"
+//                  last x coordinate of input image
+//	lasty mode value, type "uint"
+//                  last Y coordinate of input image
+//	xsize mode immediate, type "int"
+//                  width of window - must be odd
+//	ysize mode immediate, type "int"
+//                  height of window - must be odd
+//	separate mode immediate, type "log"
+//                  use separate delay lines for rows
+//	edge mode immediate, type "int"
+//                  off-edge pixel values
+//	reset mode value, type "log"
+//                  frame reset
+//
+// If 'separate' is TRUE (default) separate delay lines are
+// used for each window row (the first has no delay) and
+// for the control data (5 signals). This uses redundant
+// RAM address counters, one for each block RAM, but this
+// minimises address distribution delays. 'separate' TRUE
+// minimises routing resources and possible timing problems
+// whereas 'separate' FALSE minimises logic.
+global module
+pixwin (
+    value(out)
+    <-
+    value(pix),
+    value({lastx, lasty}, "uint:"),
+    int({xsize, ysize}),
+    log(separate, true),
+    int(edge),
+    value(reset, "log", false)
+) {
+    int(xsize, dimension(out, 0));
+    int(ysize, dimension(out, 1));
+    if ((xsize % 2) == 0 || (ysize % 2) == 0)
+	error("pixwin(){}: cannot have even window dimension\n");
+    if (xsize == 0 || ysize == 0)
+	error("pixwin(){}: cannot have zero window dimension\n");
+    
+    static(finish, "log");
+    value(cen_valid, "log");
+    value(o, type(out));
+    value(step, "log", >out && <pix);
+
+    when (step)
+        out <<- o;
+    
+    pixwin_(
+        o, finish, cen_valid
+        <-
+        ?pix, step, lastx, lasty, xsize, ysize, separate, edge, reset
+    );
+
+
+    // Pixel window.
+    // Maximum image width 4096.
+    // Outputs:
+    //	out mode value, type "[][]" of input type
+    //			window output
+    //	finish mode static, type "log"
+    //                  input end-of-frame has been reached
+    //	cen_val mode value, type "log"
+    //                  central window pixel is valid
+    // inputs:
+    //	pix mode value, type "int:", "uint:" or "bits:"
+    //                  input pixel
+    //	step mode value, type "log"
+    //                  step the pipeline
+    //	lastx mode value, type "uint:"
+    //                  last x coordinate of input image
+    //	lasty mode value, type "uint:"
+    //                  last Y coordinate of input image
+    //	xsize mode immediate, type "int"
+    //                  width of window - must be odd
+    //	ysize mode immediate, type "int"
+    //                  height of window - must be odd
+    //	separate mode immediate, type "log"
+    //                  use separate delay lines for rows
+    //	edge mode immediate, type "int"
+    //                  off-edge pixel values
+    //	reset mode value, type "log"
+    //                  frame reset
+    //
+    // If 'separate' is TRUE (default) separate delay lines are
+    // used for each window row (the first has no delay) and
+    // for the control data (5 signals). This uses redundant
+    // RAM address counters, one for each block RAM, but this
+    // minimises address distribution delays. 'separate' TRUE
+    // minimises routing resources and possible timing problems
+    // whereas 'separate' FALSE minimises logic.
+    module
+    pixwin_ (
+	    value(out, "[][]"+typestring(pix)),
+            static(finish, "log"),
+            value(cen_valid, "log")
+	    <-
+	    value(pix),
+            value(step, "log"),
+            value({lastx, lasty}),
+            int({xsize, ysize}),
+            log(separate, true),
+            int(edge),
+            value(reset, false)
+    ) {
+        int(xsize, dimension(out, 0));
+        int(ysize, dimension(out, 1));
+        if ((xsize % 2) == 0 || (ysize % 2) == 0)
+	    texit("pixwin(): cannot have even window dimension");
+        if (xsize == 0 || ysize == 0)
+	    texit("pixwin(): cannot have zero window dimension");
+
+        int(dwidth, width(pix));
+        int(lastx_size, width(lastx));
+        int(lasty_size, siwidthzeof(lasty));
+        int(lsize, ysize -1);
+        static(o, "["+ysize+"]["+xsize+"]"+typestring(pix));
+        static(x, "uint:"+lastx_size);
+        static(y, "uint:"+lasty_size);
+        value({dl1i, dl1o}, "["+lsize+"]"+typestring(pix));
+        value({dl2i, dl2o}, "[5]:log");
+        value({ledge, redge, tedge, bedge, cen_valid_m1}, "log");
+        value({cen_redge, cen_ledge, cen_bedge, cen_tedge}, "log");
+        value(xblank, "["+xsize+"]:log");
+        value(yblank, "["+ysize+"]:log");
+        value(bedgetrig, "log");
+        int(cen_del, 1 + xsize / 2);
+        log(first);
+
+        dl1i[0] := pix;
+        for (int(i, 1) ; i<ysize-1 ; i++)
+	        dl1i[i] := dl1o[i-1];
+        dl2i[0] := !finish;
+        dl2i[1] := ledge;
+        dl2i[2] := redge;
+        dl2i[3] := tedge;
+        dl2i[4] := bedgetrig;
+
+        when (step)
+            x++;
+        when (step && redge || reset)
+            reset(x);
+
+        ledge := x == 0;
+        redge := x == lastx;
+
+        when (step && redge)
+            y++;
+        when (step && redge && bedge || reset)
+            reset(y);
+
+        tedge := y == 0;
+        bedge := y == lasty;
+        bedgetrig := y == lasty - (ysize / 2 - 1);
+
+        cen_valid_m1 := delr(dl2o[0], step, cen_del-1, reset);
+        cen_valid := delr(cen_valid_m1, step,, reset);
+
+        when (step && redge && bedge)
+            finish <- true;
+        when (step && !cen_valid_m1 || reset)
+            reset(finish);
+
+        if (separate) {
+	    for (i=0 ; i<lsize ; i++)
+	        dl1o[i] := line_delay(dl1i[i],step, lastx, true, reset);
+	        dl2o := line_delay(dl2i, step, lastx, true, reset);
+        } else {
+            struct(pack,
+                data,       "["+lsize+"]:"+typestring(in),
+                control,    "[5]log"
+            );
+	    value({dl3o, dl3i}, pack);
+
+            dl3i.data := dl1i;
+            dl3i.control := dl2i[0..4];
+
+	    dl3o := line_delay(dl3i, step, lastx, true, reset);
+
+            dl1o := dl3o.data;
+            dl2o[0..4] := dl3o.control;
+        }
+
+        cen_ledge := delr(dl2o[1], step, cen_del-1, reset);
+        for (int(i, xsize/2-1) ; i>=0 ; i--)
+            xblank[i] := delrl(cen_ledge, step, 1, xsize/2-i, reset);
+        xblank[xsize/2] := false;
+
+        cen_redge := delr(dl2o[2], step,, reset);
+        for (int(i, xsize/2+1) ; i<xsize ; i++)
+            xblank[i] := delrl(cen_redge, step, xsize-i, i-xsize/2, reset);
+
+        value(eol, "log", xblank[xsize/2+1]);
+
+        cen_tedge := delr(dl2o[3], step, cen_del-1, reset);
+
+        first = true;
+        for (int(i, ysize/2-1) ; i>=0 ; i--)
+	    if (first) {
+	        yblank[i] := delr(cen_tedge, step,, reset);
+	        first = false;
+	    } else
+	        yblank[i] := fjk(cen_tedge, eol&&!yblank[i+1], step, reset);
+
+        yblank[ysize/2] := false;
+
+        cen_bedge := delr(dl2o[4], step, cen_del, reset);
+        value(k, "log", yblank[j+1] && eol);
+        first = true;
+        int(lim, ysize/2);
+        for (int(i, ysize-1) ; i>lim ; i--)
+	    if (first) {
+	        yblank[i] := fjk(cen_bedge, k, step, reset);
+	        first = false;
+	    } else
+	        yblank[i] := fjk(eol&&yblank[i+1], k, step, reset);
+
+        first = true;
+        int(m);
+        for (int(j, ysize-1) ; j>=0 ; j--) {
+            when (step) par {
+	        if (first) {
+                    o[j][xsize-1] <- pix;
+	            first = FALSE;
+	        } else
+	            o[j][xsize-1] <- dl1o[m++];
+	        for (i=xsize-2 ; i>=0 ; i--) {
+	            o[j][i] <- o[j][i+1];
+	        }
+            }
+            when (reset) par {
+	        for (int(i) ; i<xsize ; i++)
+	            reset(o[j][i]);
+            }
+        }
+
+        value(ok, "["+ysize+"]["+xsize+"]:log");
+
+        for (int(j, 0) ; j<ysize ; j++)
+	    for (int(i, 0) ; i<xsize ; i++) {
+	        ok[j][i] := !yblank[j] && !xblank[i];
+	        out[j][i] := ok[j][i] ? edge : o[j][i];
+	    }
+
+        // Delay a target value by a fixed number of event steps. The
+        // implementation uses static variables for small delays.
+        // Inputs:
+        //  in, value mode, any type
+        //          the input value to be delayed - this must not contain queue reads.
+        //  step, value mode, type "log"
+        //          when true step the delay one cycle - may contain queue reads
+        //  del, immediate mode,  type "int"
+        //          the number of steps to delay the input - may be unmatched
+        //          in which case default is 1
+        //  reset, value mode, type "log"
+        //          when true reset the delay to initial condition - may be unmatched
+        function
+        delr (
+            value(in),
+            value(step, "log"),
+            int(del, 1),
+            value(reset, "log", false)
+        ) {
+            static(s, "["+del+"]"+typestring(in));
+
+            if (hasqueuereads(in))
+                texit("delr(): input contains queues");
+            when (step) par {
+                s[0] <- in;
+                for (int(i, 1) ; i<del ; i++)
+                    s[i] <- s[i-1];
+            }
+            when (reset) par {
+                for (int(i) ; i<del ; i++)
+                    reset(s);
+            }
+            return(s[del-1]);
+        }
+
+        // Signal array delay of 'del' enabled clock cycles.
+        // +ve signal lengthened to 'len' cycles.
+        // Delay is explicitly by registers.
+        //
+        // INTENDED FOR USE BY pixwin() ONLY!
+        //
+        // Intended for inputs of one (qualified) clock
+        // cycle in length separated by len+1 idle cycles.
+        // Longer inputs or shorter gaps will produce anomalous
+        // results! The function could be made more complex
+        // to counter these limits, but this would add more logic.
+        function
+        delrl (
+            value({in, step}, "log"),
+            int(del, 1),
+            int(len, 1),
+            value(reset, "log", false)
+        ) {
+            value({v1, v2, out}, "log");
+            static(s, "log");
+
+            [
+                if (del < 1)
+                    texit("delrl(): cannot have delay < 1");
+                else if (del == 1)
+                    v1 = in;
+                else
+                    v1 = delr(in, step, del-1, reset);
+                if (len < 1)
+                    texit("delrl(): cannot have length < 1");
+                else if (len == 1) {
+                    when (step)
+                        s <- v1;
+                    when (reset)
+                        reset(s);
+                } else {
+                    when (step) par {
+	                v2 := delr(s, step, len-1, reset);
+                        s <- (v1 || s) && !v2;
+                    }
+                    when (reset)
+                        reset(s);
+                }
+            ]
+
+            return(s);
+        }
+    }
+}
+
+// Delay a target value by a fixed number of event steps. The
+// implementation uses registered output RAM for large delays.
+// Inputs:
+//  in, value mode, any type
+//          the input value to be delayed - this must not contain queue reads.
+//  step, value mode, type "log"
+//          when true step the delay one cycle - may contain queue reads
+//  del, value mode,  type "uint" (width from argument)
+//          the number of steps to delay the input
+//  reset, value mode, type "log"
+//          when true reset the delay to initial condition - may be unmatched
+global function
+line_delay (
+    value(in),
+    value(step, "log"),
+    value(del, "uint:"),
+    log(delp1),
+    value(reset, "log", false)
+) {
+    int(awidth, width(del));
+    int(dwidth, width(in));
+    if (awidth > 12)
+        texit("line_delay(): del cannot be > 12 bits ("+awidth+")");
+    if (dwidth == 0)
+        texit("line_delay(): data width zero)");
+    static(waddr, "uint:"+awidth);
+    static(raddr, "uint:"+awidth, delp1?1:2);
+    var(mem, "->", bram2(awidth, dwidth));
+
+    [
+        when (step) par {
+            rwrite2(mem, 0, waddr, in);
+            rread2(mem, 1, raddr);
+            when (waddr == del)
+                reset(waddr);
+            else
+                waddr++;
+            when (raddr == del)
+                reset(raddr);
+            else
+                raddr++;
+        }
+        when (reset) par {
+            reset(waddr);
+            reset(raddr);
+        }
+    ]
+
+    return(rramout2(mem, 1));
+}
+
+global procedure
+make_conseeds (int(frame)) {
+    var(x_size, "[5]int", { 9, 10, 10,  9, 10});
+    var(y_size, "[5]int", { 9, 10, 10,  8,  9});
+    var(xsq_size, "[5]int", {18, 19, 20, 18, 19});
+    var(ysq_size, "[5]int", {18, 19, 20, 16, 17});
+    var(xy_size, "[5]int", {18, 19, 20, 17, 18});
+    var(sump_size, "[5]int", {19, 19, 21, 18, 18});
+    var(sumx_size, "[5]int", {26, 28, 29, 25, 27});
+    var(sumy_size, "[5]int", {26, 27, 29, 24, 25});
+    var(sumxsq_size, "[5]int", {35, 37, 39, 34, 36});
+    var(sumysq_size, "[5]int", {35, 36, 39, 32, 33});
+    var(sumxy_size, "[5]int", {34, 36, 38, 32, 34});
+    var(perim_size, "[5]int", {26, 26, 28, 25, 25});
+    struct(/conseeds,
+        {polarity, edgeb, first, last, trunc, nbn}, "log",
+        sump,   "uint:"+sump_size[frame],
+        sumx,   "uint:"+x_size[frame],
+        sumy,   "uint:"+y_size[frame],
+        sumxsq, "uint:"+xsq_size[frame],
+        sumysq, "uint:"+ysq_size[frame],
+        sumxy,  "uint:"+sumxy_size[frame],
+        minx,   "uint:"+x_size[frame],
+        maxx,   "uint:"+x_size[frame],
+        miny,   "uint:"+y_size[frame],
+        maxy,   "uint:"+y_size[frame],
+        perim,  "uint:"+perim_size[frame],
+        rightx, "uint:"+x_size[frame]
+    );
+}
+
+global module
+connec (
+    queue(out, conseeds)
+    <-
+    queue(in, conpix),
+    int({frame, b_bits}),
+    value(start, "log"),
+    value(size_min, "uint:8"),
+    value(ptaddr, "uint:9"),
+    value(ptval, "uint:8"),
+    value(ptwe, "log"),
+    value(lastx, "uint:"),
+    value(lasty, "uint:"),
+    value(reset, "log")
+) {
+    value(outv, conseeds); import(outv);
+    value(outv_av, "log"); import(outv_av);
+    value(outv_ack, "log");
+    value(inp_ack, "log"); import(inp_ack);
+    CODE(
+        "\tconnecqm(%%, %%, FALSE){\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%.AV,\n \t\t%%.ACK\n" +
+        "\t\t<-\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%.AV,\n \t\t%%.ACK,\n" +
+        "\t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n \t\t%%,\n" +
+        "\t\t%%,\n \t\t%%,\n \t\tC.%%,\n \t\t%%\n" +
+        "\t};",
+        frame, b_bits,
+        outv.polarity,
+        outv.edgeb,
+        outv.first,
+        outv.last,
+        outv.trunc,
+        outv.nbn,
+        outv.sump,
+        outv.sumx,
+        outv.sumy,
+        outv.sumxsq,
+        outv.sumysq,
+        outv.sumxy,
+        outv.minx,
+        outv.maxx,
+        outv.miny,
+        outv.maxy,
+        outv.perim,
+        outv.rightx,
+        varident(outv_av),
+        varident(inp_ack),
+        in.data,
+        in.vr,
+        varident(in),
+        varident(outv_ack),
+        start,
+        size_min,
+        ptaddr,
+        ptval,
+        ptwe,
+        lastx,
+        lasty,
+        clocksigident(),
+        reset
+    );
+    when (outv_av) par {
+        outp <<- outv;
+        pulse(outv_ack <-);
+    }
+    when (inp_ack)
+        null <<- inp;
+}

@@ -1,0 +1,8 @@
+part("XC3S500EVQ100-4");
+module "xilinx/xc3s.3pl"
+str(lvcmos33, "LVCMOS33");
+iopins(c32_pin, "str", "P89", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+clock(c32_in, loc=c32_pin, frequency=32.0e6);
+clock(global.c32, frequency=32.0e6);
+clockbufg(c32 <- c32_in);
+useclock(c32);

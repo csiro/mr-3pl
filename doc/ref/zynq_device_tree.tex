@@ -1,0 +1,160 @@
+\pagebreak
+
+\chapter{Zynq device tree}\label{ch:zynq_device_tree}
+
+    The following partial device tree source matches the Zynq CPU/FPGA interfaces
+    described in \autorefph{ch:zynqcpu} and \autorefph{ch:misctools}.
+    
+    \begin{verbatim}
+        reserved-memory {
+                #address-cells = <0x1>;
+                #size-cells = <0x1>;
+                ranges;
+
+                hpbuf_reserved {
+                        compatible = "xlnx,uio", "generic-uio";
+                        size = <0x1000000>;
+                        alignment = <0x1000000>;
+                        linux,phandle = <0x8>;
+                        phandle = <0x8>;
+                };
+        };
+
+        amba_pl {
+                #address-cells = <0x1>;
+                #size-cells = <0x1>;
+                compatible = "simple-bus";
+                ranges;
+
+                axi_mgp0@40000000 {
+                        compatible = "xlnx,axi_mgp0", "xlnx,uio", "generic-uio";
+                        reg = <0x40000000 0x1000000>;
+                        xlnx,s00-axi-addr-width = <0xa>;
+                        xlnx,s00-axi-data-width = <0x20>;
+                };
+
+                axi_mgp1@80000000 {
+                        compatible = "xlnx,axi_mgp1", "xlnx,uio", "generic-uio";
+                        reg = <0x80000000 0x1000000>;
+                        xlnx,s01-axi-addr-width = <0xa>;
+                        xlnx,s01-axi-data-width = <0x20>;
+                };
+
+                axi_hpbuf@0 {
+                        compatible = "xlnx,axi_hpbuf", "xlnx,uio", "generic-uio";
+                        memory-region = <0x8>;
+                };
+
+                event0 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x1d 0x1>;
+                        interrupt-names = "int61";
+                        interrupt-parent = <0x3>;
+                };
+
+                event1 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x1e 0x1>;
+                        interrupt-names = "int62";
+                        interrupt-parent = <0x3>;
+                };
+
+                event2 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x1f 0x1>;
+                        interrupt-names = "int63";
+                        interrupt-parent = <0x3>;
+                };
+
+                event3 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x20 0x1>;
+                        interrupt-names = "int64";
+                        interrupt-parent = <0x3>;
+                };
+
+                event4 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x21 0x1>;
+                        interrupt-names = "int65";
+                        interrupt-parent = <0x3>;
+                };
+
+                event5 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x22 0x1>;
+                        interrupt-names = "int66";
+                        interrupt-parent = <0x3>;
+                };
+
+                event6 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x23 0x1>;
+                        interrupt-names = "int67";
+                        interrupt-parent = <0x3>;
+                };
+
+                event7 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x24 0x1>;
+                        interrupt-names = "int68";
+                        interrupt-parent = <0x3>;
+                };
+
+                event8 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x34 0x1>;
+                        interrupt-names = "int84";
+                        interrupt-parent = <0x3>;
+                };
+
+                event9 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x35 0x1>;
+                        interrupt-names = "int85";
+                        interrupt-parent = <0x3>;
+                };
+
+                event10 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x36 0x1>;
+                        interrupt-names = "int86";
+                        interrupt-parent = <0x3>;
+                };
+
+                event11 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x37 0x1>;
+                        interrupt-names = "int87";
+                        interrupt-parent = <0x3>;
+                };
+
+                event12 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x38 0x1>;
+                        interrupt-names = "int88";
+                        interrupt-parent = <0x3>;
+                };
+
+                event13 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x39 0x1>;
+                        interrupt-names = "int89";
+                        interrupt-parent = <0x3>;
+                };
+
+                event14 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x3a 0x1>;
+                        interrupt-names = "int90";
+                        interrupt-parent = <0x3>;
+                };
+
+                event15 {
+                        compatible = "xlnx,uio", "generic-uio";
+                        interrupts = <0x0 0x3b 0x1>;
+                        interrupt-names = "int91";
+                        interrupt-parent = <0x3>;
+                };
+        };
+   \end{verbatim}

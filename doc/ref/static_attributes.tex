@@ -1,0 +1,194 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf static mode attributes} \\
+        \hline
+        init       & 3PL  &           & initial value             \\
+        domain     & 3PL  & clock     & force the clock domain    \\
+        continuous & 3PL  & boolean   & no startup dependence     \\
+        readonly   & 3PL  & boolean   & set to read only          \\
+        alu        & 3PL  & boolean   & use an ALU if appropriate \\
+        dsp        & 3PL  & boolean   & use a DSP block           \\
+        loc        & UC:C & string(s) & locations                 \\
+        iob        & UC:C & boolean   & locate in I/O blocks      \\
+        ids        & UC:C & string(s) & element IDs               \\
+        \hline
+        \btabularxend
+        
+        3PL - 3PL uses the attribute itself for control logic or optimisation.
+        
+        UC:C - 3PL does not use the attribute - it must be used by 3PL source
+        code to generate constraint file entries.
+        
+        {\bf These attributes are case-insensitive.}
+        
+        {\bf init} sets an initial value for the variable. Any previous initial
+        value will be overwritten. If the static variable type is compound the
+        initialisation value will usually be a compound value, but it may be
+        initialised by a single immediate value in which case all members of the
+        compound type will be initialised to that value (the compound type
+        members would have to be the same primitive type). The initial value
+        is not used until completion of immediate execution when variables
+        are processed into target code and hence it can be changed at any time
+        during immediate execution.
+
+        {\bf domain} forces the clock domain (both input and output) to
+        the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the variable already has a clock domain
+        as a result of having been assigned or evaluated then that clock domain
+        is compared with the intended domain. If the assigned clock domain
+        agrees with that already in place then there is no further action,
+        otherwise a fatal error occurs.
+
+        {\bf Continuous} true specifies that if possible assignment will occur
+        as soon as the FPGA is operational after configuration. This can
+        increase operating speed by eliminating clock-enable logic. There are
+        two situations where this can occur -
+        \blist
+        \item   the static variable has a non-conditional assignment - the
+                assignment operates continuously following configuration loading
+                regardless of any 3PL startup mechanisms.
+        \item   a {\bf when} statement has only unconditional assignments to
+                variables in its nested code block(s) - the assignments are
+                enabled directly from the {\bf when} test expression (or its
+                inverse) and are not controlled from execution threads
+                initiated by the 3PL startup mechanisms.
+        \blend
+        see {\bf start()}(\autorefph{sec:ipstart}).
+        Note that if directive "continuous" is defined as type log with value
+        true, all static variables which do
+        not have this attribute set will be treated as though they had the
+        continuous attribute true. The directive prevails if the attribute has
+        not been set, otherwise the attribute is used.
+        
+        The "continuous" attribute should be set prior to assignments to the
+        variable to have effect. Similarly the "continuous" directive should
+        be set as early as possible in immediate execution or else prior
+        to immediate execution using presetdirective().
+
+        {\bf readonly} true specifies that from now on this variable cannot
+        be assigned to. This attribute cannot be assigned false.
+        
+        {\bf alu} specifies that assignments of expressions containing
+        arithmetic operators '+' and '-' as the final or only operation can be
+        combined into a single common adder/subtracter using CLBs. If the {\bf alu}
+        attribute is false it can override the global directive {\bf ALU} to
+        suppress the use of an ALU for an individual static variable.
+        
+        The {\bf alu} attribute can save logic and incurs no time penalty for the
+        operations drawn in to the adder/subtracter, but all other assignments
+        suffer an increase in propagation time since assigned values must now
+        traverse the shared adder/subtracter. This tradeoff must be considered
+        in each case.
+        
+        The {\bf alu} attribute can only be applied to a static variable of
+        primitive type; it will be ignored following a warning message
+        otherwise.
+
+        The {\bf alu} attribute is only used at completion of immediate execution.
+        
+        The behaviour of the {\bf dsp} attribute depends on the FPGA -
+        \blist
+        \item   For Virtex-5 and Virtex-6 it has two effects -
+                \blist
+                \item   it causes the static variable to be implemented using
+                        the output register of a DSP block instead of
+                        flip-flops.
+                \item   For Virtex-5 and Virtex-6 it has a similar effect to
+                        the {\bf alu} attribute in that it draws arithmetic and
+                        bitwise logic operations in assignments to the
+                        variable into a single ALU, but using a DSP block
+                        rather than CLBs.
+                \blend
+        \item   For Virtex-2, Virtex-2Pro and Virtex-4\footnote{Virtex-4 has a
+                DSP block but for reasons of local (non)usage the full
+                capabilities of Virtex4 are not supported by 3PL. The DSP
+                block is treated as a simple multiplier block.} it causes the
+                static variable to be implemented using the output register
+                of a multiplier block instead of flip-flops.
+        \item   For other FPGAs the attribute has no effect.
+        \blend
+        
+        The {\bf dsp} attribute will not implement the static variable using
+        a multiplier or DSP register in the following cases -
+        \blist
+        \item   the variable is initialised to a non-zero value
+        \item   the variable has the {\bf iob} attribute
+        \blend
+        The attribute will be ignored and a warning message issued in these
+        cases.
+        
+        Note that the use of the {\bf dsp} attribute reduces the number of
+        flip-flops required by using multiplier or DSP block output registers
+        instead, but this may make timing constraints harder to meet because -
+        \blist
+        \item   the clock edge to output time of these may be worse that that
+                for CLB flip-flops
+        \item   the bits can no longer be distributed among CLBs and routing
+                must instead converge on one or more multiplier or DSP blocks
+        \blend
+   
+        In addition the {\bf loc} attribute if supplied will be ignored (with a
+        warning message). For Virtex-2 and Virtex-2 PRO each multiplier element
+        has a 36 bit register. For Virtex-5 and Virtex-6 the output register is
+        48 bits. For variables whose type is not primitive each component will
+        be implemented in a separate multiplier or DSP register. For components
+        larger than the hardware register size sufficient DSP registers will be
+        used to accomodate the component (but as noted above registers larger
+        than 48 bits cannot use the Virtex-5 or Virtex-6 DSP block as an ALU).
+        In the case of Virtex-5 or Virtex-6 , setting this attribute true also
+        sets the {\bf alu} attribute true and the ALU logic will be implemented in the
+        same DSP block. Note that if the limitations listed above are not met
+        the {\bf dsp} attribute will be cleared (an associated warning message will be
+        printed), the variable will be implemented using CLb flip-flops and if
+        an ALU is generated it will use CLB logic.
+        
+        Note that for Virtex-5 or Virtex-6 if the {\bf alu} attribute is true but not
+        the {\bf dsp} attribute then the static variable will be implemented using
+        flip-flops and arithmetic operators '+' and '-' as the final or only
+        operation can be combined into a single common adder/subtracter using
+        CLBs.
+        
+        {\bf loc} provides absolute locations for the CLB flip-flops comprising
+        the static variable (register). Locations are matched to flip-flops
+        starting at the least significant bit. For a single bit static this
+        attribute may be a string, otherwise it must be a string array. Each
+        string must have the location format expected by the vendor for the FPGA
+        type. 3PL does not at present provide support for relative placement
+        of flip-flops in static variables though this could easily be added
+        if required.
+
+        {\bf iob} specifies that the flip-flops implementing the static variable
+        are to be placed in IOB blocks rather than CLB blocks (this can also be
+        requested by using the -pr option in the Xilinx map utility). If the
+        value of the variable is used in addition to being connected to
+        output buffers then the flip-flops will be duplicated in parallel, one
+        set in the I/O blocks and the other in CLBs.
+        
+        {\bf ids} is a string array that contains the identifiers of the netlist
+        elements (in this case D-type flip-flops) that implement the static mode
+        variable (register). This attribute is read-only and is initialised when
+        the variable is created. It can be used to apply constraints, such as
+        absolute or relative location, to these elements.The array is ordered from
+        least to most significant bit. For example to place a static variable in
+        specific FPGA slice locations (for ISE) -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+        static(s, "uint:8");
+        var(slocs, "[8]str", {"", "", "", .......}); // array of slice locations
+        var(sids, "[8]str", attribute(s, ids));      // array of netlist element identifiers
+        for (int(i) ; i<8 ; i++)
+            addncfline("INST \""+ sids[i] + "\" LOC=" + slocs[i]);
+        \end{lstlisting}
+    
+        For Vivado -
+        
+        \begin{lstlisting}[gobble=8, language=threepl]
+        static(s, "uint:8");
+        var(slocs, "[8]str", {"", "", "", .......}); // array of slice locations
+        var(sids, "[8]str", attribute(s, ids));      // array of netlist element identifiers
+        for (int(i) ; i<8 ; i++)
+            addxdcline("set_property LOC " + slocs[i] + "[ get_cells " + sids[i] + "]");
+        \end{lstlisting}
+        
+        
+        

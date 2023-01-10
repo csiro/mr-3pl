@@ -1,0 +1,2419 @@
+PARSER_BEGIN(Parser)
+
+// Files created by javacc :-
+//
+//    ParseException.java
+//    Parser.java
+//    ParserConstants.java
+//    ParserTokenManager.java
+//    SimpleCharStream.java
+//    Token.java
+//    TokenMgrError.java
+//
+// Some of these files must be "massaged" after javacc has run - see the
+// scripts in ../../scripts directory.
+
+package threepl.parser;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.text.*;
+
+import static threepl.ThreePL.*;
+
+import threepl.ThreePL;
+import threepl.nodes.*;
+import threepl.exec.*;
+import threepl.exec.Module;
+import threepl.mods.*;
+import threepl.procs.*;
+import threepl.funcs.*;
+import threepl.codegen.*;
+import threepl.exceptions.*;
+
+@SuppressWarnings("all")
+public class Parser implements Constant, TDEConstants {
+}
+
+PARSER_END(Parser)
+
+// These are source file name and line number tokens inserted by the
+// SrcReader class file reader when switching to or returning from a new
+// source file. Since file names and line numbers change each time we enter
+// or leave a source file these must be updated and this is done via
+// these inserted tokens. The tokens are thus skipped in parsing, after
+// extracting the file information.
+//SKIP :
+//{
+//    <IMARKER: "#" ("i"|"I") "#" (~["#"])+ "#" (~["#"])+ "#\n"> {ThreePL.setPosition(image);}
+//}
+
+// Update the file line number on each newline, but skip the token.
+SKIP :
+{
+    "\n" {ThreePL.incrLineNo();}
+}
+// Skip carriage returns from DOS sources.
+SKIP :
+{
+    "\r"
+}
+
+//SKIP :
+//{
+//        <WHITE_SPACE:  " " | "\t" | "\r" | "\f" >
+//    |   <NEW_LINE:     (<WHITE_SPACE>)* "\n" >
+//}
+SKIP :
+{
+        <WHITE_SPACE:  " " | "\t" >
+}
+
+// Comments
+SKIP :
+{
+      "//"  : IN_SINGLE_LINE_COMMENT
+    | "/*"  : IN_MULTI_LINE_COMMENT
+}
+
+<IN_SINGLE_LINE_COMMENT> SKIP :
+{
+    "\n" {ThreePL.incrLineNo();} : DEFAULT
+}
+
+<IN_MULTI_LINE_COMMENT> SKIP :
+{
+      "*/" : DEFAULT
+    | "\n" {ThreePL.incrLineNo();}
+}
+
+<IN_SINGLE_LINE_COMMENT, IN_MULTI_LINE_COMMENT> SKIP :
+{
+    < ~[] >
+}
+
+// These are source file name and line number tokens inserted by the
+// SrcReader class file reader when switching to or returning from a new
+// module file. Since file names and line numbers change each time we
+// enter or leave a module file these must be updated and this is done via
+// these inserted tokens. These tokens are handled at the top of the parse tree.
+TOKEN :
+{
+      <FMODSTART: "#M#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"> {ThreePL.setPosition(image);}
+    | <FMODFINISH: "#m#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"> {ThreePL.setPosition(image);}
+}
+
+TOKEN :
+{
+      <FSRCSTART: "#S#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"> {ThreePL.setPosition(image);}
+    | <FSRCFINISH: "#s#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"> {ThreePL.setPosition(image);}
+}
+
+// Literals
+TOKEN :
+{
+  <INTEGER_LITERAL:   <DECIMAL_LITERAL>
+                    | <HEX_LITERAL>
+                    | <BIN_LITERAL>
+                    | <OCTAL_LITERAL> >
+| <#DECIMAL_LITERAL:  ["1"-"9"] (["0"-"9"])*>
+| <#HEX_LITERAL:      "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+>
+| <#BIN_LITERAL:      "0" ["b","B"] (["0"-"9","a"-"f","A"-"F"])+>
+| <#OCTAL_LITERAL:    "0" (["0"-"7"])*>
+| <FLOATING_POINT_LITERAL: 
+                      (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)? 
+                    | "." (["0"-"9"])+ (<EXPONENT>)?
+                    | (["0"-"9"])+ "." <EXPONENT>
+                    | (["0"-"9"])+ (<EXPONENT>)?>
+| <#EXPONENT:         ["e","E"] (["+","-"])? (["0"-"9"])+>
+| <STRING_LITERAL:    "\"" (~["\"","\\","\n","\r"] 
+                    | "\\" (["n","t","b","r","f","\\","\'","\""] 
+                            | "x" ["0"-"9","a"-"f"] ["0"-"9","a"-"f"] 
+                            | "0" ["0"-"3"] ["0"-"7"] ["0"-"7"]))* "\"">
+| <LOG_LITERAL:       "true" | "false">
+}
+
+// Reserved words
+TOKEN : 
+{
+      <BRANCH:          "branch">
+    | <BREAK:           "break">
+    | <CALLINGDOT:      "calling.">
+    | <CASE:            "case">
+    | <CLASS:           "class">
+    | <CLASSDOT:        "class.">
+    | <COMMON:          "common">
+    | <CONTINUE:        "continue">
+    | <DEF:             "default">
+    | <DO:              "do">
+    | <FILEDOT:         "file.">
+    | <ELSE:            "else">
+    | <FOR:             "for">
+    | <FUNCTION:        "function">
+    | <GLOBAL:          "global">
+    | <GLOBALDOT:       "global.">
+    | <IF:              "if">
+    | <INITIAL:         "initial">
+    | <LEADERMODULE:    "leadermodule">
+    | <LOCALDOT:        "local.">
+    | <MODULE:          "module">
+    | <NULL:            "null">
+    | <PAR:             "par">
+    | <PETRINET:        "petrinet">
+    | <PRIVATE:         "private" >
+    | <PROCEDURE:       "procedure">
+    | <POSTMODULE:      "postmodule">
+    | <RETURN:          "return">
+    | <SEQ:             "seq">
+    | <SWITCH:          "switch">
+    | <SYNC:            "sync">
+    | <TRAILERMODULE:   "trailermodule">
+    | <UNLESS:          "unless">
+    | <VARARGS:         "varargs">
+    | <WAITPRI:         "waitpri">
+    | <WAITPRILOCK:     "waitprilock">
+    | <WHEN:            "when">
+    | <WHILE:           "while">
+    | <EQ:              "=">
+    | <PLUSEQ:          "+=">
+    | <MINEQ:           "-=">
+    | <MULEQ:           "*=">
+    | <DIVEQ:           "/=">
+    | <REMEQ:           "%=">
+    | <BANDEQ:          "&=">
+    | <BOREQ:           "|=">
+    | <BXOREQ:          "^=">
+    | <LANDEQ:          "&&=">
+    | <LOREQ:           "||=">
+    | <LXOREQ:          "^^=">
+    | <LSEQ:            "<<=">
+    | <RSEQ:            ">>=">
+    | <RRPOINT:         "->>">
+    | <RPOINT:          "->">
+    | <COLEQ:           ":=">
+    | <BUSPOINT:        "|-">
+    | <LLPOINT:         "<<-">
+    | <LPOINT:          "<-">
+    | <PLUSLPOINT:      "+<-">
+    | <MINUSLPOINT:     "-<-">
+    | <MULLPOINT:       "*<-">
+    | <EQEQ:            "==">
+    | <NE:              "!=">
+    | <LE:              "<=">
+    | <GE:              ">=">
+    | <PLUS:            "+">
+    | <MINUS:           "-">
+    | <STAR:            "*">
+    | <SLASH:           "/">
+    | <PERCENT:         "%">
+    | <OROR:            "||">
+    | <UPUP:            "^^">
+    | <ANDAND:          "&&">
+    | <OR:              "|">
+    | <UP:              "^">
+    | <AND:             "&">
+    | <EXCL:            "!">
+    | <TILDE:           "~">
+    | <QUEST:           "?">
+    | <LS:              "<<">
+    | <RS:              ">>">
+    | <LR:              "^<<">
+    | <RR:              ">>^">
+    | <INCR:            "++">
+    | <DECR:            "--">
+    | <DOTDOT:          "..">
+    | <LBRACE:          "{">
+    | <RBRACE:          "}">
+    | <LBRACK:          "[">
+    | <RBRACK:          "]">
+    | <LPAREN:          "(">
+    | <RPAREN:          ")">
+    | <LANGLE:          "<">
+    | <RANGLE:          ">">
+    | <COMMA:           ",">
+    | <SEMICOL:         ";">
+    | <COLON:           ":">
+    | <DOT:             ".">
+}
+// Identifiers
+TOKEN : 
+{
+      <IDENTIFIER:  <LETTER> (<LETTER> | <DIGIT>)*>
+    | <#LETTER:     ["A"-"Z","a"-"z","_"]>
+    | <#DIGIT:      ["0"-"9"]>
+}
+
+// Module, procedure and function declarations are compiled into
+// 'Module", 'Procedure' and 'Function' classes which extend
+// class 'Body'.
+// These are entered into HashMaps 'modules', 'procedures'
+// and 'functions' in the enclosing module, procedure or function body.
+// The code body for each of these is compiled into
+// an instance of the 'Block' as a field of the super class 'Body'.
+//
+// Each tree node contains the location of the most appropriate
+// associated token in the form of a SrcLoc instance. This is
+// primarily for use in execution error messages. This
+// information is usually passed to the constructor by passing
+// the token as the final parameter.
+//
+
+/**
+ * File module grammar production.
+ * A scope for this file module, fmscope, is created here and passed to all
+ * modules, procedures and functions declared within this file module. It is
+ * a static scope. Variables created within this file module can be accessed
+ * from within any modules, procedures and functions declared within it even
+ * though this file module scope may no longer be on the call stack.
+ * @return  module/procedure call node
+ * @throws  ParseException on a parsing error
+ */
+ProcModCallNode
+Filemodule () :
+{
+    Node            n;
+    Token           t;
+    String          f;
+    int             l;
+    Scope           fmscope;    // scope for this file module
+    Module          module;     // the module itself
+    BlockNode       block;      // the code block within the module
+    ProcModCallNode pc;         // implicit invocation of the module
+}
+{
+    t = <FMODSTART>  {
+                        f = (prev_file_name == null) ? getFileName() : prev_file_name;
+                        l = prev_line_no;
+                        t.fileName = file_name; // fix token location
+                        t.lineNo = line_no;
+                        //fmscope = new Scope(file_name);
+                        fmscope = new Scope(abbrev_path);   // use abbreviated path instead
+                        module = new Module(t, Btype.FMOD, null, fmscope, false);
+                        pc = new ProcModCallNode(module, t);
+                        pc.setSrcLoc(new SrcLoc(f, l, -1));
+                        block = new BlockNode(Btype.FMOD, t, null);
+                    }
+    (
+          (n = Statement(module, fmscope) {block.addSubNode(n);})
+    )*
+    (
+          <FMODFINISH>
+        | <EOF>
+    ) {
+        module.addTree(block);
+        return(pc);
+    }
+}
+
+/**
+ * File source grammar production.
+ * @param   body is the Body class to contain the code body
+ * @param   fmscope is the current file module scope
+ * @return  source statement node
+ * @throws  ParseException on a parsing error
+ */
+BlockNode
+Filesource (
+    Body    body,
+    Scope   fmscope
+) : 
+{
+    Node            n;
+    Token           t;
+    String          f;
+    int             l;
+    BlockNode       block;
+}
+{
+    t = <FSRCSTART>  {
+                        f = (prev_file_name == null) ? getFileName() : prev_file_name;
+                        l = prev_line_no;
+                        t.fileName = file_name; // fix token location
+                        t.lineNo = line_no;
+                        block = new BlockNode(Btype.FSRC, t, null);
+                    }
+    (
+          (n = Statement(body, fmscope) {block.addSubNode(n);})
+    )*
+    (
+          <FSRCFINISH>
+        | <EOF>
+    ) {return(block);}
+}
+
+/**
+ * Class, module, procedure or function call grammar production.
+ * @param   stat_call is true if called as a statement rather than in
+ *          the RHS of as assignment statement
+ * @param   lhs is true if called on the LHS of a statement
+ * @return  function definition node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Call (
+    boolean stat_call,      // called as statement, i.e. not in an assignment
+    boolean lhs             // called on LHS of an assignment
+) :
+{
+    Token       lt;
+    Token       ct;
+    Token       t = null;
+    Node        fnn;
+    Node        dummy;
+    Node        rn;
+    Node        pvn;
+    Node        sfn = null;
+    NodeList    nodelist1;
+    NodeList    nodelist2;
+    boolean     nullresolve = false;
+    boolean     indirect = false;
+    boolean     is_mod_proc = stat_call;    // assume at first - if LHS then is a mod/proc call
+    Flag        flag = Flag.NONE;
+}
+{
+    (LOOKAHEAD(2)      fnn = DereferencedVar()
+      // Terrible hack to allow class() as a procedure call.
+      // Avoids problem with "class" as a keyword.
+    | ct = <CLASS> {fnn = new VarNode("class", Context.DEFAULT, new NodeList(null), ct);}
+    )
+    lt = <LPAREN> {dummy = new NullNode(lt);}
+    ArgList(dummy, stat_call || lhs)
+    <RPAREN>
+    {
+        nodelist1 = new NodeList(fnn.getSrcLoc());
+        nodelist2 = new NodeList(fnn.getSrcLoc());
+    }
+    (
+          sfn = Subscript() {nodelist1.add(sfn);}
+        | sfn = Field() {nodelist1.add(sfn);}
+    )*
+    (
+        (
+              t = <RPOINT>
+            | t = <RRPOINT> {nullresolve = true;}
+        )
+        {
+            nodelist2 = new NodeList(new SrcLoc(t));
+        }
+        (
+              sfn = Subscript() {nodelist2.add(sfn);}
+            | sfn = Field() {nodelist2.add(sfn);}
+        )*
+    )*
+    [
+          <INCR> {flag = Flag.POSTINCR;}
+        | <DECR> {flag = Flag.POSTDECR;}
+    ]
+    {
+        is_mod_proc = stat_call;
+        if ((t != null) || (sfn != null))
+            is_mod_proc = false; // override - is a LHS function call
+        if (is_mod_proc)
+            rn = new ProcModCallNode(fnn);
+        else {
+            rn = new ClassFuncCallNode(fnn);
+            if (lhs && (t == null) && !(((VarNode)fnn).getId().equals("get")))
+                emsg("LHS function call statement has no pointer dereference (->)");
+            if (stat_call && lhs && (rn.getFlag() == Flag.NONE) && (flag == Flag.NONE))
+                emsg("LHS function call statement has no ++ or --");
+            if ((rn.getFlag() != Flag.NONE) && (flag != Flag.NONE))
+                emsg("both pre and post increment/decrement used");
+            if (flag != Flag.NONE)
+                rn.setFlag(flag);
+            ((ClassFuncCallNode)rn).setSubFields(nodelist1);
+        }
+        rn.addSubNode(dummy.getSubNode(0));
+        rn.addSubNode(dummy.getSubNode(1));
+        if (t != null)
+            rn = new PtrValNode(rn, nodelist2, nullresolve, t);
+        return(rn);
+    }
+}
+
+/**
+ * Procedure call in parameter list or 'for' statement initialisation grammar
+ * production.
+ * @return  procedure call node
+ * @throws  ParseException on a parsing error
+ */
+ProcModCallNode
+ParProcCall () :
+{
+    ProcModCallNode pc;
+    Node            n;
+    Token           ct;
+}
+{
+    (
+        n = DereferencedVar() { pc = new ProcModCallNode(n);
+                            if (n.getFlag() != Flag.NONE)
+                                emsg("module or procedure call syntax error");
+                            if (!n.getListSubNode(0).isEmpty())
+                                emsg("module or procedure call syntax error");
+                            }
+      | ct = <CLASS> {
+                        // Terrible hack to allow class() as a parameter procedure call.
+                        // Avoids problem with "class" as a keyword.
+                        n = new VarNode("class", Context.DEFAULT, new NodeList(null), ct);
+                        pc = new ProcModCallNode(n);
+                     }
+    )
+    <LPAREN>
+    ArgList(pc, true)
+    <RPAREN>
+    {return(pc);}
+}
+
+/**
+ * A module, procedure or function call argument list grammar production.
+ * @param   call is the call node
+ * @param   arrow indicates if a &lt;- is allowed as an argument separator
+ * @throws  ParseException on a parsing error
+ */
+void
+ArgList (
+    Node    call,
+    boolean arrow
+) :
+{
+    ListNode    in = new ListNode(call.getSrcLoc());
+    ListNode    out = null;
+    Node        n = null;
+    Token       t = null;
+    int         count = 0;
+}
+{
+    [
+        (
+              LOOKAHEAD(2) n = Keymatch()
+            | LOOKAHEAD(2) n = Expr()
+            | n = CompVal()
+        )
+        {
+            in.addNode(n);
+            count++;
+        }
+    ]
+    (
+        (<COMMA> | t = <LPOINT>)
+        {
+            if ((n == null) && (t == null))
+                in.addNode(null);
+            n = null;
+            if (t != null) {
+                t = null;
+                count = 0;
+                if (out == null) {
+                    out = in;
+                    in = new ListNode(call.getSrcLoc());
+                } else
+                    emsg("argument list cannot have multiple '<-'s");
+            }
+        }
+        [
+            (
+                  LOOKAHEAD(2) n = Keymatch()
+                | LOOKAHEAD(2) n = Expr()
+                | n = CompVal()
+            )
+            {
+                in.addNode(n);
+                count++;
+            }
+        ]
+    )*
+    {
+        if ((count != 0) && (n == null))
+            in.addNode(null);    // trailing null argument
+        // Since classes can have output arguments/parameters do this check
+        // conditionally in ClassFuncCallNode() instead of here.
+        //if (!arrow && (out != null))
+        //    emsg("function cannot have output arguments");
+        if (out == null)
+            out = new ListNode(call.getSrcLoc()); // output is empty list
+        call.addSubNode(in);
+        call.addSubNode(out);
+    }
+}
+
+/**
+ * Keymatch (name=value) argument grammer production
+ * @return  a keymatch node
+ * @throws ParseException on a parsing error
+ */
+KeyMatchNode
+Keymatch () :
+{
+    Token   t;
+    Node    n;
+}
+{
+    t = <IDENTIFIER> <EQ> (n = Expr() | n = CompVal())
+    {return(new KeyMatchNode(t, n));}
+}
+
+/**
+ * Common block definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */
+void
+CommonBlock (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       t;
+    BlockNode   iblock = null;
+}
+{
+  
+    t = <COMMON> iblock = Block(t.image, Btype.INIT, body, fmscope) { body.addCommon(iblock); }
+}
+
+/**
+ * Group (3PL class) definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */
+void
+GroupDef (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       g = null;
+    Group       group = null;
+    Token       t;
+    Token       i;
+    BlockNode   iblock = null;
+    BlockNode   block;
+}
+{
+    [g = <GLOBAL> {if ((body != null) && (body.getEnclosing() != null)) emsg("a global group declaration cannot be nested");}]
+    (
+        <CLASS> t = <IDENTIFIER> {group = new Group(t, body, fmscope);} <LPAREN> ParamList(group) <RPAREN>
+    )
+    {
+      if (body == null) emsg("a group declaration cannot be within a control structure");
+    }
+    block = Block(t.image, Btype.GROUP, group, fmscope)
+    {
+        checkGroupClash(t.image, g != null);
+        group.addTree(block);
+        if (g == null) {
+            if (body != null)   // is it ever null?
+                body.addGroup(group);
+        } else
+            groups.put(t.image, group);
+    }
+}
+
+/**
+ * Module definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */
+void
+ModDef (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       g = null;
+    Token       p = null;
+    Module      module = null;
+    Token       t;
+    BlockNode   block;
+    boolean     ldr = false;
+    boolean     trlr = false;
+    boolean     post = false;
+    Token       ct = null;
+    Token       n = null;
+}
+{
+    [   g = <GLOBAL>
+            {if ((body != null) && (body.getEnclosing() != null))
+                emsg("a global module declaration cannot be nested");}
+    |   p = <PRIVATE>
+    ]
+    (
+        <MODULE> t = <IDENTIFIER> {module = new Module(t, Btype.NMOD, body, fmscope, p!=null);} <LPAREN> ParamList(module) <RPAREN>
+        | t = <LEADERMODULE> {module = new Module(t, Btype.NMOD, body, fmscope, false);} <LPAREN> n = <STRING_LITERAL> [<COMMA> ct = <INTEGER_LITERAL>] <RPAREN> {ldr = true;}
+        | t = <TRAILERMODULE> {module = new Module(t, Btype.NMOD, body, fmscope, false);} <LPAREN> n = <STRING_LITERAL> [<COMMA> ct = <INTEGER_LITERAL>] <RPAREN> {trlr = true;}
+        | t = <POSTMODULE> {module = new Module(t, Btype.NMOD, body, fmscope, false);} <LPAREN> n = <STRING_LITERAL> [<COMMA> ct = <INTEGER_LITERAL>] <RPAREN> {post = true;}
+    )
+    {
+      if (body == null) emsg("a module declaration cannot be within a control structure");
+    }
+    block = Block(t.image, Btype.NMOD, module, fmscope)
+    {
+        if ((ldr || trlr || post) && ((p != null) || (g != null)))
+            msg("leader trailer or post-processing module cannot be global or private = ignored");
+        if (!ldr && !trlr && !post)
+            checkModClash(t.image, g != null);
+        module.addTree(block);
+        if (ldr)
+            addLeaderModule(module, n, ct);
+        else if (trlr)
+            addTrailerModule(module, null, n, ct);
+        else if (post)
+            addPostProcessingModule(module, n, ct);
+        else if (g == null) {
+            if (body != null)
+                body.addModule(module);
+        } else
+            modules.put(t.image, module);
+    }
+}
+
+/**
+ * Procedure definition grammar production.
+ * @param   body is the procedure code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */
+void
+ProcDef (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       g = null;
+    Token       p = null;
+    Procedure   procedure;
+    Token       t;
+    BlockNode   block;
+}
+{
+    [   g = <GLOBAL>
+            {if ((body != null) && (body.getEnclosing() != null))
+                emsg("a global procedure declaration cannot be nested");}
+    |   p = <PRIVATE>
+    ]
+    <PROCEDURE> t = <IDENTIFIER>
+    {
+      if (body == null) emsg("a procedure declaration cannot be within a control structure");
+    }
+    {procedure = new Procedure(t, body, fmscope, p!=null);}
+    <LPAREN>
+    ParamList(procedure)
+    <RPAREN>
+    block = Block(t.image, Btype.PROC, procedure, fmscope)
+    {
+        checkProcClash(t.image, g != null);
+        procedure.addTree(block);
+        if (g == null) {
+            if (body != null)
+                body.addProcedure(procedure);
+        } else
+            procedures.put(t.image, procedure);
+    }
+}
+
+/**
+ * Function definition grammar production.
+ * @param   body is the function code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */
+void
+FuncDef (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       g = null;
+    Token       p = null;
+    Function    function;
+    Token       t;
+    BlockNode   block;
+}
+{
+    [   g = <GLOBAL>
+            {if ((body != null) && (body.getEnclosing() != null))
+                emsg("a global function declaration cannot be nested");}
+    |   p = <PRIVATE>
+    ]
+    <FUNCTION> t = <IDENTIFIER>
+    {
+      if (body == null) emsg("a function declaration cannot be within a control structure");
+    }
+    {function = new Function(t, body, fmscope, p!=null);}
+    <LPAREN>
+    ParamList(function)
+    <RPAREN>
+    block = Block(t.image, Btype.FUNC, function, fmscope)
+    {
+        checkFuncClash(t.image, g != null);
+        function.addTree(block);
+        if (g == null) {
+            if (body != null)
+                body.addFunction(function);
+        } else
+            functions.put(t.image, function);
+    }
+}
+
+/**
+ * Module, procedure or function output or input parameters grammar production.
+ * @param   body is the module, procedure or function
+ * @param   arrow indicates if an &lt;- is allowed as a parameter separator
+ * @throws  ParseException on a parsing error
+ */
+void
+ParamList (
+    Body    body
+) :
+{
+    ProcModCallNode pc;
+    VarNode         vn;
+    Token           t = null;
+    int             lpointers = 0;
+    NodeList        inputs = new NodeList(body.getSrcLoc());
+    NodeList        outputs = null;
+    SrcLoc          loc = body.getSrcLoc();
+}
+{
+    [
+        (
+              pc = ParProcCall() {inputs.add(pc);}
+            | t = <VARARGS>
+              {
+                vn = new VarNode("varargs", Context.DEFAULT, new NodeList(loc), t);
+                inputs.add(vn);
+              }
+        )
+        (
+            (<COMMA> | t = <LPOINT>)
+            {
+                if (t != null) {
+                    t = null;
+                    if (lpointers == 0) {
+                        outputs = inputs;
+                        inputs = new NodeList(loc);
+                    }
+                    lpointers++;
+                }
+            }
+            [
+                  pc = ParProcCall() {inputs.add(pc);}
+                | t = <VARARGS>
+                  {
+                    vn = new VarNode("varargs", Context.DEFAULT, new NodeList(loc), t);
+                    inputs.add(vn);
+                  }
+            ]
+        )*
+    ]
+    {
+        // Since classes can have output arguments/parameters do this check
+        // conditionally in ClassFuncCallNode() instead of here.
+        //if (!arrow && (lpointers != 0))
+        //    emsg("function or class cannot have output parameters");
+        if (lpointers > 1)
+            emsg("parameter list cannot have multiple '<-'s");
+        if ((body instanceof Function) && (lpointers != 0))
+            emsg("function definition cannot have output parameters");
+        if (outputs == null)
+            outputs = new NodeList(body.getSrcLoc());   // output is empty list
+        body.setInputPars(inputs);
+        body.setOutputPars(outputs);
+    }
+}
+
+/**
+ * General code block grammar production.
+ * @param   name is the module name
+ * @param   btype is the block type
+ * @param   body is the Module, Procedure or Function production or else null
+ * @param   fmscope is the file module scope
+ * @return  the code block root node
+ * @throws  ParseException on a parsing error
+ */
+BlockNode
+Block (
+    String  name,
+    Btype   btype,
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       t;
+    BlockNode   block;
+    Node        n;
+}
+{
+    t = <LBRACE>
+    {
+      block = new BlockNode(btype, t, body);
+    }
+    (n = Statement(body, fmscope) {
+        if ((btype == Btype.INIT) && (n == null))
+            emsg("cannot define class, module, procedure or function in class initial block");
+        block.addSubNode(n);
+      } )*
+    <RBRACE>
+    {
+      block.addFileScope(fmscope);
+      return(block);
+    }
+}
+
+/**
+ * Statement grammar production.
+ * @param   body is the body containing the statement
+ * @param   fmscope is the current file module scope
+ * @return  the statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Statement (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Node    n = null;
+}
+{
+    (
+          LOOKAHEAD(2) GroupDef(body, fmscope)
+        | LOOKAHEAD(2) ModDef(body, fmscope)
+        | LOOKAHEAD(2) ProcDef(body, fmscope)
+        | LOOKAHEAD(2) FuncDef(body, fmscope)
+        | LOOKAHEAD(2) CommonBlock(body, fmscope)
+        | n = InlineModBlock(body, fmscope)
+        // Match
+        //  - a LHS function call returning a pointer with ++ or --
+        //  - a module or procedure call
+        | LOOKAHEAD(Call(true, true) <SEMICOL>) n = Call(true, true) <SEMICOL>
+        | LOOKAHEAD(Call(false, true) (<EQ>|
+                                       <PLUSEQ>|
+                                       <MINEQ>|<MULEQ>|<DIVEQ>|<REMEQ>|
+                                       <BANDEQ>|<BOREQ>|<BXOREQ>|
+                                       <LANDEQ>|<LOREQ>|<LXOREQ>|<LSEQ>|<RSEQ>))
+                                            n = ImFuncAssignStat() <SEMICOL>
+        | LOOKAHEAD(Call(false, true) (<COLEQ>|<BUSPOINT>|<LPOINT>|<PLUSLPOINT>|<MINUSLPOINT>|<MULLPOINT>|<LLPOINT>))
+                                            n = TargFuncAssignStat() <SEMICOL>
+        | LOOKAHEAD(DereferencedVar() (<EQ>|
+                                       <PLUSEQ>|
+                                       <MINEQ>|<MULEQ>|<DIVEQ>|<REMEQ>|
+                                       <BANDEQ>|<BOREQ>|<BXOREQ>|
+                                       <LANDEQ>|<LOREQ>|<LXOREQ>|<LSEQ>|<RSEQ>))
+                                            n = ImAssignStat() <SEMICOL>
+        | LOOKAHEAD(DereferencedVar() (<COLEQ>|<BUSPOINT>|<LPOINT>|<PLUSLPOINT>|<MINUSLPOINT>|<MULLPOINT>|<LLPOINT>))
+                                            n = TargAssignStat() <SEMICOL>
+        | n = NullPipeAssignStat() <SEMICOL>
+        | LOOKAHEAD(2) n = SeqWhileStat(fmscope)
+        | LOOKAHEAD(2) n = SeqDoWhileStat(fmscope)
+        | LOOKAHEAD(2) n = SeqBlock(fmscope)
+        | LOOKAHEAD(2) n = ParWhileStat(fmscope)
+        | LOOKAHEAD(2) n = ParDoWhileStat(fmscope)
+        | LOOKAHEAD(2) n = ParBlock(fmscope)
+        | LOOKAHEAD(2) n = SyncWhenStat(fmscope)
+        | LOOKAHEAD(2) n = SyncWhileStat(fmscope)
+        | LOOKAHEAD(2) n = SyncDoWhileStat(fmscope)
+        | LOOKAHEAD(2) n = SyncBlock(fmscope)
+        | LOOKAHEAD(2) n = WaitPriBlock(fmscope)
+        | n = Filemodule()
+        | n = Filesource(body, fmscope)
+        | n = WhenStat(fmscope)
+        | n = BranchStat(fmscope)
+        | n = IncrDecrStat() <SEMICOL>
+        | n = ReturnStat()
+        | n = BreakStat()
+        | n = ContinStat()
+        | n = IfStat(fmscope)
+        | n = WhileStat(fmscope)
+        | n = DoWhileStat(fmscope)
+        | n = ForStat(fmscope)
+        | n = SwitchStat(fmscope)
+        //| n = BlockStat(body, fmscope) DOESN'T WORK!
+        | n = PetriNetStat(fmscope)
+        | <SEMICOL>
+    )
+    {return(n);}
+}
+
+/**
+ * Immediate assignment (=) grammar production.
+ * @return  immediate assignment statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ImAssignStat () :
+{
+    Token       t;
+    Node        nl;
+    Node        nr;
+}
+{
+    nl = DereferencedVar()
+    (
+        t = <EQ> |
+        t = <PLUSEQ> |
+        t = <MINEQ> | t = <MULEQ> | t = <DIVEQ> |
+        t = <REMEQ> | t = <BANDEQ> | t = <BOREQ> | t = <BXOREQ> | t = <LANDEQ> |
+        t = <LOREQ> | t = <LXOREQ> | t = <LSEQ> | t = <RSEQ>
+    )
+    (nr = Expr() | nr = CompVal())
+    {return(new ImAssNode(nl, nr, t));}
+}
+
+/**
+ * Immediate assignment (=) grammar production.
+ * @return  immediate function assignment statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ImFuncAssignStat () :
+{
+    Token       t;
+    Node        nl;
+    Node        nr;
+}
+{
+    nl = Call(false, true)
+    (
+        t = <EQ> |
+        t = <PLUSEQ> |
+        t = <MINEQ> | t = <MULEQ> | t = <DIVEQ> |
+        t = <REMEQ> | t = <BANDEQ> | t = <BOREQ> | t = <BXOREQ> | t = <LANDEQ> |
+        t = <LOREQ> | t = <LXOREQ> | t = <LSEQ> | t = <RSEQ>
+    )
+    (nr = Expr() | nr = CompVal())
+    {
+        if (nl.getFlag() != Flag.NONE)
+            emsg("++ or -- used on LHS of assignment");
+        return(new ImAssNode(nl, nr, t));
+    }
+}
+
+/**
+ * Target assignment { @literal (:=, |-, &lt;- or &lt;&lt;-) } grammar production.
+ * @return  target assignment statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+TargAssignStat () :
+{
+    Token       t;
+    Node        nl;
+    Node        nr;
+}
+{
+    nl = DereferencedVar()
+    (t = <COLEQ> | t = <BUSPOINT> | t = <LPOINT> | t = <PLUSLPOINT> | t = <MINUSLPOINT> | t = <MULLPOINT> | t = <LLPOINT>)
+    (nr = Expr() | nr = CompVal())
+    {return(new TargAssNode(nl, nr, t));}
+}
+
+/**
+ * Target assignment {@literal (:=, |-, &lt;- or &lt;&lt;-) } grammar production.
+ * @return  target function assignment statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+TargFuncAssignStat () :
+{
+    Token       t;
+    Node        nl;
+    Node        nr;
+}
+{
+    nl = Call(false, true)
+    (t = <COLEQ> | t = <BUSPOINT> | t = <LPOINT> | t = <PLUSLPOINT> | t = <MINUSLPOINT> | t = <MULLPOINT> | t = <LLPOINT>)
+    (nr = Expr() | nr = CompVal())
+    {return(new TargAssNode(nl, nr, t));}
+}
+
+/**
+ * A null pipe assignment (pop a pipe) grammar production.
+ * @return  null pipe assignment statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+NullPipeAssignStat () :
+{
+    Token       t;
+    Node        nl;
+    Node        nr;
+}
+{
+    t = <NULL> {nl = new NullNode(t);}
+    t = <LLPOINT>
+    nr = DereferencedVar()
+    {return(new TargAssNode(nl, nr, t));}
+}
+
+UnlessNode
+unless (Scope fmscope) :
+{
+    Token   t;
+    Node    excep = null;
+    Node    excepblock = null;
+}
+{
+    t = <UNLESS> <LPAREN>
+    excep = Expr()
+    <RPAREN>
+    excepblock = Block(null, Btype.EXCEP, null, fmscope)
+    {return(new UnlessNode(excep, excepblock, t));}
+}
+
+/**
+ * Par block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ParBlock (Scope fmscope) :
+{
+    Token           t;
+    ParBlockNode    block;
+    Node            n;
+    UnlessNode      en = null;
+}
+{
+    t = <PAR>
+    <LBRACE>
+    {block = new ParBlockNode(t);}
+    (n = Statement(null, fmscope) {block.addSubNode(n);})*    
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        if (en != null) {
+            en.addSubNode(block);
+            return(en);
+        } else
+            return(block);
+    }
+}
+
+/**
+ * Seq block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SeqBlock (Scope fmscope) :
+{
+    Token           t;
+    SeqBlockNode    block;
+    Node            n;
+    UnlessNode      en = null;
+}
+{
+    t = <SEQ>
+    <LBRACE>
+    {block = new SeqBlockNode(t);}
+    (n = Statement(null, fmscope) {block.addSubNode(n);})*    
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        if (en != null) {
+            en.addSubNode(block);
+            return(en);
+        } else
+            return(block);
+    }
+}
+
+/**
+ * Sync block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SyncBlock (Scope fmscope) :
+{
+    Token           t;
+    SyncBlockNode   block;
+    Node            n;
+    UnlessNode      en = null;
+}
+{
+    t = <SYNC>
+    <LBRACE>
+    {block = new SyncBlockNode(t);}
+    (n = Statement(null, fmscope) {block.addSubNode(n);})*    
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        if (en != null) {
+            en.addSubNode(block);
+            return(en);
+        } else
+            return(block);
+    }
+}
+
+/**
+ * Priority wait block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  waitpri statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+WaitPriBlock (Scope fmscope) :
+{
+    Token           tw = null;
+    Token           twl = null;
+    WaitPriNode     wpn;
+    Node            n, v, index;
+    UnlessNode      en = null;
+}
+{
+    (tw = <WAITPRI> | twl = <WAITPRILOCK>) <LPAREN>
+    v = DereferencedVar()
+    <COMMA>
+    index = Expr()
+    <RPAREN>
+    {wpn = new WaitPriNode(tw != null ? tw : twl, v, twl != null, index);}
+    n = Statement(null, fmscope) {wpn.addSubNode(n);}
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        if (en != null) {
+            en.addSubNode(wpn);
+            return(en);
+        } else
+            return(wpn);
+    }
+}
+
+/**
+ * Inline module block grammar production.
+ * @param   body is the body of the in-line module
+ * @param   fmscope is the current file module scope
+ * @return  procedure or module call node
+ * @throws  ParseException on a parsing error
+ */
+ProcModCallNode
+InlineModBlock (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token           t;
+    ProcModCallNode pc;
+    Module          module;
+    BlockNode       block;
+    Node            n;
+}
+{
+    t = <LBRACK>
+    {
+        module = new Module(t, Btype.ILMOD, body, fmscope, false);
+        pc = new ProcModCallNode(module, t);
+        block = new BlockNode(Btype.ILMOD, t, null);
+    }
+    (n = Statement(module, fmscope) {block.addSubNode(n);})*    
+    <RBRACK>
+    {
+        module.addTree(block);
+        return(pc);
+    }
+}
+
+/**
+ * Variable increment or decrement statement (e.g. v++;) grammar production.
+ * Note: VarNode will appear in the code tree where we would
+ * expect a statement. VarNode thus has an execute() method to take
+ * care of this.
+ * @return  increment or decrement statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+IncrDecrStat () :
+{
+    Node    n;
+}
+{
+    n = DereferencedVar()
+    {
+        if (n.getFlag() == Flag.NONE)
+            if (n instanceof VarNode)
+                wmsg("variable " + ((VarNode)n).getId() + " as statement has no ++ or --");
+            else
+                wmsg("variable as statement has no ++ or --");
+        return(n);
+    }
+}
+
+/**
+ * Function or procedure return statement grammar production.
+ * @return  return statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ReturnStat () :
+{
+    Token   t;
+    Node    n = null;
+}
+{
+    t = <RETURN>
+    [
+        <LPAREN>
+        n = Expr()
+        <RPAREN>
+    ]
+    <SEMICOL>
+    {return(new ReturnNode(n, t));}
+}
+
+/**
+ * Break statement grammar production.
+ * @return  break statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+BreakStat () :
+{
+    Token   t;
+}
+{
+    t = <BREAK> <SEMICOL>
+    {return(new BreakNode(t));}
+}
+
+/**
+ * Continue statement grammar production.
+ * @return  continue statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ContinStat () :
+{
+    Token   t;
+}
+{
+    t = <CONTINUE> <SEMICOL>
+    {return(new ContinNode(t));}
+}
+
+/**
+ * If statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  if statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+IfStat (Scope fmscope) :
+{
+    Token   t;
+    Node    ntest = null;
+    Node    ntrue = null;
+    Node    nfalse = null;
+}
+{
+    t = <IF> <LPAREN>
+    ntest = Expr()
+    <RPAREN>
+    (
+          ntrue = Statement(null, fmscope)
+        | ntrue = Block(null, Btype.IF, null, fmscope)
+    )
+    [
+        LOOKAHEAD(2) <ELSE>
+        (
+              nfalse = Statement(null, fmscope)
+            | nfalse = Block(null, Btype.IF, null, fmscope)
+        )
+    ]
+    {return(new IfNode(ntest, ntrue, nfalse, t));}
+}
+
+/**
+ * While statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+WhileStat (Scope fmscope) :
+{
+    Token   t;
+    Node    test = null;
+    Node    n = null;
+}
+{
+    t = <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN>
+    (
+          n = Statement(null, fmscope)
+        | n = Block(null, Btype.WHILE, null, fmscope)
+    )
+    {return(new WhileNode(test, n, t));}
+}
+
+/**
+ * Do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  do_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+DoWhileStat (Scope fmscope) :
+{
+    Token   t;
+    Node    n = null;
+    Node    ntest = null;
+}
+{
+    t = <DO>
+    n = Block(null, Btype.DOWHILE, null, fmscope)
+    <WHILE> <LPAREN>
+    ntest = Expr()
+    <RPAREN> <SEMICOL>
+    {return(new DoWhileNode(n, ntest, t));}
+}
+
+/**
+ * For statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  for statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ForStat (Scope fmscope) :
+{
+    Token   t;
+    Node    ninit = null;
+    Node    ntest = null;
+    Node    niter = null;
+    Node    nblock = null;
+}
+{
+    t = <FOR> <LPAREN>
+    [LOOKAHEAD(2) ninit = ParProcCall() | ninit = ImAssignStat()]
+    <SEMICOL>
+    [ntest = Expr()]
+    <SEMICOL>
+    [LOOKAHEAD(3) niter = ImAssignStat() | niter = IncrDecrStat()]
+    <RPAREN>
+    (
+        nblock = Statement(null, fmscope)
+      | nblock = Block(null, Btype.FOR, null, fmscope)
+    )
+    {return(new ForNode(ninit, ntest, niter, nblock, t));}
+}
+
+/**
+ * Switch statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  switch statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SwitchStat (Scope fmscope) :
+{
+    Token       t;
+    SwitchNode  s;
+    Node        ntest = null;
+    Node        n;
+    Node        stat;
+}
+{
+    t = <SWITCH> <LPAREN>
+    ntest = Expr() {s = new SwitchNode(ntest, t);}
+    <RPAREN> <LBRACE>
+    (
+        (
+                (t = <CASE> (n = Expr() | n = CompVal ()))
+            |
+                t = <DEF> {n = null;}
+        )
+        <COLON>
+        {
+            if (s.addCase(n, t))
+                emsg("switch statement has multiple defaults");
+        }
+        (stat = Statement(null, fmscope) {s.addStatement(stat);})*
+    )+
+    <RBRACE>
+    {return(s);}
+}
+
+/**
+ * Branch statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  branch statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+BranchStat (Scope fmscope) :
+{
+    Token       t;
+    BranchNode  s;
+    Node        ntest = null;
+    Node        n;
+    Node        stat;
+    UnlessNode  en = null;
+}
+{
+    t = <BRANCH> <LPAREN>
+    ntest = Expr() {s = new BranchNode(ntest, t);}
+    <RPAREN> <LBRACE>
+    (
+        (
+                (t = <CASE> (n = Expr() | n = CompVal ()))
+            |
+                t = <DEF> {n = null;}
+        )
+        <COLON>
+        {
+            if (s.addCase(n, t))
+                emsg("branch statement has multiple defaults");
+        }
+        stat = Statement(null, fmscope) {s.addStatement(stat);}
+    )+
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        if (en != null) {
+            en.addSubNode(s);
+            return(en);
+        } else
+            {return(s);}
+    }
+}
+
+/**
+ * block statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  class statement node
+ * @throws  ParseException on a parsing error
+ */
+/*Node
+BlockStat (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       t;
+    VarNode     v = null;
+    Node        n = null;
+}
+{
+    (
+        <BLOCK>
+        n = Block(null, Btype.CLASS, body, fmscope)
+        
+    )
+    { return(n); }
+}*/
+
+/**
+ * Petri net grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  Node for the petrinet
+ * @throws  ParseException on a parsing error
+ */
+Node
+PetriNetStat (Scope fmscope) :
+{
+    PetriNetNode    pnn;
+    Token           t;
+    Node            reset;
+    ArrayList       inits;
+    ArrayList       fromlist;
+    ArrayList       tolist;
+    Node            e;
+    Node            b;
+    boolean         strict;
+}
+{
+    t = <PETRINET> {pnn = new PetriNetNode(t);}
+    [
+        <LPAREN> reset = Expr() <RPAREN> {pnn.addReset(reset);}
+    ]
+    <LBRACE>
+    t = <INITIAL> inits = IdentList() {pnn.addInits(inits);}
+    <SEMICOL>
+    (
+        {
+            e = null;
+            b = null;
+        }
+        fromlist = IdentList()
+        (<RPOINT> {strict = false;} | <RRPOINT> {strict = true;})
+        tolist = IdentList()
+        [<WHEN> <LPAREN> e = Expr() <RPAREN>]
+        [b = Block(null, Btype.PETRINET, null, fmscope)]
+        <SEMICOL>
+        {pnn.addTransition(fromlist, tolist, strict, e, b);}
+    )+
+    <RBRACE>
+    {return(pnn);}
+}
+
+/**
+ * Non-empty identifier list grammar production.
+ * @return  the list of identifiers
+ * @throws ParseException on a parsing error
+ */
+ArrayList
+IdentList () :
+{
+    ArrayList   list = new ArrayList();
+    Token       t;
+}
+{
+    t = <IDENTIFIER> {list.add(t);}
+    (<COMMA> t = <IDENTIFIER> {list.add(t);})*
+    {return(list);}
+}
+
+/**
+ * When statement grammar production.
+ * @param fmscope is the current file module scope
+ * @return  the WHEN node
+ * @throws  ParseException on a parsing error
+ */
+Node
+WhenStat (Scope fmscope) :
+{
+    Token           t;
+    Node            ntest = null;
+    Node            ntrue = null;
+    Node            nfalse = null;
+    Node            when_node;
+    UnlessNode      en = null;
+}
+{
+    t = <WHEN> <LPAREN>
+    ntest = Expr()
+    <RPAREN>
+    (
+          ntrue = Statement(null, fmscope)
+        | ntrue = Block(null, Btype.WHEN, null, fmscope)
+    )
+    [
+        LOOKAHEAD(2) <ELSE>
+        (
+              nfalse = Statement(null, fmscope)
+            | nfalse = Block(null, Btype.WHEN, null, fmscope)
+        )
+    ]
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        when_node = new WhenNode(ntest, ntrue, nfalse, t);
+        if (en != null) {
+            en.addSubNode(when_node);
+            return(en);
+        } else
+            return(when_node);
+    }
+}
+
+/**
+ * Seq while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SeqWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            test;
+    Node            sblock;
+    Node            n;
+    TargWhileNode   twblock;
+    UnlessNode      en = null;
+}
+{
+    t = <SEQ>
+    <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN> <LBRACE>
+    {sblock = new SeqBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        twblock = new TargWhileNode(t);
+        twblock.addSubNode(test);
+        twblock.addSubNode(sblock);
+        if (en != null) {
+            en.addSubNode(twblock);
+            return(en);
+        } else
+            return(twblock);
+    }
+}
+
+/**
+ * Par while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ParWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            test;
+    Node            block;
+    Node            sblock;
+    Node            n;
+    TargWhileNode   twblock;
+    UnlessNode      en = null;
+}
+{
+    t = <PAR>
+    <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN> <LBRACE>
+    {sblock = new ParBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        twblock = new TargWhileNode(t);
+        twblock.addSubNode(test);
+        twblock.addSubNode(sblock);
+        if (en != null) {
+            en.addSubNode(twblock);
+            return(en);
+        } else
+            return(twblock);
+    }
+}
+
+/**
+ * Syncwhen statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_when statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SyncWhenStat (Scope fmscope) :
+{
+    Token           t;
+    Node            ntest = null;
+    Node            block;
+    Node            n = null;
+    Node            sync_when_node;
+    UnlessNode      en = null;
+}
+{
+    t = <SYNC> <WHEN> <LPAREN>
+    ntest = Expr()
+    <RPAREN>
+    <LBRACE>
+    {block = new ParBlockNode(t);}
+    (n = Statement(null, fmscope) {block.addSubNode(n);})*    
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        sync_when_node = new SyncWhenNode(ntest, block, t);
+        if (en != null) {
+            en.addSubNode(sync_when_node);
+            return(en);
+        } else
+            return(sync_when_node);
+    }
+}
+
+/**
+ * Sync while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SyncWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            test;
+    Node            block;
+    Node            sblock;
+    Node            n;
+    TargWhileNode   twblock;
+    UnlessNode      en = null;
+}
+{
+    t = <SYNC>
+    <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN> <LBRACE>
+    {sblock = new SyncBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*
+    <RBRACE>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        twblock = new TargWhileNode(t);
+        twblock.addSubNode(test);
+        twblock.addSubNode(sblock);
+        if (en != null) {
+            en.addSubNode(twblock);
+            return(en);
+        } else
+            return(twblock);
+    }
+}
+
+/**
+ * Seq do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq_do_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SeqDoWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            sblock;
+    TargDoWhileNode tdwblock;
+    Node            n;
+    Node            test;
+    UnlessNode      en = null;
+}
+{
+    t = <SEQ> <DO> <LBRACE>
+    {sblock = new SeqBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*    
+    <RBRACE> <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        tdwblock = new TargDoWhileNode(t);
+        tdwblock.addSubNode(sblock);
+        tdwblock.addSubNode(test);
+        if (en != null) {
+            en.addSubNode(tdwblock);
+            return(en);
+        } else
+            return(tdwblock);
+    }
+}
+
+/**
+ * Par do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par_do_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+ParDoWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            sblock;
+    TargDoWhileNode tdwblock;
+    Node            n;
+    Node            test;
+    UnlessNode      en = null;
+}
+{
+    t = <PAR> <DO> <LBRACE>
+    {sblock = new ParBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*    
+    <RBRACE> <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        tdwblock = new TargDoWhileNode(t);
+        tdwblock.addSubNode(sblock);
+        tdwblock.addSubNode(test);
+        if (en != null) {
+            en.addSubNode(tdwblock);
+            return(en);
+        } else
+            return(tdwblock);
+    }
+}
+
+/**
+ * Sync do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_do_while statement node
+ * @throws  ParseException on a parsing error
+ */
+Node
+SyncDoWhileStat (Scope fmscope) :
+{
+    Token           t;
+    Node            sblock;
+    TargDoWhileNode tdwblock;
+    Node            n;
+    Node            test;
+    UnlessNode      en = null;
+}
+{
+    t = <SYNC> <DO> <LBRACE>
+    {sblock = new SyncBlockNode(t);}
+    (n = Statement(null, fmscope) {sblock.addSubNode(n);})*    
+    <RBRACE> <WHILE> <LPAREN>
+    test = Expr()
+    <RPAREN>
+    [ LOOKAHEAD(2) en = unless(fmscope) ]
+    {
+        tdwblock = new TargDoWhileNode(t);
+        tdwblock.addSubNode(sblock);
+        tdwblock.addSubNode(test);
+        if (en != null) {
+            en.addSubNode(tdwblock);
+            return(en);
+        } else
+            return(tdwblock);
+    }
+}
+
+/**
+ * Expression (operator ? : ) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr () :
+{
+    Token   t;
+    Node    ntrue;
+    Node    nfalse;
+    Node    n = null;
+}
+{
+    n = Expr1()
+    [
+        t = <QUEST>
+        ntrue = Expr1()
+        <COLON>
+        nfalse = Expr1()
+        {n = new ExprNode(TreeOp.CONDIT, n, ntrue, nfalse, t);}
+    ]
+    {return(n);}
+}
+
+/**
+ * Expression (operator ||) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr1 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr2()
+    (
+        t = <OROR>
+        nr = Expr2()
+        {nl = new ExprNode(TreeOp.LOGOR, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operator ^^) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr2 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr3()
+    (
+        t = <UPUP>
+        nr = Expr3()
+        {nl = new ExprNode(TreeOp.LOGXOR, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operator {@literal &&}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr3 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr4()
+    (
+        t = <ANDAND>
+        nr = Expr4()
+        {nl = new ExprNode(TreeOp.LOGAND, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operator |) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr4 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr5()
+    (
+        t = <OR>
+        nr = Expr5()
+        {nl = new ExprNode(TreeOp.BITOR, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operator ^) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr5 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr6()
+    (
+        t = <UP>
+        nr = Expr6()
+        {nl = new ExprNode(TreeOp.BITXOR, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operator {@literal &}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr6 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+}
+{
+    nl = Expr8()
+    (
+        t = <AND>
+        nr = Expr8()
+        {nl = new ExprNode(TreeOp.BITAND, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operators == {@literal != < > <= >=}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr8 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+    TreeOp  op;
+}
+{
+    nl = Expr9()
+    (
+        LOOKAHEAD(2)
+        (
+              t = <EQEQ> {op = TreeOp.EQ;}
+            | t = <NE> {op = TreeOp.NE;}
+            | t = <LANGLE> {op = TreeOp.LT;}
+            | t = <RANGLE> {op = TreeOp.GT;}
+            | t = <LE> {op = TreeOp.LE;}
+            | t = <GE> {op = TreeOp.GE;}
+        )
+        nr = Expr9()
+        {nl = new ExprNode(op, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operators {@literal << >> }) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr9 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+    TreeOp  op;
+}
+{
+    nl = Expr10()
+    (
+        LOOKAHEAD(2)
+        (t = <LS> {op = TreeOp.LS;} | t = <RS> {op = TreeOp.RS;} |
+         t = <LR> {op = TreeOp.LR;} | t = <RR> {op = TreeOp.RR;})
+        nr = Expr10()
+        {nl = new ExprNode(op, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operators + -) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr10 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+    TreeOp  op;
+}
+{
+    nl = Expr11()
+    (
+        LOOKAHEAD(2)
+        (t = <PLUS> {op = TreeOp.ADD;} | t = <MINUS> {op = TreeOp.SUB;})
+        nr = Expr11()
+        {nl = new ExprNode(op, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (operators * / %) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr11 () :
+{
+    Token   t;
+    Node    nl = null;
+    Node    nr;
+    TreeOp  op;
+}
+{
+    nl = Expr12()
+    (
+        LOOKAHEAD(2)
+        (
+              t = <STAR> {op = TreeOp.MUL;}
+            | t = <SLASH> {op = TreeOp.DIV;}
+            | t = <PERCENT> {op = TreeOp.REM;}
+        )
+        nr = Expr12()
+        {nl = new ExprNode(op, nl, nr, t);}
+    )*
+    {return(nl);}
+}
+
+/**
+ * Expression (unary operators ~ ! - {@literal &}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr12 () :
+{
+    Token   t;
+    Node    n = null;
+}
+{
+    (
+          t = <TILDE> n = Expr13() {n = new ExprNode(TreeOp.BITNOT, n, t);}
+        | t = <EXCL> n = Expr13() {n = new ExprNode(TreeOp.LOGNOT, n, t);}
+        | t = <MINUS> n = Expr13() {n = new ExprNode(TreeOp.MIN, n, t);}
+        | t = <AND> n = Expr13() {n = new AddrNode(n, t);}
+        | n = Expr13()
+    )
+    {return(n);}
+}
+
+/**
+ * Expression (unary operators ? {@literal <}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr13 () :
+{
+    Token   t;
+    Node    n = null;
+}
+{
+    (
+          t = <QUEST> n = Expr14() {n = new ExprNode(TreeOp.EXAM, n, t);}
+        | t = <LANGLE> n = Expr14() {n = new ExprNode(TreeOp.RAV, n, t);}
+        | n = Expr14()
+    )
+    {return(n);}
+}
+
+/**
+ * Expression (constants, function call, parenthesised expression)
+ * grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr14 () :
+{
+    Token       t;
+    Node        n = null;
+    Node        nsf;
+    String      s;
+    String      id;
+    NodeList    nodelist;
+}
+{
+    (
+          t = <INTEGER_LITERAL> {n = new IntNode(t);}
+        | t = <FLOATING_POINT_LITERAL> {n = new FloatNode(t);}
+        | t = <STRING_LITERAL>
+          {
+            s = t.toString();
+            n = new StrNode(s.substring(1, s.length()-1), t);
+          }
+        | t = <LOG_LITERAL> {n = new LogNode(t);}
+        | t = <NULL> {n = new NullNode(t);}
+        | LOOKAHEAD(DereferencedVar() <LPAREN>) n = Call(false, false)
+        | n = Expr15()
+        | LOOKAHEAD(<LPAREN> Expr() <RPAREN> <RPOINT>) <LPAREN> n = Expr() <RPAREN> t = <RPOINT>
+          (
+            {
+                nodelist = new NodeList(new SrcLoc(t));
+                n = new PtrValNode(n, nodelist, false, t);
+            }
+            (
+                  nsf = Subscript() {nodelist.add(nsf);}
+                | nsf = Field() {nodelist.add(nsf);}
+            )*
+          )
+        | <LPAREN> n = Expr() <RPAREN>
+    )
+    {return(n);}
+}
+
+/**
+ * Expression (unary operator {@literal >}) grammar production
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */
+Node
+Expr15 () :
+{
+    Token   t;
+    Node    n = null;
+}
+{
+    (
+          t = <RANGLE> n = DereferencedVar() {n = new ExprNode(TreeOp.WAV, n, t);}
+        | n = DereferencedVar()
+    )
+    {return(n);}
+}
+
+/**
+ * Compound value grammar production.
+ * @return  compound value node
+ * @throws  ParseException on a parsing error
+ */
+CompoundValNode
+CompVal () :
+{
+    CompoundValNode scn;
+    Token           t;
+    Node            n = null;
+}
+{
+    t = <LBRACE> {scn = new CompoundValNode(t);}
+    [
+          LOOKAHEAD(2) n = Keymatch()
+        | n = Expr()
+        | n = CompVal()
+    ]
+    {scn.addSubNode(n);}
+    (
+        <COMMA> {n = null;}
+        [
+              LOOKAHEAD(2) n = Keymatch()
+            | n = Expr()
+            | n = CompVal() 
+        ]
+        {scn.addSubNode(n);}
+    )*
+    <RBRACE>
+    {return(scn);}
+}
+
+Node
+DereferencedVar () :
+{
+    Token       t;
+    Node        nl;
+    Node        vn = null;
+    Node        n;
+    NodeList    nodelist;
+    boolean     nullresolve = false;
+    Flag        flag;
+    boolean     classref = false;
+}
+{
+    nl = FlaggedVar() { flag = nl.getFlag();}
+    (LOOKAHEAD(3) 
+        (
+              t = <RPOINT>
+            | t = <RRPOINT> {nullresolve = true;}
+        )
+        {
+            nodelist = new NodeList(new SrcLoc(t));
+            if (classref) {
+                vn = new VarNode(t.image, Context.DEFAULT, nodelist, t);
+                nl = new GroupRefNode(nl, vn, nodelist, t);
+            } else
+                nl = new PtrValNode(nl, nodelist, nullresolve, t);
+        }
+        (
+              n = Subscript() {nodelist.add(n);}
+            | n = Field() {nodelist.add(n);}
+        )*
+    )*
+    [
+        { if (flag != Flag.NONE) emsg("both pre and post increment/decrement used"); }
+          <INCR> {nl.setFlag(Flag.POSTINCR);}
+        | <DECR> {nl.setFlag(Flag.POSTDECR);}
+    ]
+    {return(nl);}
+}
+
+/**
+ * Pre or post increment or decrement or indirect variable grammar production.
+ * ++, --, * and {@literal &} are not handled as normal operator nodes.
+ * The VarNode to which they apply has flags set
+ * to indicate ++v, --v, v++, v-- , *v or {@literal &v}.
+ * These are handled when the variable is accessed.
+ * @return  a node for a variable with a ++ or --
+ * @throws  ParseException on a parsing error
+ */
+VarNode
+FlaggedVar () :
+{
+    VarNode n;
+    Flag    flag = Flag.NONE;
+}
+{
+    [
+          <INCR> {flag = Flag.PREINCR;}
+        | <DECR> {flag = Flag.PREDECR;}
+    ]
+    n = Variable()
+    {
+        n.setFlag(flag);
+        return(n);
+    }
+}
+
+
+/**
+ * A variable (possibly with subscripts or field names) grammar production.
+ * @return  a variable node
+ * @throws  ParseException on a parsing error
+ */
+VarNode
+Variable () : 
+{
+    Token       t;
+    VarNode     vn = null;
+    Node        n;
+    Context     context = Context.DEFAULT;
+    NodeList    nodelist;
+}
+{
+    [
+          <GLOBALDOT> {context = Context.GLOBAL;}
+        | <FILEDOT> {context = Context.FILE;}
+        | <CALLINGDOT> {context = Context.CALLING;}
+        | <LOCALDOT> {context = Context.LOCAL;}
+        | <CLASSDOT> {context = Context.GROUP;}
+    ]
+    t = <IDENTIFIER> {nodelist = new NodeList(new SrcLoc(t));}
+    (
+          n = Subscript() {nodelist.add(n);}
+        | n = Field() {nodelist.add(n);}
+    )*
+    {
+        vn = new VarNode(t.image, context, nodelist, t);
+        return(vn);
+    }
+}
+
+/**
+ * Subscript(s) grammar production.
+ * @return  a subscript node
+ * @throws  ParseException on a parse error
+ */
+SubscriptNode
+Subscript () :
+{
+    Token           t;
+    SubscriptNode   n;
+    Node            s1 = null;
+    Node            s2 = null;
+}
+{
+    t = <LBRACK>
+    (
+        [
+            s1 = Expr()
+            [<DOTDOT> s2 = Expr()]
+        ]
+    )
+    <RBRACK>
+    {return(new SubscriptNode(s1, s2, t));}
+}
+
+/**
+ * Struct field (on a variable) grammar production.
+ * @return  a field node
+ * @throws  ParseException on a parse error
+ */
+FieldNode
+Field () :
+{
+    FieldNode   n;
+    Token       t;
+}
+{
+    <DOT>
+    t = <IDENTIFIER>
+    {return(new FieldNode(new StrNode(t.image, t), t));}
+}

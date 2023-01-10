@@ -1,0 +1,59 @@
+nosource
+
+// 3pl board support for Numato Systems Mimas
+
+// Initial setup
+part("XC6SLX9TQG144");
+module "xilinx/xc6s.3pl"
+
+// all IO is 3.3V on this board
+str(lvcmos33, "LVCMOS33");
+
+// clock generator 100MHz
+iopins(c100_pin, "str", "P126", frequency=1.0e8, ibufg=true, iostandard=lvcmos33);
+
+// Header P1 pins 3 to 38
+iopins(global.P1_pins, "[36]str",
+	{"P35",  "P34",  "P33",  "P32",  "P30",  "P29",  "P27",  "P26",
+	 "P24",  "P23",  "P22",  "P21",  "P17",  "P16",  "P15",  "P14",
+	 "P12",  "P11",  "P10",   "P9",   "P8",   "P7",   "P6",   "P5",
+          "P2",   "P1", "P142", "P141", "P140", "P139", "P138", "P137",
+	"P134", "P133", "P132", "P131"},
+        iostandard=lvcmos33
+);
+// Header P2 pins 3 to 18
+iopins(global.P2A_pins, "[16]str",
+        {"P43", "P44", "P45", "P46", "P47", "P48", "P50", "P51",
+	 "P55", "P56", "P74", "P75", "P78", "P79", "P80", "P81"},
+        iostandard=lvcmos33
+);
+// Header P2 pins 21 to 38
+iopins(global.P2B_pins, "[18]str",
+	{"P82",  "P83", "P84", "P85", "P87",  "P88",  "P92",  "P93",
+	 "P94",  "P95", "P97", "P98", "P99", "P100", "P101", "P102",
+        "P104", "P105"},
+        iostandard=lvcmos33
+);
+
+iopins(global.flash_cs_pin, "str", "P38", iostandard=lvcmos33);
+iopins(global.flash_clk_pin, "str", "P70", iostandard=lvcmos33);
+iopins(global.flash_mosi_pin, "str", "P64", iostandard=lvcmos33);
+iopins(global.flash_miso_pin, "str", "P65", iostandard=lvcmos33);
+
+// LED pins
+// active high
+iopins(global.LED_pins, "[8]str",
+	 {"P119", "P118", "P117", "P116", "P115", "P114", "P112", "P111"},
+         iostandard=lvcmos33
+);
+
+// Switch pins
+// active low
+iopins(global.SW_pins, "[4]str", {"P124", "P123", "P121", "P120"},
+        pullup=true, iostandard=lvcmos33
+);
+
+// create 100MHz clock
+clock(global.c100_in, loc=c100_pin);
+simpleclock(global.c100, c100_in);
+useclock(c100);

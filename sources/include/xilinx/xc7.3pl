@@ -1,0 +1,46 @@
+// Include file for series 7 elements (Artix7, Kintex7, Virtex7, Zynq7000).
+nosource
+
+presetdirective("postProcessTool", "vivado");
+
+source "xilinx/common.3pl"
+module "xilinx/postprocess.3pl"
+module "stdlib.3pl"
+module "xilinx/clocks.3pl"
+module "xilinx/io.3pl"
+module "xilinx/dsp48.3pl"
+module "xilinx/gtp_dual.3pl"
+
+// Specify allowed special I/O and clock elements valid for
+// this device.
+// Map "elementMap" is in common.3pl.
+elementMap["BUFG"] = true;
+elementMap["BUFGCE"] = true;
+elementMap["BUFGMUX_CTRL"] = true;
+elementMap["BUFR"] = true;
+elementMap["BUFIO"] = true;
+elementMap["MMCM"] = true;
+elementMap["PLL"] = true;
+elementMap["IDDR"] = true;
+elementMap["ODDR"] = true;
+elementMap["IDELAYE2"] = true;
+elementMap["ODELAYE2"] = true;
+elementMap["IODELAYE2"] = true;
+elementMap["ISERDESE2"] = true;
+elementMap["OSERDESE2"] = true;
+
+leadermodule ("assign attribute procedure", 100) {
+    attributeprocedure(processPinAttributes);
+}
+
+trailermodule ("generate constraints", 100) {
+    netlistcommentfromdirs();
+    generateConstraints();
+}
+
+postmodule ("Xilinx post-processing") {
+    if (directive("postProcessTool") == "ise")
+	postprocess("xilinx/ise_fpga.tcl", "ise", 13.1);
+    else
+	postprocess("xilinx/vivado.tcl", "vivado");
+}

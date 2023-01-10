@@ -1,0 +1,59 @@
+\pagebreak
+
+\section{JSON type Library - jsontype.3pl}\label{chap:jsont}
+
+    \index{library!float.3pl}
+    This library provides a conversion between a 3PL type and a JSON string.
+    
+    This library must be incorporated by using a {\bf module} statement, i.e.
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "jsontype.3pl"
+    \end{lstlisting}
+
+
+
+    \subsection{library modules}
+
+
+        none.
+
+
+    \subsection{library procedures}
+    
+        None.
+
+
+
+
+    \subsection{library functions}
+    
+
+
+        \subsubsection{jsontype - generate a JSON string from a 3PL type}\label{sec:lfjsontype}
+
+            {\bf Library: jsontype.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global function
+               jsontype (type(t), int(indent)) {}
+            \end{lstlisting}
+
+            {\bf Return mode and type:} \\
+            immediate, "str"
+
+            {\bf Input parameters:} \\            
+            {\bf t} is the 3PL type.\\
+            {\bf indent} is the level of indenting of the formatted string, default 0.
+
+            {\bf description:} \\
+            This function takes a 3PL type and generates a JSON description as a
+            single returned string. The string contains leading indenting and newlines
+            as required so that the resulting string is formatted to be easily human-readable.
+
+
+
+    \subsection{library classes}
+    
+        None.

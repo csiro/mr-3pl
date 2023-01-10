@@ -1,0 +1,1288 @@
+nosource
+
+leadermodule ("gtp_dual") {
+    struct(global.gtp_tile_params,
+        loc,                                        "str",  // location
+        {refclkp_pin, refclkn_pin},                 "str",  // clock pins
+        {boost0, boost1},                           "log",  // TX pre-emph boost
+        {txdiffctrl0, txdiffctrl1},                 "int",  // TX differential V
+        {txpreemphasis0, txpreemphasis1},           "int"   // TX pre-emphasis
+    );
+}
+
+struct(global.gt_16,
+    data,   "bits:16",  // data
+    k,      "log",      // true if top 8 bits of data are a K-character
+    contin, "log"       // this is a continuation word
+);
+
+struct(global.gt_16_e,
+    data,   "bits:16",  // data
+    k,      "log",      // true if top 8 bits of data are a K-character
+    first,  "log",      // previous word was an idle
+    error,  "log"       // disparity error or not-in-table error
+);
+
+struct(global.gt_16_ee,
+    data,       "bits:16",  // data
+    k,          "log",      // true if top 8 bits of data are a K-character
+    first,      "log",      // previous word was an idle
+    disperr,    "[2]log",   // disparity errors
+    niterr,     "[2]log"    // not-in-table errors
+);
+
+
+
+//int(comma8, K28_1);         // 8-bit comma
+//int(comma10m_rev, 0b1001111100); // 10-bit -ve comma - bits in reverse order
+//int(comma10p_rev, 0b0110000011); // 10-bit +ve comma - bits in reverse order
+int(comma8, K28_5);         // 8-bit comma
+int(comma10m_rev, 0b0101111100); // 10-bit -ve comma - bits in reverse order
+int(comma10p_rev, 0b1010000011); // 10-bit +ve comma - bits in reverse order
+int(D21_4, 0b10010101);
+
+global module
+gtp_dual_16 (
+    queue(out0),
+    queue(out1),
+    clock(usrclk2),
+    value({rxdiag0, rxdiag1}, "[10]log"),
+    value({txdiag0, txdiag1}, "[2]log")
+    <-
+    var(tile, gtp_tile_params),
+    float(freq, 156.25e6),        // MGT base frequency
+    int(run_length),
+    queue(in0),
+    queue(in1),
+    value({txpowerdown0, txpowerdown1, rxpowerdown0, rxpowerdown1}, "uint:2", 0),
+    value({gtpreset, rxreset0, rxreset1}, "log", false),
+    value({loopback0, loopback1}, "uint:3", 0),
+    value({diff0, diff1, pe0, pe1}, "uint:3", 0),
+    log(los_fsm)
+) {
+    attributes(usrclk2, frequency=freq);
+
+    iopins(clk_pins, "[2]str", {tile.refclkp_pin, tile.refclkn_pin}, iostandard="LVDS_25");
+
+    clock(rclk, frequency=freq, differential=true, loc=clk_pins);
+
+    value(plllkdet, "log");
+    value({rxdata0, txdata0, rxdata1, txdata1}, "[2]bits:8");
+    value({txcharisk0, txcharisk1, rxnotintable0, rxnotintable1,
+            rxchariscomma0, rxchariscomma1, rxcharisk0, rxcharisk1, rxdisperr0, rxdisperr1}, "[2]log");
+    value({rxcommadet0, rxcommadet1}, "log");
+    value({resetdone0, resetdone1, rxelecidle0, rxelecidle1, rxcdrreset0, rxcdrreset1,
+            rxelecidlereset0, rxelecidlereset1, _rxenelecidleresetb}, "log");
+    value({txbufstatus0, txbufstatus1, txkerr0, txkerr1}, "[2]log");
+    value({rxlossofsync0, rxlossofsync1}, "[2]log", {false, false});
+    value({rxbyteisaligned0, rxbyteisaligned1}, "log");
+    
+    clock({refclkout, pllin}, frequency=freq);
+    clock({fbclk, pllout1}, frequency=freq);
+    clock({usrclk, pllout0}, frequency=freq*2);
+    value(pll_locked, "log");
+    log(freq_high, freq >= 100.0e6);
+
+    clockbufg(pllin <- refclkout); attributes(pllin, tnm="");
+    pll_base(
+        clkout0 = pllout0,
+        clkout1 = pllout1,
+        clkfbout = fbclk,
+        locked = pll_locked
+        <-
+        clkin = pllin,
+        clkfbin = fbclk,
+        reset = !plllkdet,
+        clkout0_divide = freq_high ? 2 : 4,
+        clkout1_divide = freq_high ? 4 : 8,
+        clkfbout_mult = freq_high ? 4 : 8,
+        divclk_divide = 1
+    );
+    clockbufg(usrclk <- pllout0); attributes(usrclk, tnm="USRCLK"+tile.loc);
+    clockbufg(usrclk2 <- pllout1); attributes(usrclk2, tnm="USRCLK2"+tile.loc);
+    if (matched(usrclk2))
+        attributes(usrclk2, tnm="NONE");
+    
+    netaddncf(refclkout, "S", null);
+    
+    useclock(usrclk2);
+    
+    if (!matched(gtpreset)) {
+        static(reset, "log");
+        gtpreset := reset;
+        
+        seq {
+            wait(1e-2);
+            reset <- true;
+            nop();
+            nop();
+            nop();
+            reset <- false;
+            stop();
+        }
+    }
+    
+    int(clk25_divider);
+    if (freq <= 25.0e6)
+        clk25_divider = 1;
+    else if (freq <= 50.0e6)
+        clk25_divider = 2;
+    else if (freq <= 75.0e6)
+        clk25_divider = 3;
+    else if (freq <= 100.0e6)
+        clk25_divider = 4;
+    else if (freq <= 125.0e6)
+        clk25_divider = 5;
+    else if (freq <= 150.0e6)
+        clk25_divider = 6;
+    else if (freq <= 250.0e6)
+        clk25_divider = 10;
+    else
+        clk25_divider = 12;
+
+    gtp_dual (
+        // output signals
+        refclkout = refclkout,
+        //rxrecclk0 = rxrecclk0,
+        //txoutclk0 = ,
+        //rxrecclk1 = rxrecclk1,
+        //txoutclk1 = ,
+        //drdy = ,
+        //phystatus0 = ,
+        //phystatus1 = ,
+        plllkdet = plllkdet,
+        resetdone0 = resetdone0,
+        resetdone1 = resetdone1,
+        rxbyteisaligned0 = rxbyteisaligned0,
+        rxbyteisaligned1 = rxbyteisaligned1,
+        //rxbyterealign0 = ,
+        //rxbyterealign1 = ,
+        //rxchanbondseq0 = ,
+        //rxchanbondseq1 = ,
+        //rxchanisaligned0 = ,
+        //rxchanisaligned1 = ,
+        //rxchanrealign0 = ,
+        //rxchanrealign1 = ,
+        rxcommadet0 = rxcommadet0,
+        rxcommadet1 = rxcommadet1,
+        rxelecidle0 = rxelecidle0,
+        rxelecidle1 = rxelecidle1,
+        //rxoversampleerr0 = ,
+        //rxoversampleerr1 = ,
+        //rxprbserr0 = ,
+        //rxprbserr1 = ,
+        //rxvalid0 = ,
+        //rxvalid1 = ,
+        //rxconfigout = ,
+        //rxbufstatus0 = ,
+        //rxbufstatus1 = ,
+        //rxchbondo0 = ,
+        //rxchbondo1 = ,
+        //rxclkcorcnt0 = ,
+        //rxclkcorcnt1 = ,
+        rxdata0 = rxdata0,
+        rxdata1 = rxdata1,
+        rxdisperr0 = rxdisperr0,
+        rxdisperr1 = rxdisperr1,
+        rxnotintable0 = rxnotintable0,
+        rxnotintable1 = rxnotintable1,
+        rxlossofsync0 = rxlossofsync0,
+        rxlossofsync1 = rxlossofsync1,
+        //rxrundisp0 = ,
+        //rxrundisp1 = ,
+        rxchariscomma0 = rxchariscomma0,
+        rxchariscomma1 = rxchariscomma1,
+        rxcharisk0 = rxcharisk0,
+        rxcharisk1 = rxcharisk1,
+        txkerr0 = txkerr0,
+        txkerr1 = txkerr1,
+        //txrundisp0 = ,
+        //txrundisp1 = ,
+        //rxstatus0 = ,
+        //rxstatus1 = ,
+        txbufstatus0 = txbufstatus0,
+        txbufstatus1 = txbufstatus1
+        <-
+        loc = tile.loc,
+        // attributes
+        ac_cap_dis_0 = true, //false,
+        ac_cap_dis_1 = true, //false,
+        align_comma_word_0 = 2,
+        align_comma_word_1 = 2,
+        chan_bond_1_max_skew_0 = 7,
+        chan_bond_1_max_skew_1 = 7,
+        chan_bond_2_max_skew_0 = 1,
+        chan_bond_2_max_skew_1 = 1,
+        chan_bond_level_0 = 0,
+        chan_bond_level_1 = 0,
+        chan_bond_mode_0 = "OFF",
+        chan_bond_mode_1 = "OFF",
+        chan_bond_seq_1_1_0 = 0b0001001010,
+        chan_bond_seq_1_1_1 = 0b0001001010,
+        chan_bond_seq_1_2_0 = 0b0001001010,
+        chan_bond_seq_1_2_1 = 0b0001001010,
+        chan_bond_seq_1_3_0 = 0b0001001010,
+        chan_bond_seq_1_3_1 = 0b0001001010,
+        chan_bond_seq_1_4_0 = 0b0110111100,
+        chan_bond_seq_1_4_1 = 0b0110111100,
+        chan_bond_seq_1_enable_0 = 0b1111,
+        chan_bond_seq_1_enable_1 = 0b1111,
+        chan_bond_seq_2_1_0 = 0b0110111100,
+        chan_bond_seq_2_1_1 = 0b0110111100,
+        chan_bond_seq_2_2_0 = 0b0100111100,                           
+        chan_bond_seq_2_2_1 = 0b0100111100,                           
+        chan_bond_seq_2_3_0 = 0b0100111100,                           
+        chan_bond_seq_2_3_1 = 0b0100111100,                           
+        chan_bond_seq_2_4_0 = 0b0100111100,                           
+        chan_bond_seq_2_4_1 = 0b0100111100,                           
+        chan_bond_seq_2_enable_0 = 0b1111,                            
+        chan_bond_seq_2_enable_1 = 0b1111,                            
+        chan_bond_seq_2_use_0 = true,
+        chan_bond_seq_2_use_1 = true,
+        chan_bond_seq_len_0 = 4,
+        chan_bond_seq_len_1 = 4,
+        clk_cor_adj_len_0 = 2,
+        clk_cor_adj_len_1 = 2,
+        clk_cor_det_len_0 = 2,
+        clk_cor_det_len_1 = 2,
+        clk_cor_insert_idle_flag_0 = false,
+        clk_cor_insert_idle_flag_1 = false,
+        clk_cor_keep_idle_0 = false,
+        clk_cor_keep_idle_1 = false,
+        clk_cor_max_lat_0 = 18,
+        clk_cor_max_lat_1 = 18,
+        clk_cor_min_lat_0 = 16,
+        clk_cor_min_lat_1 = 16,
+        clk_cor_precedence_0 = true,
+        clk_cor_precedence_1 = true,
+        clk_cor_repeat_wait_0 = 0,
+        clk_cor_repeat_wait_1 = 0,
+        clk_cor_seq_1_1_0 = (0b01<<8)|comma8,
+        clk_cor_seq_1_2_0 = (0b00<<8)|D21_4,
+        clk_cor_seq_1_3_0 = 0b0000000000,
+        clk_cor_seq_1_4_0 = 0b0000000000,
+        clk_cor_seq_1_1_1 = (0b01<<8)|comma8,
+        clk_cor_seq_1_2_1 = (0b00<<8)|D21_4,
+        clk_cor_seq_1_3_1 = 0b0000000000,
+        clk_cor_seq_1_4_1 = 0b0000000000,
+        clk_cor_seq_1_enable_0 = 0b0011,
+        clk_cor_seq_1_enable_1 = 0b0011,
+        clk_cor_seq_2_1_0 = 0b0000000000,
+        clk_cor_seq_2_2_0 = 0b0000000000,
+        clk_cor_seq_2_3_0 = 0b0000000000,
+        clk_cor_seq_2_4_0 = 0b0000000000,
+        clk_cor_seq_2_1_1 = 0b0000000000,
+        clk_cor_seq_2_2_1 = 0b0000000000,
+        clk_cor_seq_2_3_1 = 0b0000000000,
+        clk_cor_seq_2_4_1 = 0b0000000000,
+        clk_cor_seq_2_enable_0 = 0b0000, 
+        clk_cor_seq_2_enable_1 = 0b0000, 
+        clk_cor_seq_2_use_0 = false,          
+        clk_cor_seq_2_use_1 = false,          
+        clk_correct_use_0 = true,        
+        clk_correct_use_1 = true,        
+        clk25_divider = clk25_divider,               
+        com_burst_val_0 = 0,
+        com_burst_val_1 = 0,
+        comma_10b_enable_0 = 0b1111111111,
+        comma_10b_enable_1 = 0b1111111111,
+        comma_double_0 = false,
+        comma_double_1 = false,
+        dec_mcomma_detect_0 = true,
+        dec_mcomma_detect_1 = true,
+        dec_pcomma_detect_0 = true,
+        dec_pcomma_detect_1 = true,
+        dec_valid_comma_only_0 = true,
+        dec_valid_comma_only_1 = true,
+        mcomma_10b_value_0 = comma10m_rev,
+        mcomma_10b_value_1 = comma10m_rev,
+        mcomma_detect_0 = true,
+        mcomma_detect_1 = true,
+        oob_clk_divider = 4,
+        oobdetect_threshold_0 = 0b001,
+        oobdetect_threshold_1 = 0b001,
+        oversample_mode = false,
+        pci_express_mode_0 = false,
+        pci_express_mode_1 = false,
+        pcomma_10b_value_0 = comma10p_rev,
+        pcomma_10b_value_1 = comma10p_rev,
+        pcomma_detect_0 = true,
+        pcomma_detect_1 = true,
+        //pcs_com_cfg = 0x1680a0e,    // from user guide - not set by wizard
+        pll_divsel_fb = 2,
+        pll_divsel_ref = 1,
+        pll_rxdivsel_out_0 = 1,
+        pll_rxdivsel_out_1 = 1,
+        pll_txdivsel_comm_out = 1,
+        pll_txdivsel_out_0 = 1,
+        pll_txdivsel_out_1 = 1,
+        pma_cdr_scan_0 = 0x6c08040,
+        pma_cdr_scan_1 = 0x6c08040,
+        //pma_com_cfg = ,       can ignore if tx buffer is used (not bypassed)
+        pma_rx_cfg_0 = 0x0dce089,
+        pma_rx_cfg_1 = 0x0dce089,
+        prbs_err_threshold_0 = 8,  // wizard has this as x"11111111"
+        prbs_err_threshold_1 = 8,  // ditto
+        rcv_term_gnd_0 = false,
+        rcv_term_gnd_1 = false,
+        rcv_term_mid_0 = false,
+        rcv_term_mid_1 = false,
+        rcv_term_vttrx_0 = false,
+        rcv_term_vttrx_1 = false,
+        rx_buffer_use_0 = true,
+        rx_buffer_use_1 = true,
+        rx_decode_seq_match_0 = true,
+        rx_decode_seq_match_1 = true,
+        rx_los_invalid_incr_0 = 2,  //8
+        rx_los_invalid_incr_1 = 2,  //8
+        rx_los_threshold_0 = 4,     //128
+        rx_los_threshold_1 = 4,     //128
+        rx_loss_of_sync_fsm_0 = los_fsm,
+        rx_loss_of_sync_fsm_1 = los_fsm,
+        rx_slide_mode_0 = "PCS",
+        rx_slide_mode_1 = "PCS",
+        rx_status_fmt_0 = "PCIE",
+        rx_status_fmt_1 = "PCIE",
+        rx_xclk_sel_0 = "RXREC",
+        rx_xclk_sel_1 = "RXREC",
+        sata_burst_val_0 = 0b100,
+        sata_burst_val_1 = 0b100,
+        sata_idle_val_0 = 0b011,
+        sata_idle_val_1 = 0b011,
+        sata_max_burst_0 = 7,
+        sata_max_burst_1 = 7,
+        sata_max_init_0 = 22,
+        sata_max_init_1 = 22,
+        sata_max_wake_0 = 7,
+        sata_max_wake_1 = 7,
+        sata_min_burst_0 = 4,
+        sata_min_burst_1 = 4,
+        sata_min_init_0 = 12,
+        sata_min_init_1 = 12,
+        sata_min_wake_0 = 4,
+        sata_min_wake_1 = 4,
+        termination_ovrd = false,   
+        termination_ctrl = 0b10100,
+        trans_time_from_p2_0 = 0x0060,  //0x003c,
+        trans_time_from_p2_1 = 0x0060,  //0x003c,
+        trans_time_non_p2_0  = 0x0025,  //0x0019,                               
+        trans_time_non_p2_1  = 0x0025,  //0x0019,
+        trans_time_to_p2_0   = 0x0100,  //0x0064,
+        trans_time_to_p2_1   = 0x0100,  //0x0064,
+        tx_buffer_use_0 = true,
+        tx_buffer_use_1 = true,
+        tx_diff_boost_0 = tile.boost0,
+        tx_diff_boost_1 = tile.boost1,
+
+        // input signals
+        clkin = rclk,
+        //daddr = ,
+        //dclk = ,
+        //den = ,
+        //txconfigin = ,
+        //dwe = ,
+        gtpreset = gtpreset,
+        intdatawidth = true,
+        loopback0 = loopback0,
+        loopback1 = loopback1,
+        plllkdeten = true,
+        pllpowerdown = false,   // active high
+        prbscntreset0 = false,
+        prbscntreset1 = false,
+        refclkpwrdnb = true,    // active low
+        rxbufreset0 = false,
+        rxbufreset1 = false,
+        rxcdrreset0 = rxcdrreset0,
+        rxcdrreset1 = rxcdrreset1,
+        //rxchbondi0 = ,
+        //rxchbondi1 = ,
+        rxcommadetuse0 = true,
+        rxcommadetuse1 = true,
+        rxdatawidth0 = true,
+        rxdatawidth1 = true,
+        rxdec8b10buse0 = true,
+        rxdec8b10buse1 = true,
+        rxelecidlereset0 = rxelecidlereset0,
+        rxelecidlereset1 = rxelecidlereset1,
+        rxenchansync0 = false,
+        rxenchansync1 = false,
+        rxenelecidleresetb = _rxenelecidleresetb, // active low
+        rxeneqb0 = true,       // active low - might need to make this true
+        rxeneqb1 = true,       // active low - might need to make this true
+        rxenmcommaalign0 = true, //align0,
+        rxenmcommaalign1 = true, //align1,
+        rxenpcommaalign0 = true, //align0,
+        rxenpcommaalign1 = true, //align1,
+        rxenprbstst0 = 0,
+        rxenprbstst1 = 0,
+        rxensamplealign0 = false,
+        rxensamplealign1 = false,
+        rxeqmix0 = 0,
+        rxeqmix1 = 0,
+        rxeqpole0 = 8,
+        rxeqpole1 = 8,
+        //rxpmasetphase0 = ,
+        //rxpmasetphase1 = ,
+        rxpolarity0 = false,
+        rxpolarity1 = false,
+        rxpowerdown0 = rxpowerdown0,
+        rxpowerdown1 = rxpowerdown1,
+        rxreset0 = rxreset0,
+        rxreset1 = rxreset1,
+        rxslide0 = false,
+        rxslide1 = false,
+        rxusrclk0 = usrclk,
+        rxusrclk1 = usrclk,
+        rxusrclk20 = usrclk2,
+        rxusrclk21 = usrclk2,
+        txbufdiffctrl0 = matched(diff0) ? diff0 : tile.txdiffctrl0,
+        txbufdiffctrl1 = matched(diff1) ? diff1 : tile.txdiffctrl1,
+        txbypass8b10b0 = {false,false}, // don't disable 8b/10b encoding
+        txbypass8b10b1 = {false,false}, // don't disable 8b/10b encoding
+        txchardispmode0 = {false,false}, // | .
+        txchardispmode1 = {false,false}, // | normal running disparity
+        txchardispval0 = {false,false},  // | .
+        txchardispval1 = {false,false},  // | .
+        txcharisk0 = txcharisk0,
+        txcharisk1 = txcharisk1,
+        txcomstart0 = false,
+        txcomstart1 = false,
+        txcomtype0 = false,
+        txcomtype1 = false,
+        txdata0 = txdata0,
+        txdata1 = txdata1,
+        txdatawidth0 = true,
+        txdatawidth1 = true,
+        txdetectrx0 = false,
+        txdetectrx1 = false,
+        txdiffctrl0 = matched(diff0) ? diff0 : tile.txdiffctrl0,
+        txdiffctrl1 = matched(diff1) ? diff1 : tile.txdiffctrl1,
+        txelecidle0 = false,
+        txelecidle1 = false,
+        txenc8b10buse0 = true,
+        txenc8b10buse1 = true,
+        txenpmaphasealign = false,
+        txenprbstst0 = 0,
+        txenprbstst1 = 0,
+        txinhibit0 = false,
+        txinhibit1 = false,
+        txpmasetphase = false,
+        txpolarity0 = false,
+        txpolarity1 = false,
+        txpowerdown0 = txpowerdown0,
+        txpowerdown1 = txpowerdown1,
+        txpreemphasis0 = matched(pe0) ? pe0 : tile.txpreemphasis0,
+        txpreemphasis1 = matched(pe1) ? pe1 : tile.txpreemphasis1,
+        txreset0 = false,
+        txreset1 = false,
+        txusrclk0 = usrclk,
+        txusrclk1 = usrclk,
+        txusrclk20 = usrclk2,
+        txusrclk21 = usrclk2
+    );
+    
+    log(use_pop4, tile.loc == "GTP_DUAL_X0Y1" || tile.loc == "GTP_DUAL_X0Y0");
+    if (varexists(global.gtpopt_rx_used)) {
+        gtpopt_rx_used ||= (matched(out0) || matched(out1)) && use_pop4;
+        gtpopt_tx_used ||= (matched(in0) || matched(in1)) && use_pop4;
+    }
+    
+    attributes({rxlossofsync0, rxlossofsync1, rxbyteisaligned0, rxbyteisaligned1},
+                    domain=usrclk2);
+
+    if (matched(out0)) {
+        rxelecidlereset0 := resetdone0 && rxelecidle0;       
+        data_output(
+            out0,
+            rxcdrreset0,
+            nullarg(rxdiag0)
+            <-
+            rxdata0,
+            rxcharisk0,
+            rxchariscomma0,
+            rxdisperr0,
+            rxnotintable0,
+            rxbyteisaligned0,
+            los_fsm,
+            rxlossofsync0
+        );
+    } else {
+        rxpowerdown0 := 3;
+        rxelecidlereset0 := false;
+        rxcdrreset0 := false;
+    }
+    if (matched(out1)) {
+        rxelecidlereset1 := resetdone1 && rxelecidle1;       
+        data_output(
+            out1,
+            rxcdrreset1,
+            nullarg(rxdiag1)
+            <-
+            rxdata1,
+            rxcharisk1,
+            rxchariscomma1,
+            rxdisperr1,
+            rxnotintable1,
+            rxbyteisaligned1,
+            los_fsm,
+            rxlossofsync1
+        );
+    } else {
+        rxpowerdown1 := 3;
+        rxelecidlereset1 := false;
+        rxcdrreset1 := false;
+    }
+    if (matched(out0) && matched(out1))
+        _rxenelecidleresetb := !(rxelecidlereset0 || rxelecidlereset1);
+    else if (matched(out0))
+        _rxenelecidleresetb := !rxelecidlereset0;
+    else if (matched(out1))
+        _rxenelecidleresetb := !rxelecidlereset1;
+    else
+        _rxenelecidleresetb := true;
+    
+    if (matched(in0))
+        data_input(txdata0, txcharisk0, nullarg(txdiag0) <- in0, run_length);
+    else {
+        txdata0[0] := 0;
+        txdata0[1] := 0;
+        txpowerdown0 := 3;
+        txcharisk0 := {false,false};
+    }
+    if (matched(in1))
+        data_input(txdata1, txcharisk1, nullarg(txdiag1) <- in1, run_length);
+    else {
+        txdata1[0] := 0;
+        txdata1[1] := 0;
+        txpowerdown1 := 3;
+        txcharisk1 := {false,false};
+    }
+
+    if (matched(rxdiag0)) {
+        rxdiag0[7] := rxcommadet0;
+        rxdiag0[6] := rxbyteisaligned0;
+        rxdiag0[5] := rxchariscomma0[0];
+        rxdiag0[4] := rxchariscomma0[1];
+        rxdiag0[3] := rxdisperr0[0];
+        rxdiag0[2] := rxdisperr0[1];
+        rxdiag0[1] := rxlossofsync0[0];
+        rxdiag0[0] := rxlossofsync0[1];
+    }
+    if (matched(rxdiag1)) {
+        rxdiag1[7] := rxcommadet1;
+        rxdiag1[6] := rxbyteisaligned1;
+        rxdiag1[5] := rxchariscomma1[0];
+        rxdiag1[4] := rxchariscomma1[1];
+        rxdiag1[3] := rxdisperr1[0];
+        rxdiag1[2] := rxdisperr1[1];
+        rxdiag1[1] := rxlossofsync1[0];
+        rxdiag1[0] := rxlossofsync1[1];
+    }
+
+    useclock();
+
+    module
+    data_output (
+        queue(out),
+        static(rxcdrreset, "log"),
+        value(rxdiag, "[10]log")
+        <-
+        value(rxdata_in, "[2]bits:8"),
+        value({rxcharisk_in, rxchariscomma_in, rxdisperr_in, rxnotintable_in}, "[2]log"),
+        value(rxbyteisaligned_in, "log"),
+        log(los_fsm),
+        value(rxlossofsync_in, "[2]log")
+    ) {
+        // Pipeline all inputs from GTP by one clock cycle to improve
+        // place-and-route.
+        static(rxdata, "[2]bits:8");
+        static({rxcharisk, rxchariscomma, rxdisperr, rxnotintable}, "[2]log");
+        static(rxbyteisaligned, "log");
+        static(rxlossofsync, "[2]log");
+        attributes(
+            {
+                rxdata, rxcharisk, rxchariscomma, rxdisperr, rxnotintable,
+                rxbyteisaligned, rxlossofsync
+            },
+            continuous=true
+        );
+        rxdata          <- rxdata_in;
+        rxcharisk       <- rxcharisk_in;
+        rxchariscomma   <- rxchariscomma_in;
+        rxdisperr       <- rxdisperr_in;
+        rxnotintable    <- rxnotintable_in;
+        rxbyteisaligned <- rxbyteisaligned_in;
+        if (los_fsm)
+            rxlossofsync    <- rxlossofsync_in;
+        
+        value(is_idle, "log", rxchariscomma[0]);
+        if (type(out) != ds16) {
+            static(local.was_idle, "log");
+            was_idle <- is_idle;
+        }
+
+        // rxok is duplicated for better optimisation
+        value(rxoka, "log");
+        value(rxokb, "log");
+        if (los_fsm) {
+            rxoka :=!rxlossofsync[0] && !rxlossofsync[1] && rxbyteisaligned;
+            rxokb := !rxlossofsync[0] && !rxlossofsync[1] && rxbyteisaligned;
+        } else {
+            rxoka := rxbyteisaligned;
+            rxokb := rxbyteisaligned;
+        }
+        sync when (rxoka && !is_idle) {
+            if (type(out) == gt_16_ee) {
+                out.data <<- (rxdata[0] << 8) | rxdata[1];
+                out.k <<- rxcharisk[0];
+                out.first <<- was_idle;
+                out.disperr[0] <<- rxdisperr[0];
+                out.disperr[1] <<- rxdisperr[1];
+                out.niterr[0] <<- rxnotintable[0];
+                out.niterr[1] <<- rxnotintable[1];
+            } else if (type(out) == gt_16_e) {
+                out.data <<- (rxdata[0] << 8) | rxdata[1];
+                out.k <<- rxcharisk[0];
+                out.first <<- was_idle;
+                out.error <<- rxdisperr[0] || rxdisperr[1] || rxnotintable[0] || rxnotintable[1];
+            } else if (type(out) == ds16) {
+                out.data <<- (rxdata[0] << 8) | rxdata[1];
+                out.k <<- rxcharisk[0];
+            } else
+                texit("gtp_dual_16(): output queue not allowed type");
+        }
+        if (matched(rxdiag)) {
+            rxdiag[8] := rxokb;
+            rxdiag[9] := is_idle;
+        }
+        
+        int(afcdinit, 1000);
+        static(align_fault_countdown, "uint:"+size(afcdinit), afcdinit);
+        value(align_fault_countdown_eq_0, "log", align_fault_countdown == 0);
+        when (rxchariscomma[1] && !align_fault_countdown_eq_0)
+            align_fault_countdown--;
+        when (rxchariscomma[1] && align_fault_countdown_eq_0) seq {
+            rxcdrreset <- true;
+            wait(2.e-6);    // assert reset for 2uS
+            rxcdrreset <- false;
+            align_fault_countdown <- afcdinit;
+            wait(20.e-6);   // wait 20uS - reset and resync takes about 10uS
+        }
+        when (!rxchariscomma[1])
+            align_fault_countdown <- afcdinit;
+        
+        int(ifcdinit, 10000);
+        static(idle_fault_countdown, "uint:"+size(ifcdinit), ifcdinit);
+        value(idle_fault_countdown_eq_0, "log", idle_fault_countdown == 0);
+        when (!rxchariscomma[0] && !idle_fault_countdown_eq_0)
+            idle_fault_countdown--;
+        when (!rxchariscomma[0] && idle_fault_countdown_eq_0) seq {
+            rxcdrreset <- true;
+            wait(2.e-6);    // assert reset for 2uS
+            rxcdrreset <- false;
+            idle_fault_countdown <- ifcdinit;
+            wait(20.e-6);   // wait 20uS - reset and resync takes about 10uS
+        }
+        when (rxchariscomma[0])
+            idle_fault_countdown <- ifcdinit;
+    }
+    
+    module
+    data_input (
+        value(txdata, "[2]bits:8"),
+        value(txcharisk, "[2]log"),
+        value(txdiag, "[2]log")
+        <-
+        queue(in), int(run_length)
+    ) {
+        value(idle, "log");
+        
+        if (run_length != 0) {
+            static(block_count, "uint:"+size(run_length), run_length);
+            value(block_count_eq_0, "log", block_count == 0);
+            if (type(in) == gt_16)
+                idle := <in && !?in.contin && block_count_eq_0 || !<in;
+            else if (type(in) == ds16)
+                idle := <in && block_count_eq_0 || !<in;
+            else
+                texit("gtp_dual_16(): input queue not allowed type");
+
+            txdata[0] := idle ? comma8 : ?in.data >> 8;
+            txdata[1] := idle ? D21_4 : ?in.data;
+            txcharisk[0] := idle ? true : ?in.k;
+            txcharisk[1] := false;
+
+            when (!idle)
+                null <<- in;
+            when (idle)
+                block_count <- run_length;
+            when (!idle && !block_count_eq_0)
+                block_count--;
+        } else {
+            idle := !<in;
+
+            txdata[0] := idle ? comma8 : ?in.data >> 8;
+            txdata[1] := idle ? D21_4 : ?in.data;
+            txcharisk[0] := idle ? true : ?in.k;
+            txcharisk[1] := false;
+
+            when (!idle)
+                null <<- in;
+        }
+
+        if (matched(txdiag)) {
+            txdiag[0] := !idle && ?in.k;
+            txdiag[1] := idle;
+        }
+    }
+}
+
+
+
+
+
+
+  
+global procedure
+gtp_dual (
+    // outputs
+    clock({refclkout, rxrecclk0, txoutclk0, rxrecclk1, txoutclk1}),
+    value({
+        drdy, phystatus0, phystatus1, plllkdet, resetdone0, resetdone1,
+        rxbyteisaligned0, rxbyteisaligned1, rxbyterealign0, rxbyterealign1,
+        rxchanbondseq0, rxchanbondseq1, rxchanisaligned0, rxchanisaligned1,
+        rxchanrealign0, rxchanrealign1, rxcommadet0, rxcommadet1, rxelecidle0,
+        rxelecidle1, rxoversampleerr0, rxoversampleerr1, rxprbserr0, rxprbserr1,
+        rxvalid0, rxvalid1},        
+        "log"
+    ),
+    value(rxconfigout, "bits:16"),  // port do
+    value({rxbufstatus0, rxbufstatus1}, "uint:3"),
+    value({rxchbondo0, rxchbondo1}, "[3]log"),
+    value({rxclkcorcnt0, rxclkcorcnt1}, "uint:3"),
+    value({rxdata0, rxdata1}, "[2]bits:8"),
+    value({rxdisperr0, rxdisperr1, rxnotintable0, rxnotintable1,
+           rxlossofsync0, rxlossofsync1, rxrundisp0, rxrundisp1,
+           rxchariscomma0, rxchariscomma1, rxcharisk0, rxcharisk1,
+           txkerr0, txkerr1, txrundisp0, txrundisp1},
+           "[2]log"),
+    value({rxstatus0, rxstatus1}, "uint:3"),
+    value({txbufstatus0, txbufstatus1}, "[2]log")
+    
+    <-
+    
+    // attributes
+    str({loc, refclkp_pin, refclkn_pin}),
+    log({
+        ac_cap_dis_0, ac_cap_dis_1, chan_bond_seq_2_use_0,
+        chan_bond_seq_2_use_1, clk_cor_insert_idle_flag_0,
+        clk_cor_insert_idle_flag_1, clk_cor_keep_idle_0, clk_cor_keep_idle_1,
+        clk_cor_precedence_0, clk_cor_precedence_1, clk_cor_seq_2_use_0,
+        clk_cor_seq_2_use_1, clk_correct_use_0, clk_correct_use_1,
+        comma_double_0, comma_double_1, dec_mcomma_detect_0,
+        dec_mcomma_detect_1, dec_pcomma_detect_0, dec_pcomma_detect_1,
+        dec_valid_comma_only_0, dec_valid_comma_only_1, mcomma_detect_0,
+        mcomma_detect_1, oversample_mode, pci_express_mode_0,
+        pci_express_mode_1, pcomma_detect_0, pcomma_detect_1, rcv_term_gnd_0,
+        rcv_term_gnd_1, rcv_term_mid_0, rcv_term_mid_1, rcv_term_vttrx_0,
+        rcv_term_vttrx_1, rx_buffer_use_0, rx_buffer_use_1,
+        rx_decode_seq_match_0, rx_decode_seq_match_1, rx_loss_of_sync_fsm_0,
+        rx_loss_of_sync_fsm_1, termination_ovrd, tx_buffer_use_0,
+        tx_buffer_use_1
+    }),
+    log(tx_diff_boost_0, true),
+    log(tx_diff_boost_1, true),
+    int({
+        align_comma_word_0, align_comma_word_1, chan_bond_1_max_skew_0,
+        chan_bond_1_max_skew_1, chan_bond_2_max_skew_0, chan_bond_2_max_skew_1,
+        chan_bond_level_0, chan_bond_level_1, chan_bond_seq_1_1_0,
+        chan_bond_seq_1_1_1, chan_bond_seq_1_2_0, chan_bond_seq_1_2_1,
+        chan_bond_seq_1_3_0, chan_bond_seq_1_3_1, chan_bond_seq_1_4_0,
+        chan_bond_seq_1_4_1, chan_bond_seq_1_enable_0, chan_bond_seq_1_enable_1,
+        chan_bond_seq_2_1_0, chan_bond_seq_2_1_1, chan_bond_seq_2_2_0,
+        chan_bond_seq_2_2_1, chan_bond_seq_2_3_0, chan_bond_seq_2_3_1,
+        chan_bond_seq_2_4_0, chan_bond_seq_2_4_1, chan_bond_seq_2_enable_0,
+        chan_bond_seq_2_enable_1, clk_cor_seq_1_1_0, clk_cor_seq_1_1_1,
+        clk_cor_seq_1_2_0, clk_cor_seq_1_2_1, clk_cor_seq_1_3_0,
+        clk_cor_seq_1_3_1, clk_cor_seq_1_4_0, clk_cor_seq_1_4_1,
+        clk_cor_seq_1_enable_0, clk_cor_seq_1_enable_1, clk_cor_seq_2_1_0,
+        clk_cor_seq_2_1_1, clk_cor_seq_2_2_0, clk_cor_seq_2_2_1,
+        clk_cor_seq_2_3_0, clk_cor_seq_2_3_1, clk_cor_seq_2_4_0,
+        clk_cor_seq_2_4_1, clk_cor_seq_2_enable_0, clk_cor_seq_2_enable_1,
+        com_burst_val_0, com_burst_val_1, comma_10b_enable_0, comma_10b_enable_1,
+        mcomma_10b_value_0, mcomma_10b_value_1, oobdetect_threshold_0,
+        oobdetect_threshold_1, pcomma_10b_value_0, pcomma_10b_value_1,
+        sata_burst_val_0,
+        sata_burst_val_1, sata_idle_val_0, sata_idle_val_1, termination_ctrl
+    }),
+    int({   pcs_com_cfg, pma_cdr_scan_0, pma_cdr_scan_1, pma_rx_cfg_0,
+            pma_rx_cfg_1, prbs_err_threshold_0, prbs_err_threshold_1, 
+            trans_time_from_p2_0, trans_time_from_p2_1, trans_time_non_p2_0,
+            trans_time_non_p2_1, trans_time_to_p2_0, trans_time_to_p2_1}),
+    int(chan_bond_seq_len_0,    1),
+    int(chan_bond_seq_len_1,    1),
+    int(clk25_divider,          1),
+    int(clk_cor_adj_len_0,      1),
+    int(clk_cor_adj_len_1,      1),
+    int(clk_cor_det_len_0,      1),
+    int(clk_cor_det_len_1,      1),
+    int(clk_cor_max_lat_0,      3),
+    int(clk_cor_max_lat_1,      3),
+    int(clk_cor_min_lat_0,      3),
+    int(clk_cor_min_lat_1,      3),
+    int(clk_cor_repeat_wait_0,  0),
+    int(clk_cor_repeat_wait_1,  0),
+    int(oob_clk_divider,        1),
+    int(pll_divsel_fb,          1),
+    int(pll_divsel_ref,         1),
+    int(pll_rxdivsel_out_0,     1),
+    int(pll_rxdivsel_out_1,     1),
+    int(pll_txdivsel_comm_out,  1),
+    int(pll_txdivsel_out_0,     1),
+    int(pll_txdivsel_out_1,     1),
+    int(rx_los_invalid_incr_0,  1),
+    int(rx_los_invalid_incr_1,  1),
+    int(rx_los_threshold_0,     4),
+    int(rx_los_threshold_1,     4),
+    int(sata_max_burst_0,       7),
+    int(sata_max_burst_1,       7),
+    int(sata_max_init_0,       22),
+    int(sata_max_init_1,       22),
+    int(sata_max_wake_0,        7),
+    int(sata_max_wake_1,        7),
+    int(sata_min_burst_0,       5),
+    int(sata_min_burst_1,       5),
+    int(sata_min_init_0,       12),
+    int(sata_min_init_1,       12),
+    int(sata_min_wake_0,        4),
+    int(sata_min_wake_1,        14),
+    str({   chan_bond_mode_0, chan_bond_mode_1, rx_slide_mode_0,
+            rx_slide_mode_1, rx_status_fmt_0, rx_status_fmt_1, rx_xclk_sel_0,
+            rx_xclk_sel_1   }),
+    // str(pma_com_cfg),
+    // inputs
+    clock({
+        txusrclk0, txusrclk20, rxusrclk0, rxusrclk20,
+        txusrclk1, txusrclk21, rxusrclk1, rxusrclk21,
+        clkin, dclk
+    }),
+    value({den, dwe, gtpreset, intdatawidth, plllkdeten, pllpowerdown,
+           prbscntreset0, prbscntreset1, refclkpwrdnb, rxbufreset0, rxbufreset1,
+           rxcdrreset0, rxcdrreset1, rxcommadetuse0, rxcommadetuse1,
+           rxdatawidth0, rxdatawidth1, rxdec8b10buse0, rxdec8b10buse1,
+           rxelecidlereset0, rxelecidlereset1, rxenchansync0, rxenchansync1,
+           rxenelecidleresetb, rxeneqb0, rxeneqb1, rxenmcommaalign0,
+           rxenmcommaalign1, rxenpcommaalign0, rxenpcommaalign1,
+           rxensamplealign0, rxensamplealign1, rxpmasetphase0, rxpmasetphase1,
+           rxpolarity0, rxpolarity1, rxreset0, rxreset1, rxslide0, rxslide1,
+           txcomstart0, txcomstart1, txcomtype0, txcomtype1, txdatawidth0,
+           txdatawidth1, txdetectrx0, txdetectrx1, txelecidle0, txelecidle1,
+           txenc8b10buse0, txenc8b10buse1, txenpmaphasealign, txinhibit0,
+           txinhibit1, txpmasetphase, txpolarity0, txpolarity1, txreset0, txreset1
+           }, "log"
+    ),
+    value(daddr, "uint:7"),
+    value(txconfigin, "bits:16"),   // port di
+    value({rxchbondi0, rxchbondi1}, "[3]log"),
+    value({rxeqpole0, rxeqpole1}, "uint:4"),
+    value({txbypass8b10b0, txbypass8b10b1, txchardispmode0, txchardispmode1,
+           txchardispval0, txchardispval1,
+           txcharisk0, txcharisk1},
+           "[2]log"),
+    value({rxeqmix0, rxeqmix1}, "uint:2"),
+    value({txdata0, txdata1}, "[2]bits:8"),
+    value({txenprbstst0, rxenprbstst0,
+           txenprbstst1, rxenprbstst1},
+          "uint:2"),  
+    value({txpowerdown0, rxpowerdown0,
+           txpowerdown1, rxpowerdown1},
+          "uint:2"),
+    value({txpreemphasis0, txpreemphasis1, txdiffctrl0, txdiffctrl1,
+           txbufdiffctrl0, txbufdiffctrl1, loopback0, loopback1},
+           "uint:3")
+) {
+    int(arrayformat, 2);
+    // fixed attributes
+    int(termination_imp_0, 50);
+    int(termination_imp_1, 50);
+    int(tx_sync_filterb,    1);
+    
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "gtp_dual"+idn++);
+    element("GTP_DUAL", id);
+
+    str({tx_xclk_sel_0, tx_xclk_sel_1});
+    int({txrx_invert0, txrx_invert1});
+    if (tx_buffer_use_0) {
+        tx_xclk_sel_0 = "TXOUT";
+        txrx_invert0 = 0b00000;
+    } else {
+        tx_xclk_sel_0 = "TXUSR";
+        txrx_invert0 = 0b00100;
+    }
+    if (tx_buffer_use_1) {
+        tx_xclk_sel_1 = "TXOUT";
+        txrx_invert1 = 0b00000;
+    } else {
+        tx_xclk_sel_1 = "TXUSR";
+        txrx_invert1 = 0b00100;
+    }
+    log(clkindc_b, true);           // must be true
+    log({pll_sata_0, pll_sata_1});  // must both be false
+    
+    elementclockinput(id, "TXUSRCLK0",  nullarg(txusrclk0)      );
+    elementclockinput(id, "TXUSRCLK20", nullarg(txusrclk20)     );
+    elementclockinput(id, "RXUSRCLK0",  nullarg(rxusrclk0)      );
+    elementclockinput(id, "RXUSRCLK20", nullarg(rxusrclk20)     );
+    elementclockinput(id, "TXUSRCLK1",  nullarg(txusrclk1)      );
+    elementclockinput(id, "TXUSRCLK21", nullarg(txusrclk21)     );
+    elementclockinput(id, "RXUSRCLK1",  nullarg(rxusrclk1)      );
+    elementclockinput(id, "RXUSRCLK21", nullarg(rxusrclk21)     );
+    elementclockinput(id, "CLKIN",      nullarg(clkin)          );
+    elementclockinput(id, "DCLK",       nullarg(dclk)           );
+    
+    elementinput(id, "DEN",                  nullarg(den)                          );
+    elementinput(id, "DWE",                  nullarg(dwe)                          );
+    elementinput(id, "GTPRESET",             nullarg(gtpreset)                     );
+    elementinput(id, "INTDATAWIDTH",         nullarg(intdatawidth)                 );
+    elementinput(id, "PLLLKDETEN",           nullarg(plllkdeten)                   );
+    elementinput(id, "PLLPOWERDOWN",         nullarg(pllpowerdown)                 );
+    elementinput(id, "PRBSCNTRESET0",        nullarg(prbscntreset0)                );
+    elementinput(id, "PRBSCNTRESET1",        nullarg(prbscntreset1)                );
+    elementinput(id, "REFCLKPWRDNB",         nullarg(refclkpwrdnb)                 );
+    elementinput(id, "RXBUFRESET0",          nullarg(rxbufreset0)                  );
+    elementinput(id, "RXBUFRESET1",          nullarg(rxbufreset1)                  );
+    elementinput(id, "RXCDRRESET0",          nullarg(rxcdrreset0)                  );
+    elementinput(id, "RXCDRRESET1",          nullarg(rxcdrreset1)                  );
+    elementinput(id, "RXCOMMADETUSE0",       nullarg(rxcommadetuse0)               );
+    elementinput(id, "RXCOMMADETUSE1",       nullarg(rxcommadetuse1)               );
+    elementinput(id, "RXDATAWIDTH0",         nullarg(rxdatawidth0)                 );
+    elementinput(id, "RXDATAWIDTH1",         nullarg(rxdatawidth1)                 );
+    elementinput(id, "RXDEC8B10BUSE0",       nullarg(rxdec8b10buse0)               );
+    elementinput(id, "RXDEC8B10BUSE1",       nullarg(rxdec8b10buse1)               );
+    elementinput(id, "RXELECIDLERESET0",     nullarg(rxelecidlereset0)             );
+    elementinput(id, "RXELECIDLERESET1",     nullarg(rxelecidlereset1)             );
+    elementinput(id, "RXENCHANSYNC0",        nullarg(rxenchansync0)                );
+    elementinput(id, "RXENCHANSYNC1",        nullarg(rxenchansync1)                );
+    elementinput(id, "RXENELECIDLERESETB",   nullarg(rxenelecidleresetb)           );
+    elementinput(id, "RXENEQB0",             nullarg(rxeneqb0)                     );
+    elementinput(id, "RXENEQB1",             nullarg(rxeneqb1)                     );
+    elementinput(id, "RXENMCOMMAALIGN0",     nullarg(rxenmcommaalign0)             );
+    elementinput(id, "RXENMCOMMAALIGN1",     nullarg(rxenmcommaalign1)             );
+    elementinput(id, "RXENPCOMMAALIGN0",     nullarg(rxenpcommaalign0)             );
+    elementinput(id, "RXENPCOMMAALIGN1",     nullarg(rxenpcommaalign1)             );
+    elementinput(id, "RXENSAMPLEALIGN0",     nullarg(rxensamplealign0 )            );
+    elementinput(id, "RXENSAMPLEALIGN1",     nullarg(rxensamplealign1)             );
+    elementinput(id, "RXPMASETPHASE0",       nullarg(rxpmasetphase0)               );
+    elementinput(id, "RXPMASETPHASE1",       nullarg(rxpmasetphase1)               );
+    elementinput(id, "RXPOLARITY0",          nullarg(rxpolarity0)                  );
+    elementinput(id, "RXPOLARITY1",          nullarg(rxpolarity1)                  );
+    elementinput(id, "RXRESET0",             nullarg(rxreset0)                     );
+    elementinput(id, "RXRESET1",             nullarg(rxreset1)                     );
+    elementinput(id, "RXSLIDE0",             nullarg(rxslide0)                     );
+    elementinput(id, "RXSLIDE1",             nullarg(rxslide1)                     );
+    elementinput(id, "TXCOMSTART0",          nullarg(txcomstart0)                  );
+    elementinput(id, "TXCOMSTART1",          nullarg(txcomstart1)                  );
+    elementinput(id, "TXCOMTYPE0",           nullarg(txcomtype0)                   );
+    elementinput(id, "TXCOMTYPE1",           nullarg(txcomtype1)                   );
+    elementinput(id, "TXDATAWIDTH0",         nullarg(txdatawidth0)                 );
+    elementinput(id, "TXDATAWIDTH1",         nullarg(txdatawidth1)                 );
+    elementinput(id, "TXDETECTRX0",          nullarg(txdetectrx0)                  );
+    elementinput(id, "TXDETECTRX1",          nullarg(txdetectrx1)                  );
+    elementinput(id, "TXELECIDLE0",          nullarg(txelecidle0)                  );
+    elementinput(id, "TXELECIDLE1",          nullarg(txelecidle1)                  );
+    elementinput(id, "TXENC8B10BUSE0",       nullarg(txenc8b10buse0)               );
+    elementinput(id, "TXENC8B10BUSE1",       nullarg(txenc8b10buse1)               );
+    elementinput(id, "TXENPMAPHASEALIGN",    nullarg(txenpmaphasealign)            );
+    elementinput(id, "TXINHIBIT0",           nullarg(txinhibit0)                   );
+    elementinput(id, "TXINHIBIT1",           nullarg(txinhibit1)                   );
+    elementinput(id, "TXPMASETPHASE",        nullarg(txpmasetphase)                );
+    elementinput(id, "TXPOLARITY0",          nullarg(txpolarity0)                  );
+    elementinput(id, "TXPOLARITY1",          nullarg(txpolarity1)                  );
+    elementinput(id, "TXRESET0",             nullarg(txreset0)                     );
+    elementinput(id, "TXRESET1",             nullarg(txreset1)                     );
+    elementinput(id, "DADDR",                nullarg(daddr),            arrayformat);
+    elementinput(id, "DI",                   nullarg(txconfigin),       arrayformat);
+    elementinput(id, "RXCHBONDI0",           nullarg(rxchbondi0),       arrayformat);
+    elementinput(id, "RXCHBONDI1",           nullarg(rxchbondi1),       arrayformat);
+    elementinput(id, "RXEQPOLE0",            nullarg(rxeqpole0),        arrayformat);
+    elementinput(id, "RXEQPOLE1",            nullarg(rxeqpole1),        arrayformat);
+    elementinput(id, "TXBYPASS8B10B0",       nullarg(txbypass8b10b0),   arrayformat);
+    elementinput(id, "TXBYPASS8B10B1",       nullarg(txbypass8b10b1),   arrayformat);
+    elementinput(id, "TXCHARDISPMODE0",      nullarg(txchardispmode0),  arrayformat);
+    elementinput(id, "TXCHARDISPMODE1",      nullarg(txchardispmode1),  arrayformat);
+    elementinput(id, "TXCHARDISPVAL0",       nullarg(txchardispval0),   arrayformat);
+    elementinput(id, "TXCHARDISPVAL1",       nullarg(txchardispval1),   arrayformat);
+    elementinput(id, "TXCHARISK0",           nullarg(txcharisk0),       arrayformat);
+    elementinput(id, "TXCHARISK1",           nullarg(txcharisk1),       arrayformat);
+    elementinput(id, "RXEQMIX0",             nullarg(rxeqmix0),         arrayformat);
+    elementinput(id, "RXEQMIX1",             nullarg(rxeqmix1),         arrayformat);
+    elementinput(id, "TXDATA0",              nullarg(txdata0),          arrayformat);
+    elementinput(id, "TXDATA1",              nullarg(txdata1),          arrayformat);
+    elementinput(id, "TXENPRBSTST0",         nullarg(txenprbstst0),     arrayformat);
+    elementinput(id, "RXENPRBSTST0",         nullarg(rxenprbstst0),     arrayformat);
+    elementinput(id, "TXENPRBSTST1",         nullarg(txenprbstst1),     arrayformat);
+    elementinput(id, "RXENPRBSTST1",         nullarg(rxenprbstst1),     arrayformat);
+    elementinput(id, "TXPOWERDOWN0",         nullarg(txpowerdown0),     arrayformat);
+    elementinput(id, "RXPOWERDOWN0",         nullarg(rxpowerdown0),     arrayformat);
+    elementinput(id, "TXPOWERDOWN1",         nullarg(txpowerdown1),     arrayformat);
+    elementinput(id, "RXPOWERDOWN1",         nullarg(rxpowerdown1),     arrayformat);
+    elementinput(id, "TXPREEMPHASIS0",       nullarg(txpreemphasis0),   arrayformat);
+    elementinput(id, "TXPREEMPHASIS1",       nullarg(txpreemphasis1),   arrayformat);
+    elementinput(id, "TXDIFFCTRL0",          nullarg(txdiffctrl0),      arrayformat);
+    elementinput(id, "TXDIFFCTRL1",          nullarg(txdiffctrl1),      arrayformat);
+    elementinput(id, "TXBUFDIFFCTRL0",       nullarg(txbufdiffctrl0),   arrayformat);
+    elementinput(id, "TXBUFDIFFCTRL1",       nullarg(txbufdiffctrl1),   arrayformat);
+    elementinput(id, "LOOPBACK0",            nullarg(loopback0),        arrayformat);
+    elementinput(id, "LOOPBACK1",            nullarg(loopback1),        arrayformat);
+
+    elementoutput(nullarg(refclkout)        <- id, "REFCLKOUT"                       );
+    elementoutput(nullarg(rxrecclk0)        <- id, "RXRECCLK0"                       );
+    elementoutput(nullarg(txoutclk0)        <- id, "TXOUTCLK0"                       );
+    elementoutput(nullarg(rxrecclk1)        <- id, "RXRECCLK1"                       );
+    elementoutput(nullarg(txoutclk1)        <- id, "TXOUTCLK1"                       );
+    elementoutput(nullarg(drdy)             <- id, "DRDY"                            );
+    elementoutput(nullarg(phystatus0)       <- id, "PHYSTATUS0"                      );
+    elementoutput(nullarg(phystatus1)       <- id, "PHYSTATUS1"                      );
+    elementoutput(nullarg(plllkdet)         <- id, "PLLLKDET"                        );
+    elementoutput(nullarg(resetdone0)       <- id, "RESETDONE0"                      );
+    elementoutput(nullarg(resetdone1)       <- id, "RESETDONE1"                      );
+    elementoutput(nullarg(rxbyteisaligned0) <- id, "RXBYTEISALIGNED0"                );
+    elementoutput(nullarg(rxbyteisaligned1) <- id, "RXBYTEISALIGNED1"                );
+    elementoutput(nullarg(rxbyterealign0)   <- id, "RXBYTEREALIGN0"                  );
+    elementoutput(nullarg(rxbyterealign1)   <- id, "RXBYTEREALIGN1"                  );
+    elementoutput(nullarg(rxchanbondseq0)   <- id, "RXCHANBONDSEQ0"                  );
+    elementoutput(nullarg(rxchanbondseq1)   <- id, "RXCHANBONDSEQ1"                  );
+    elementoutput(nullarg(rxchanisaligned0) <- id, "RXCHANISALIGNED0"                );
+    elementoutput(nullarg(rxchanisaligned1) <- id, "RXCHANISALIGNED1"                );
+    elementoutput(nullarg(rxchanrealign0)   <- id, "RXCHANREALIGN0"                  );
+    elementoutput(nullarg(rxchanrealign1)   <- id, "RXCHANREALIGN1"                  );
+    elementoutput(nullarg(rxcommadet0)      <- id, "RXCOMMADET0"                     );
+    elementoutput(nullarg(rxcommadet1)      <- id, "RXCOMMADET1"                     );
+    elementoutput(nullarg(rxelecidle0)      <- id, "RXELECIDLE0"                     );
+    elementoutput(nullarg(rxelecidle1)      <- id, "RXELECIDLE1"                     );
+    elementoutput(nullarg(rxoversampleerr0) <- id, "RXOVERSAMPLEERR0"                );
+    elementoutput(nullarg(rxoversampleerr1) <- id, "RXOVERSAMPLEERR1"                );
+    elementoutput(nullarg(rxprbserr0)       <- id, "RXPRBSERR0"                      );
+    elementoutput(nullarg(rxprbserr1)       <- id, "RXPRBSERR1"                      );
+    elementoutput(nullarg(rxvalid0)         <- id, "RXVALID0"                        );
+    elementoutput(nullarg(rxvalid1)         <- id, "RXVALID1"                        );
+    elementoutput(nullarg(rxconfigout)      <- id, "DO"                 , arrayformat);
+    elementoutput(nullarg(rxbufstatus0)      <- id, "RXBUFSTATUS0"      , arrayformat);
+    elementoutput(nullarg(rxbufstatus1)      <- id, "RXBUFSTATUS1"      , arrayformat);
+    elementoutput(nullarg(rxchbondo0)        <- id, "RXCHBONDO0"        , arrayformat);
+    elementoutput(nullarg(rxchbondo1)        <- id, "RXCHBONDO1"        , arrayformat);
+    elementoutput(nullarg(rxclkcorcnt0)      <- id, "RXCLKCORCNT0"      , arrayformat);
+    elementoutput(nullarg(rxclkcorcnt1)      <- id, "RXCLKCORCNT1"      , arrayformat);
+    elementoutput(nullarg(rxdata0)           <- id, "RXDATA0"           , arrayformat);
+    elementoutput(nullarg(rxdata1)           <- id, "RXDATA1"           , arrayformat);
+    elementoutput(nullarg(rxdisperr0)        <- id, "RXDISPERR0"        , arrayformat);
+    elementoutput(nullarg(rxdisperr1)        <- id, "RXDISPERR1"        , arrayformat);
+    elementoutput(nullarg(rxnotintable0)     <- id, "RXNOTINTABLE0"     , arrayformat);
+    elementoutput(nullarg(rxnotintable1)     <- id, "RXNOTINTABLE1"     , arrayformat);
+    elementoutput(nullarg(rxlossofsync0)     <- id, "RXLOSSOFSYNC0"     , arrayformat);
+    elementoutput(nullarg(rxlossofsync1)     <- id, "RXLOSSOFSYNC1"     , arrayformat);
+    elementoutput(nullarg(rxrundisp0)        <- id, "RXRUNDISP0"        , arrayformat);
+    elementoutput(nullarg(rxrundisp1)        <- id, "RXRUNDISP1"        , arrayformat);
+    elementoutput(nullarg(rxchariscomma0)    <- id, "RXCHARISCOMMA0"    , arrayformat);
+    elementoutput(nullarg(rxchariscomma1)    <- id, "RXCHARISCOMMA1"    , arrayformat);
+    elementoutput(nullarg(rxcharisk0)        <- id, "RXCHARISK0"        , arrayformat);
+    elementoutput(nullarg(rxcharisk1)        <- id, "RXCHARISK1"        , arrayformat);
+    elementoutput(nullarg(txkerr0)           <- id, "TXKERR0"           , arrayformat);
+    elementoutput(nullarg(txkerr1)           <- id, "TXKERR1"           , arrayformat);
+    elementoutput(nullarg(txrundisp0)        <- id, "TXRUNDISP0"        , arrayformat);
+    elementoutput(nullarg(txrundisp1)        <- id, "TXRUNDISP1"        , arrayformat);
+    elementoutput(nullarg(rxstatus0)         <- id, "RXSTATUS0"         , arrayformat);
+    elementoutput(nullarg(rxstatus1)         <- id, "RXSTATUS1"         , arrayformat);
+    elementoutput(nullarg(txbufstatus0)      <- id, "TXBUFSTATUS0"      , arrayformat);
+    elementoutput(nullarg(txbufstatus1)      <- id, "TXBUFSTATUS1"      , arrayformat);
+
+    // For the following attributes where they are not enclosed in nullargs()
+    // they are added to the constraints file regardless of whether they are
+    // passed an argument or not. Where no argument is passed in such cases then
+    // the default parameter value will be used. Parameters enclosed with nullargs()
+    // will only be written to the constraints file if passed an argument.
+    elementLogProperty(id, "AC_CAP_DIS_0",               ac_cap_dis_0               );
+    elementLogProperty(id, "AC_CAP_DIS_1",               ac_cap_dis_1               );
+    elementLogProperty(id, "CHAN_BOND_SEQ_2_USE_0",      chan_bond_seq_2_use_0      );
+    elementLogProperty(id, "CHAN_BOND_SEQ_2_USE_1",      chan_bond_seq_2_use_1      );
+    elementLogProperty(id, "CLK_CORRECT_USE_0",          clk_correct_use_0          );
+    elementLogProperty(id, "CLK_CORRECT_USE_1",          clk_correct_use_1          );
+    elementLogProperty(id, "CLK_COR_INSERT_IDLE_FLAG_0", clk_cor_insert_idle_flag_0 );
+    elementLogProperty(id, "CLK_COR_INSERT_IDLE_FLAG_1", clk_cor_insert_idle_flag_1 );
+    elementLogProperty(id, "CLK_COR_KEEP_IDLE_0",        clk_cor_keep_idle_0        );
+    elementLogProperty(id, "CLK_COR_KEEP_IDLE_1",        clk_cor_keep_idle_1        );
+    elementLogProperty(id, "CLK_COR_PRECEDENCE_0",       clk_cor_precedence_0       );
+    elementLogProperty(id, "CLK_COR_PRECEDENCE_1",       clk_cor_precedence_1       );
+    elementLogProperty(id, "CLK_COR_SEQ_2_USE_0",        clk_cor_seq_2_use_0        );
+    elementLogProperty(id, "CLK_COR_SEQ_2_USE_1",        clk_cor_seq_2_use_1        );
+    elementLogProperty(id, "CLKINDC_B",                  clkindc_b                  );
+    elementLogProperty(id, "COMMA_DOUBLE_0",             comma_double_0             );
+    elementLogProperty(id, "COMMA_DOUBLE_1",             comma_double_1             );
+    elementLogProperty(id, "DEC_MCOMMA_DETECT_0",        dec_mcomma_detect_0        );
+    elementLogProperty(id, "DEC_MCOMMA_DETECT_1",        dec_mcomma_detect_1        );
+    elementLogProperty(id, "DEC_PCOMMA_DETECT_0",        dec_pcomma_detect_0        );
+    elementLogProperty(id, "DEC_PCOMMA_DETECT_1",        dec_pcomma_detect_1        );
+    elementLogProperty(id, "DEC_VALID_COMMA_ONLY_0",     dec_valid_comma_only_0     );
+    elementLogProperty(id, "DEC_VALID_COMMA_ONLY_1",     dec_valid_comma_only_1     );
+    elementLogProperty(id, "MCOMMA_DETECT_0",            mcomma_detect_0            );
+    elementLogProperty(id, "MCOMMA_DETECT_1",            mcomma_detect_1            );
+    elementLogProperty(id, "OVERSAMPLE_MODE",            oversample_mode            );
+    elementLogProperty(id, "PCI_EXPRESS_MODE_0",         pci_express_mode_0         );
+    elementLogProperty(id, "PCI_EXPRESS_MODE_1",         pci_express_mode_1         );
+    elementLogProperty(id, "PCOMMA_DETECT_0",            pcomma_detect_0            );
+    elementLogProperty(id, "PCOMMA_DETECT_1",            pcomma_detect_1            );
+    elementLogProperty(id, "PLL_SATA_0",                 pll_sata_0                 );
+    elementLogProperty(id, "PLL_SATA_1",                 pll_sata_1                 );
+    elementLogProperty(id, "RCV_TERM_GND_0",             rcv_term_gnd_0             );
+    elementLogProperty(id, "RCV_TERM_GND_1",             rcv_term_gnd_1             );
+    elementLogProperty(id, "RCV_TERM_MID_0",             rcv_term_mid_0             );
+    elementLogProperty(id, "RCV_TERM_MID_1",             rcv_term_mid_1             );
+    elementLogProperty(id, "RCV_TERM_VTTRX_0",           rcv_term_vttrx_0           );
+    elementLogProperty(id, "RCV_TERM_VTTRX_1",           rcv_term_vttrx_1           );
+    elementLogProperty(id, "RX_BUFFER_USE_0",            rx_buffer_use_0            );
+    elementLogProperty(id, "RX_BUFFER_USE_1",            rx_buffer_use_1            );
+    elementLogProperty(id, "RX_DECODE_SEQ_MATCH_0",      rx_decode_seq_match_0      );
+    elementLogProperty(id, "RX_DECODE_SEQ_MATCH_1",      rx_decode_seq_match_1      );
+    elementLogProperty(id, "RX_LOSS_OF_SYNC_FSM_0",      rx_loss_of_sync_fsm_0      );
+    elementLogProperty(id, "RX_LOSS_OF_SYNC_FSM_1",      rx_loss_of_sync_fsm_1      );
+    elementLogProperty(id, "TERMINATION_OVRD",           termination_ovrd           );
+    elementLogProperty(id, "TX_BUFFER_USE_0",            tx_buffer_use_0            );
+    elementLogProperty(id, "TX_BUFFER_USE_1",            tx_buffer_use_1            );
+    elementLogProperty(id, "TX_DIFF_BOOST_0",            tx_diff_boost_0            );
+    elementLogProperty(id, "TX_DIFF_BOOST_1",            tx_diff_boost_1            );
+    elementIntProperty(id, "ALIGN_COMMA_WORD_0"    , align_comma_word_0,     1,  2);
+    elementIntProperty(id, "ALIGN_COMMA_WORD_1"    , align_comma_word_1,     1,  2);
+    elementIntProperty(id, "CHAN_BOND_1_MAX_SKEW_0", chan_bond_1_max_skew_0, 1, 14);
+    elementIntProperty(id, "CHAN_BOND_1_MAX_SKEW_1", chan_bond_1_max_skew_1, 1, 14);
+    elementIntProperty(id, "CHAN_BOND_2_MAX_SKEW_0", chan_bond_2_max_skew_0, 1, 14);
+    elementIntProperty(id, "CHAN_BOND_2_MAX_SKEW_1", chan_bond_2_max_skew_1, 1, 14);
+    elementIntProperty(id, "CHAN_BOND_LEVEL_0"     , chan_bond_level_0,      0,  7);
+    elementIntProperty(id, "CHAN_BOND_LEVEL_1"     , chan_bond_level_1,      0,  7);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_1_0", nullarg(chan_bond_seq_1_1_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_1_1", nullarg(chan_bond_seq_1_1_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_2_0", nullarg(chan_bond_seq_1_2_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_2_1", nullarg(chan_bond_seq_1_2_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_3_0", nullarg(chan_bond_seq_1_3_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_3_1", nullarg(chan_bond_seq_1_3_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_4_0", nullarg(chan_bond_seq_1_4_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_1_4_1", nullarg(chan_bond_seq_1_4_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_ENABLE_0", nullarg(chan_bond_seq_1_enable_0), 0,   0xf,  4);
+    elementBinProperty(id, "CHAN_BOND_SEQ_1_ENABLE_1", nullarg(chan_bond_seq_1_enable_1), 0,   0xf,  4);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_1_0", nullarg(chan_bond_seq_2_1_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_1_1", nullarg(chan_bond_seq_2_1_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_2_0", nullarg(chan_bond_seq_2_2_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_2_1", nullarg(chan_bond_seq_2_2_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_3_0", nullarg(chan_bond_seq_2_3_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_3_1", nullarg(chan_bond_seq_2_3_1),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_4_0", nullarg(chan_bond_seq_2_4_0),      0, 0x3ff, 11);
+    elementBinProperty(id,  "CHAN_BOND_SEQ_2_4_1", nullarg(chan_bond_seq_2_4_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_ENABLE_0", nullarg(chan_bond_seq_2_enable_0), 0,   0xf,  4);
+    elementBinProperty(id, "CHAN_BOND_SEQ_2_ENABLE_1", nullarg(chan_bond_seq_2_enable_1), 0,   0xf,  4);
+    elementIntProperty(id, "CHAN_BOND_SEQ_LEN_0"     , chan_bond_seq_len_0,   1,  4);
+    elementIntProperty(id, "CHAN_BOND_SEQ_LEN_1"     , chan_bond_seq_len_1,   1,  4);
+    elementIntProperty(id, "CLK25_DIVIDER"           , clk25_divider,         1, 12);
+    elementIntProperty(id, "CLK_COR_ADJ_LEN_0"       , clk_cor_adj_len_0,     1,  4);
+    elementIntProperty(id, "CLK_COR_ADJ_LEN_1"       , clk_cor_adj_len_1,     1,  4);
+    elementIntProperty(id, "CLK_COR_DET_LEN_0"       , clk_cor_det_len_0,     1,  4);
+    elementIntProperty(id, "CLK_COR_DET_LEN_1"       , clk_cor_det_len_1,     1,  4);
+    elementIntProperty(id, "CLK_COR_MAX_LAT_0"       , clk_cor_max_lat_0,     3, 48);
+    elementIntProperty(id, "CLK_COR_MAX_LAT_1"       , clk_cor_max_lat_1,     3, 48);
+    elementIntProperty(id, "CLK_COR_MIN_LAT_0"       , clk_cor_min_lat_0,     3, 48);
+    elementIntProperty(id, "CLK_COR_MIN_LAT_1"       , clk_cor_min_lat_1,     3, 48);
+    elementIntProperty(id, "CLK_COR_REPEAT_WAIT_0"   , clk_cor_repeat_wait_0, 0, 31);
+    elementIntProperty(id, "CLK_COR_REPEAT_WAIT_1"   , clk_cor_repeat_wait_1, 0, 31);
+    elementBinProperty(id, "CLK_COR_SEQ_1_1_0", nullarg(clk_cor_seq_1_1_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_1_1", nullarg(clk_cor_seq_1_1_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_2_0", nullarg(clk_cor_seq_1_2_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_2_1", nullarg(clk_cor_seq_1_2_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_3_0", nullarg(clk_cor_seq_1_3_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_3_1", nullarg(clk_cor_seq_1_3_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_4_0", nullarg(clk_cor_seq_1_4_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_4_1", nullarg(clk_cor_seq_1_4_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_1_ENABLE_0", nullarg(clk_cor_seq_1_enable_0), 0,   0xf,  4);
+    elementBinProperty(id, "CLK_COR_SEQ_1_ENABLE_1", nullarg(clk_cor_seq_1_enable_1), 0,   0xf,  4);
+    elementBinProperty(id, "CLK_COR_SEQ_2_1_0", nullarg(clk_cor_seq_2_1_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_1_1", nullarg(clk_cor_seq_2_1_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_2_0", nullarg(clk_cor_seq_2_2_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_2_1", nullarg(clk_cor_seq_2_2_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_3_0", nullarg(clk_cor_seq_2_3_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_3_1", nullarg(clk_cor_seq_2_3_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_4_0", nullarg(clk_cor_seq_2_4_0),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_4_1", nullarg(clk_cor_seq_2_4_1),      0, 0x3ff, 11);
+    elementBinProperty(id, "CLK_COR_SEQ_2_ENABLE_0", nullarg(clk_cor_seq_2_enable_0), 0,   0xf,  4);
+    elementBinProperty(id, "CLK_COR_SEQ_2_ENABLE_1", nullarg(clk_cor_seq_2_enable_1), 0,   0xf,  4);
+    elementBinProperty(id, "COMMA_10B_ENABLE_0", nullarg(comma_10b_enable_0),     0, 0x3ff, 10);
+    elementBinProperty(id, "COMMA_10B_ENABLE_1", nullarg(comma_10b_enable_1),     0, 0x3ff, 10);
+    elementBinProperty(id, "COM_BURST_VAL_0", nullarg(com_burst_val_0),        0,    15,  4);
+    elementBinProperty(id, "COM_BURST_VAL_1", nullarg(com_burst_val_1),        0,    15,  4);
+    elementBinProperty(id, "MCOMMA_10B_VALUE_0", nullarg(mcomma_10b_value_0),     0, 0x3ff, 10);
+    elementBinProperty(id, "MCOMMA_10B_VALUE_1", nullarg(mcomma_10b_value_1),     0, 0x3ff, 10);
+    elementBinProperty(id, "OOBDETECT_THRESHOLD_0", nullarg(oobdetect_threshold_0),  0,     7,  3);
+    elementBinProperty(id, "OOBDETECT_THRESHOLD_1", nullarg(oobdetect_threshold_1),  0,     7,  3);
+    elementIntProperty(id, "OOB_CLK_DIVIDER", oob_clk_divider, 1, 14);
+    elementBinProperty(id, "PCOMMA_10B_VALUE_0", nullarg(pcomma_10b_value_0), 0, 0x3ff, 10);
+    elementBinProperty(id, "PCOMMA_10B_VALUE_1", nullarg(pcomma_10b_value_1), 0, 0x3ff, 10);
+    //elementHexProperty(id, "PCS_COM_CFG", nullarg(pcs_com_cfg), 0, 0xfffffff, 7); // 0x1680A0E?
+    elementIntProperty(id, "PLL_DIVSEL_FB"        , pll_divsel_fb,         1, 5);
+    elementIntProperty(id, "PLL_DIVSEL_REF"       , pll_divsel_ref,        1, 2);
+    elementIntProperty(id, "PLL_RXDIVSEL_OUT_0"   , pll_rxdivsel_out_0,    1, 4);
+    elementIntProperty(id, "PLL_RXDIVSEL_OUT_1"   , pll_rxdivsel_out_1,    1, 4);
+    elementIntProperty(id, "PLL_TXDIVSEL_COMM_OUT", pll_txdivsel_comm_out, 1, 4);
+    elementIntProperty(id, "PLL_TXDIVSEL_OUT_0"   , pll_txdivsel_out_0,    1, 4);
+    elementIntProperty(id, "PLL_TXDIVSEL_OUT_1"   , pll_txdivsel_out_1,    1, 4);
+    elementHexProperty(id,  "PMA_CDR_SCAN_0", nullarg(pma_cdr_scan_0),       0,  0x7ffffff, 7);       // 0x6767640?
+    elementHexProperty(id,  "PMA_CDR_SCAN_1", nullarg(pma_cdr_scan_1),       0,  0x7ffffff, 7);       // 0x6767640?
+    elementHexProperty(id,  "PMA_RX_CFG_0", nullarg(pma_rx_cfg_0),         0,  0x1ffffff, 7);         // 0x09F0088?
+    elementHexProperty(id,  "PMA_RX_CFG_1", nullarg(pma_rx_cfg_1),         0,  0x1ffffff, 7);         // 0?
+    elementHexProperty(id,  "PRBS_ERR_THRESHOLD_0", nullarg(prbs_err_threshold_0), 0, 0x3fffffff, 8); // 0?
+    elementHexProperty(id,  "PRBS_ERR_THRESHOLD_1", nullarg(prbs_err_threshold_1), 0, 0x3fffffff, 8); // 0?
+    elementIntProperty(id, "RX_LOS_INVALID_INCR_0", rx_los_invalid_incr_0, 1, 128);
+    elementIntProperty(id, "RX_LOS_INVALID_INCR_1", rx_los_invalid_incr_1, 1, 128);
+    elementIntProperty(id, "RX_LOS_THRESHOLD_0"   , rx_los_threshold_0,    4, 512);
+    elementIntProperty(id, "RX_LOS_THRESHOLD_1"   , rx_los_threshold_1,    4, 512);
+    elementBinProperty(id, "SATA_BURST_VAL_0", nullarg(sata_burst_val_0), 0, 7, 3);
+    elementBinProperty(id, "SATA_BURST_VAL_1", nullarg(sata_burst_val_1), 0, 7, 3);
+    elementBinProperty(id, "SATA_IDLE_VAL_0", nullarg(sata_idle_val_0),  0, 7, 3);
+    elementBinProperty(id, "SATA_IDLE_VAL_1", nullarg(sata_idle_val_1),  0, 7, 3);
+    elementIntProperty(id, "SATA_MAX_BURST_0", sata_max_burst_0, 1, 61); 
+    elementIntProperty(id, "SATA_MAX_BURST_1", sata_max_burst_1, 1, 61); 
+    elementIntProperty(id, "SATA_MAX_INIT_0" , sata_max_init_0,  1, 61); 
+    elementIntProperty(id, "SATA_MAX_INIT_1" , sata_max_init_1,  1, 61); 
+    elementIntProperty(id, "SATA_MAX_WAKE_0" , sata_max_wake_0,  1, 61); 
+    elementIntProperty(id, "SATA_MAX_WAKE_1" , sata_max_wake_1,  1, 61); 
+    elementIntProperty(id, "SATA_MIN_BURST_0", sata_min_burst_0, 1, 61); 
+    elementIntProperty(id, "SATA_MIN_BURST_1", sata_min_burst_1, 1, 61); 
+    elementIntProperty(id, "SATA_MIN_INIT_0" , sata_min_init_0,  1, 61); 
+    elementIntProperty(id, "SATA_MIN_INIT_1" , sata_min_init_1,  1, 61); 
+    elementIntProperty(id, "SATA_MIN_WAKE_0" , sata_min_wake_0,  1, 61); 
+    elementIntProperty(id, "SATA_MIN_WAKE_1" , sata_min_wake_1,  1, 61); 
+    elementBinProperty(id, "TERMINATION_CTRL", nullarg(termination_ctrl), 0, 0x1D, 5);
+    elementIntProperty(id, "TERMINATION_IMP_0", termination_imp_0, 0, 50);
+    elementIntProperty(id, "TERMINATION_IMP_1", termination_imp_1, 0, 50);
+    elementHexProperty(id, "TRANS_TIME_FROM_P2_0", nullarg(trans_time_from_p2_0), 0, 0xffff,   4);
+    elementHexProperty(id, "TRANS_TIME_FROM_P2_1", nullarg(trans_time_from_p2_1), 0, 0xffff,   4);
+    elementHexProperty(id, "TRANS_TIME_NON_P2_0", nullarg(trans_time_non_p2_0),  0, 0xffff,   4);
+    elementHexProperty(id, "TRANS_TIME_NON_P2_1", nullarg(trans_time_non_p2_1),  0, 0xffff,   4);
+    elementHexProperty(id, "TRANS_TIME_TO_P2_0", nullarg(trans_time_to_p2_0),   0, 0xffff,   4);
+    elementHexProperty(id, "TRANS_TIME_TO_P2_1", nullarg(trans_time_to_p2_1),   0, 0xffff,   4);
+    elementIntProperty(id, "TX_SYNC_FILTERB", tx_sync_filterb, 0, 1);
+    //elementBinProperty(id, "TXRX_INVERT0", txrx_invert0, 0, 4, 5);
+    //elementBinProperty(id, "TXRX_INVERT1", txrx_invert1, 0, 4, 5);
+    elementStrProperty(id, "CHAN_BOND_MODE_0", nullarg(chan_bond_mode_0), "OFF", "MASTER", "SLAVE");
+    elementStrProperty(id, "CHAN_BOND_MODE_1", nullarg(chan_bond_mode_1), "OFF", "MASTER", "SLAVE");
+    elementStrProperty(id, "RX_SLIDE_MODE_0", nullarg(rx_slide_mode_0), "PCS", "PMA");
+    elementStrProperty(id, "RX_SLIDE_MODE_1", nullarg(rx_slide_mode_1), "PCS", "PMA");
+    elementStrProperty(id, "RX_STATUS_FMT_0", nullarg(rx_status_fmt_0), "PCIE", "SATA");
+    elementStrProperty(id, "RX_STATUS_FMT_1", nullarg(rx_status_fmt_1), "PCIE", "SATA");
+    elementStrProperty(id, "RX_XCLK_SEL_0", nullarg(rx_xclk_sel_0), "RXREC", "RXUSR");
+    elementStrProperty(id, "RX_XCLK_SEL_1", nullarg(rx_xclk_sel_1), "RXREC", "RXUSR");
+    elementStrProperty(id, "TXUSR", tx_xclk_sel_0, "TX_XCLK_SEL_0", "TXOUT");
+    elementStrProperty(id, "TXUSR", tx_xclk_sel_1, "TX_XCLK_SEL_1", "TXOUT");
+    // elementStrProperty(id, "PMA_COM_CFG", nullarg(pma_com_cfg, ????????????);
+    // LOOPBACK USE 90 bit value! - SET BY WIZARD!!! MUST FIND WHAT VALUE TO USE!!
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+    
+    elementend();
+}

@@ -1,0 +1,1059 @@
+/*
+ * 3PL - Parallel Pipeline Programming Language
+ *
+ * Copyright (C) 2002-2003
+ *     CSIRO Manufacturing and Infrastructure Technology
+ */
+
+options {
+   STATIC = false;
+   ERROR_REPORTING = false;
+}
+   
+PARSER_BEGIN(SimExpr)
+
+package threepl.simulator;
+
+import java.io.*;
+import java.util.*;
+import threepl.codegen.*;
+
+/**
+ * SimExpr contains the parser for the command interface to the
+ * simulator. It contains methods to compile a command expression
+ * into a node tree, optimise the tree, and evaluate the tree.
+ *
+ * @version $Revision: 8280 $
+ * @author Andrew Tulloh
+ *
+ * CAUTION: Do not edit SimExpr.jj or SimExpr.java; these files are generated
+ * automatically. Make changes to SimExpr.jjt only.
+ */
+public class SimExpr {
+
+   private SimExprSimpleNode root;
+   private SimExprNodeValue nodeValue;
+            
+   /**
+    * Main function for standalone testing
+    *
+    * @param args Not used
+    * @throws SimExprParseException If expression parse fails
+    */
+   public static void main(String args[]) throws SimExprParseException {
+      System.out.println("Reading from standard input...");
+      try {
+         SimExpr parser = SimExpr.newCommand(null, System.in);
+         parser.nodeDump("");
+/*
+         parser.eval();
+	 parser.valueDump();
+*/
+      } catch (Exception e) {
+         System.out.println(e.getMessage());
+         e.printStackTrace();
+      }
+   }
+   
+   /**
+    * Factory method for creation of command expression with String
+    *
+    * @param sim The single Sim object
+    * @param expr A command expression to parse
+    * @throws SimExprParseException If parse fails
+    *
+    * @return A new SimExpr object if parse is successful
+    */
+   public static SimExpr newCommand (Sim sim, String expr) throws SimExprParseException {
+      SimExpr s = new SimExpr(new StringReader(expr));
+      init(sim);
+      s.root = s.command();
+      // s.nodeDump("");      
+      return s;
+   }
+   
+   /**
+    * Factory method for creation of command expression with InputStream (eg System.in)
+    *
+    * @param sim The single Sim object
+    * @param is An InputStream containing the command expression to parse
+    * @throws SimExprParseException If parse fails
+    *
+    * @return A new SimExpr object if parse is successful
+    */
+   public static SimExpr newCommand (Sim sim, InputStream is) throws SimExprParseException {
+      SimExpr s = new SimExpr(is);
+      init(sim);
+      s.root = s.command();
+      // s.nodeDump("");      
+      return s;
+   }
+
+   /**
+    * Factory method for creation of math expression with String
+    *
+    * @param sim The single Sim object
+    * @param expr An arithmetic or logical expression to parse
+    * @throws SimExprParseException If parse fails
+    *
+    * @return A new SimExpr object if parse is successful
+    */
+   public static SimExpr newExpression (Sim sim, String expr) throws SimExprParseException {
+      SimExpr s = new SimExpr(new StringReader(expr));
+      init(sim);
+      s.root = s.expression();
+      return s;
+   }
+
+    /**
+     * Factory method for creation of math expression with InputStream (eg System.in)
+    *
+    * @param sim The single Sim object
+    * @param is An InputStream containing the arithmetic or logical expression to parse
+    * @throws SimExprParseException If parse fails
+    *
+    * @return A new SimExpr object if parse is successful
+     */
+   public static SimExpr newExpression (Sim sim, InputStream is) throws SimExprParseException {
+      SimExpr s = new SimExpr(is);
+      init(sim);
+      s.root = s.expression();
+      return s;
+   }
+
+   /**
+    * Return root node of expression tree
+    *
+    * @return The root node of the expression tree
+    */
+   public SimExprSimpleNode getRoot () {
+      return root;
+   }
+                
+   /**
+    * Initialisation during constructor
+    *
+    * @param sim The single Sim object
+    */   
+   private static void init (Sim sim) {
+   
+      /* Set the static Sim for the parse tree */
+      SimExprSimpleNode.sim = sim;
+      
+      /* Define true boolean literals */
+      System.setProperty("true", "true");  
+      System.setProperty("high", "true");  
+   }
+       
+   /**
+    * Return the expression result
+    *
+    * @return The expression result, contained in a SimExprNodeValue object
+    */
+
+   public SimExprNodeValue eval () {
+      return nodeValue = root.eval();      
+   }    
+             
+   /**
+    * Dump the expression tree to standard output
+    *
+    * @param prefix A String to prepend to the description of each node
+    */
+   public void nodeDump (String prefix) {
+      root.dump(prefix);	 
+   }
+   
+   /**
+    * Dump the value type and contents to standard output.
+    * Caution: This will refer to the value from the last call to eval().
+    * It does not automatically re-evaluate the expression, unless the
+    * expression has not yet been evaluated.
+    */
+   public void valueDump () {      
+      if (nodeValue==null)
+	 nodeValue = root.eval();
+      System.out.println("type="+nodeValue.printType()+", value="+nodeValue.toString());
+   }       
+                       
+}
+
+
+/* *** JAVACC STYLE DESCRIPTION OF THE PARSER BGINS HERE *** */
+ 
+ 
+PARSER_END(SimExpr)
+
+<*> TOKEN : {
+      < WHITESP: ([" ","\t"])+ >
+   |  < EOL: "\n" | "\r" | "\r\n" >
+}
+      
+/* Reserved command line words */
+   
+<IN_COMMAND> TOKEN : {
+      < BREAK:   "b"("r"("e"("a"("k")?)?)?)?             > : IN_SUBCOMMAND
+   |  < CALL:    "ca"("l"("l")?)?                        > : DEFAULT
+   |  < CLOCK:   "cl"("o"("c"("k")?)?)?                  > : DEFAULT
+   |  < CONT:    "co"("n"("t")?)?                        > : DEFAULT
+   |  < DISP:    "d"("i"("s"("p"("l"("a"("y")?)?)?)?)?)? > : IN_SUBCOMMAND
+   |  < EXIT:    "e"("x"("i"("t")?)?)?                   > : DEFAULT
+   |  < FORMAT:  "f"("o"("r"("m"("a"("t")?)?)?)?)?       > : IN_SUBCOMMAND
+   |  < HELP:    "h"("e"("l"("p")?)?)?                   > : IN_HELP
+   |  < PANNOT:  "pa"("n"("n"("o"("t")?)?)?)?            > : DEFAULT
+   |  < PLOT:    "pl"("o"("t")?)?                        > : IN_SUBCOMMAND
+   |  < PRINT:   "pr"("i"("n"("t")?)?)?                  > : DEFAULT
+   |  < QUIT:    "q"("u"("i"("t")?)?)?                   > : DEFAULT
+   |  < RESET:   "re"("s"("e"("t")?)?)?                  > : DEFAULT
+   |  < RUN:     "ru"("n")?                              > : DEFAULT
+   |  < SET:     "se"("t")?                              > : DEFAULT
+   |  < SHOW:    "sh"("o"("w")?)?                        > : DEFAULT
+   |  < STEP:    "st"("e"("p")?)?                        > : DEFAULT 
+   |  < TRACE:   "t"("r"("a"("c"("e")?)?)?)?             > : IN_SUBCOMMAND
+}
+
+<IN_SUBCOMMAND> TOKEN : {
+
+   /* break, display, format, trace and plot commands: */
+   
+      < ADDCMD:     "a"("d"("d")?)?        > : DEFAULT
+   |  < CLEARCMD:   "cle"("a"("r")?)?      > : DEFAULT
+   |  < CLOCKCMD:   "cloc"("k")?           > : DEFAULT
+   |  < LISTCMD:    "li"("s"("t")?)?       > : DEFAULT
+   |  < OFFCMD:     "of"("f")?             > : DEFAULT
+   |  < ONCMD:      "on"                   > : DEFAULT
+   |  < REMCMD:     "r"("e"("m")?)?        > : DEFAULT
+   |  < SHOWCMD:    "s"("h"("o"("w")?)?)?  > : DEFAULT
+   |  < EDGECMD:    "e"("d"("g"("e")?)?)?  > : DEFAULT
+   |  < LEVELCMD:   "le"("v"("e"("l")?)?)? > : DEFAULT
+}
+
+/* Non-whitespace token for help command */
+
+<IN_HELP> TOKEN : {
+      < WORD: ( ~[" ","\t"] )+ >
+}
+      
+/* Reserved expression words */
+
+TOKEN: {
+
+      < INTCAST: "int" >       /* integer cast operator */
+   |  < FLOATCAST: "float" >   /* float cast operator */
+   |  < PI:      "PI" >        /* Constant: pi */
+   |  < E:       "E" >         /* Constant: e  */
+   |  < NULL:    "null" >      /* The value held by null queues */
+}
+
+/*
+ * Declare function tokens to be active in state FUNCTION, which is never used.
+ * This is so we can recognize function names as arbitrary identifiers (so they
+ * aren't keywords which might clash with user variables), but still use the
+ * token.kind that the following declarations generate. See funcExp() below.
+ */ 
+
+<FUNCTION> TOKEN : {
+
+      < T:       "t" >         /* Returns simulator time since reset */
+   |  < SIZEOF:  "sizeof" >    /* 3pl sizeof operator */
+   |  < WRIT:    "writ" >      /* Returns true if variable was written */
+   |  < READ:    "read" >      /* Returns true if variable was read */
+   |  < ACC:     "acc" >       /* Returns true if variable was accessed */
+   |  < CHANGED: "changed" >   /* Returns true if variable has changed */ 
+   |  < COUNT:   "count" >     /* Returns this clock's active edge count */
+   |  < FREQ:    "freq" >      /* Returns this clock's frequency, Hz */
+   |  < PERIOD:  "period" >    /* Returns this clock's period, ns */
+   |  < LOG10:   "log" >       /* log base 10 */
+   |  < LN:      "ln" >        /* log base e */
+   |  < MIN:     "min" >       /* min(x,y): minimum of x and y */
+   |  < MAX:     "max" >       /* max(x,y): maximum of x and y */
+   |  < POW:     "pow" >       /* pow(x,y): x raised to the power y */
+   |  < DIMS: "dimensions" >   /* dimensions(varspec): number of varspec's dimensions */
+   |  < DIM:  "dimension"  >   /* dimensions(varspec,n): value of varspec's nth dimension */
+   |  < QUEUEWORDS: "queuewords" >   /* Returns no. of occupied elements in this queue */
+   |  < QUEUESPACES: "queuespaces" >  /* Returns no. of empty elements in this queue */
+   |  < QUEUEWRITESTATUS: "queuewritestatus" >  /* Returns queue write status (async queues only) */
+   |  < QUEUEREADSTATUS: "queuereadstatus" >    /* Returns queue read status (async queues only) */
+}
+
+/* Identifier group */
+
+TOKEN : {
+
+  /*
+   * An identifier group groups identifiers together by category, and on its own acts as
+   * a wildcard identifer. When entered with other identifier group(s), the intersection
+   * of the group results, eg. -data -outputs  represents all identifiers which are data
+   * outputs.
+   */
+  < IDENT_GROUP: "-threepl"   | 
+                 "-hidden"    | 
+                 "-variables" | 
+                 "-outputs"   |                 
+	         "-inputs"    | 
+	         "-ext"       | 
+	         "-control"   | 
+	         "-data"      |
+	         "-clocks" >
+}
+
+/* Boolean literals (must specify before identifiers) */         
+
+TOKEN : {
+   <BOOLEAN_LITERAL: "true" | "false" | "high" | "low" >
+}
+
+/* Identifiers */
+
+TOKEN : {
+
+        < IDENTIFIER: ("@")? ( <LETTER> | "_" )+ ( <DIGIT> | <LETTER> | "_" )* >
+  |     < WILDCARD_IDENTIFIER: "'" ( <WILDCARD> | <LETTER> | <DIGIT> | "_" | "." )+ "'" >
+  |     < #DIGIT: ["0"-"9"] >
+  |     < #LETTER: ["a"-"z", "A"-"Z"] >
+  |     < #WILDCARD: ["*", "?"] >  
+  |     <OPENSQUAREBRACKET: "[" >   /* open array index specifier */      
+  |     <CLOSESQUAREBRACKET: "]" >  /* close array index specifier */
+  |     "."                         /* used in struct fields */
+
+}
+
+/* Other literals */
+
+TOKEN : {
+
+  < INTEGER_LITERAL:
+        <DECIMAL_LITERAL> (["l","L"])?
+      | <HEX_LITERAL> (["l","L"])?
+      | <OCTAL_LITERAL> (["l","L"])?
+      | <BINARY_LITERAL> (["l","L"])?
+  >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+|
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+|
+  < #BINARY_LITERAL: "0" ["b","B"] (["0","1"])+ >
+|  
+  < FLOATING_LITERAL:
+        (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)? (["f","F","d","D"])?
+      | "." (["0"-"9"])+ (<EXPONENT>)? (["f","F","d","D"])?
+      | (["0"-"9"])+ <EXPONENT> (["f","F","d","D"])?
+      | (["0"-"9"])+ (<EXPONENT>)? ["f","F","d","D"]
+  >
+|
+  < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+|
+
+/*
+  // Can't use character literal at present because it clashes with WILDCARD_IDENTIFIER above.
+  // Probably won't need character literals anyway as they aren't supported in threepl.
+ 
+  < CHARACTER_LITERAL:
+      "'"
+      (   (~["'","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )
+      "'"
+  >
+|
+*/
+
+  < STRING_LITERAL:
+      "\""
+      (   (~["\"","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )*
+      "\""
+  >
+
+}
+
+/* Expression operators */
+
+TOKEN : {
+
+      <EQUALS: "=" >  /* assignment to lhs of = */      
+
+   |  < COLON: ":" >  /* part of ternary conditional expression */
+   |  < XORL: "^^" >  /* binary logical xor */
+   |  < ORL: "||" >   /* binary logical or */ 
+   |  < ANDL: "&&" >  /* binary logical and */
+    
+   |  < CARAT: "^" >  /* binary bitwise xor */
+   |  < ORB: "|"  >   /* binary bitwise or */
+   |  < ANDB: "&"  >  /* binary bitwise and */
+   
+   |  < NE: "!=" >    /* binary not equal to */
+   |  < EQ: "==" >    /* binary equal to */
+   |  < LE: "<=" >    /* binary less than or equal to */
+   |  < GE: ">=" >    /* binary greater than or equal to */
+   |  < GT: ">" >     /* unary prefix queue write availability or binary greater than */
+   |  < LT: "<" >     /* unary prefix queue read availability or binary less than */
+
+   |  < RSH: ">>" >   /* binary right shift */
+   |  < LSH: "<<" >   /* binary left shift */
+   
+   |  < MINUS: "-" >  /* unary prefix negation or binary subtraction */
+   |  < PLUS: "+" >   /* unary prefix no effect or binary addition */
+   
+   |  < REM: "%" >    /* binary remainder */
+   |  < DIV: "/" >    /* binary division */
+   |  < MUL: "*" >    /* binary multiplication */
+   
+   |  < HOOK: "?" >   /* unary prefix, queue examine or part of ternary conditional */
+   |  < TILDE: "~" >  /* unary prefix, bitwise inversion */
+   |  < BANG: "!" >   /* unary prefix, logical negation */
+
+   |  < ELLIPSES: ".." >    /* part of <n1..n2> postfix expression */ 
+   
+   |  < OPENBRACE: "{"  > /* opening token for an initialiser */
+   |  < CLOSEBRACE: "}" > /* closing token for an initialiser */
+   |  < COMMA: "," >  /* comma used in an initialiser */
+
+   |  < DUMMY: "<>" > /* dummy token used in primaryExp() */
+}
+
+/*
+   To do:
+    other functions eg. sin(expr) etc.
+    other assigmnents: +=, -=, *=, /=, &= etc.
+*/
+
+/**** Command line rules ****/
+
+SimExprSimpleNode command() : { } {
+   { token_source.SwitchTo(IN_COMMAND); }
+   ( <WHITESP> )?
+   ( breakCmd()  | clockCmd()  | contCmd() | dispCmd()  |
+     callCmd()   | formatCmd() | helpCmd() | plotCmd()  |
+     printCmd()  | quitCmd()   | resetCmd() | runCmd()  |
+     setCmd()    | showCmd()   | stepCmd() | traceCmd()
+   )
+   ( <WHITESP> )? ( <EOL> | <EOF> )	
+
+   {
+      /* Cut out redundant nodes */
+      jjtThis.trim();
+
+      /* Resolve variables and evaluate literals */
+      jjtThis.resolve();
+      
+      /* Type check */
+      jjtThis.getType();
+            
+      /* Compress each literal sub-tree into a single node */
+      jjtThis.compressLiteral();
+      
+      return jjtThis;
+   }
+}
+
+/* Format specification for expression */
+
+void formatSpec() : { SimExprToken x; } {
+   stringLiteral()
+   { 
+      /* Put the string literal into this node and remove the child node */
+      SimExprSimpleNode child = (SimExprSimpleNode)jjtThis.jjtGetChild(0);
+      jjtThis.setToken(child.token);
+      jjtThis.jjtRemoveChild(0);
+   }      
+}
+
+/* Breakpoint command */
+
+void breakCmd() : { SimExprToken x; } {
+   x=<BREAK>
+   ( LOOKAHEAD(2) <WHITESP>
+     ( 
+       ( ( x=<ADDCMD> | x=<REMCMD> | x=<EDGECMD> | x=<LEVELCMD> ) ( LOOKAHEAD(2) <WHITESP>
+         ( wildcard() | rhsExpression() ) )+ ) |
+       x=<LISTCMD> | x=<CLEARCMD>
+     )
+   )?      
+   { jjtThis.setToken(x); }
+}
+
+/* Clock command */
+
+void clockCmd() : { SimExprToken x; } {
+   x=<CLOCK> ( LOOKAHEAD(2) <WHITESP> varExp() )?
+   { jjtThis.setToken(x); }
+}
+
+/* Cont command */
+
+void contCmd() : { SimExprToken x; } {
+   x=<CONT>
+   { jjtThis.setToken(x); }
+}
+
+/* Disp(lay) command */
+
+void dispCmd() : { SimExprToken x; } {
+   x=<DISP>
+   ( LOOKAHEAD(2) <WHITESP>
+     ( 
+       ( ( x=<ADDCMD> | x=<REMCMD> )
+         ( LOOKAHEAD(2) <WHITESP> ( formatSpec() <WHITESP> )? ( wildcard() | rhsExpression() ) )+ ) |
+       x=<LISTCMD> | x=<CLEARCMD>
+     )
+   )?      
+   { jjtThis.setToken(x); }
+}
+
+/* Call command */
+
+void callCmd() : { SimExprToken x; } {
+   x=<CALL> <WHITESP> stringLiteral()
+   { jjtThis.setToken(x); }
+}
+
+/* Format command */
+
+void formatCmd() : { SimExprToken x; } {
+   x=<FORMAT>
+   ( LOOKAHEAD(2) <WHITESP>
+     ( 
+       ( x=<ADDCMD> ( LOOKAHEAD(2) <WHITESP> formatSpec() <WHITESP> ( wildcard() | rhsExpression() ) )+ ) |
+       ( x=<REMCMD> ( LOOKAHEAD(2) <WHITESP> ( wildcard() | rhsExpression() ) )+ ) |
+       x=<LISTCMD> | x=<CLEARCMD>
+     )
+   )?      
+   { jjtThis.setToken(x); }
+}
+
+/* Help command */
+
+void helpCmd() : {  SimExprToken x; } {
+   x=<HELP> ( LOOKAHEAD(2) <WHITESP> word() )*
+   { jjtThis.setToken(x); }
+}
+
+/* Plot command */
+
+void plotCmd() : { SimExprToken x; } {
+   x=<PLOT>
+   ( LOOKAHEAD(2) <WHITESP>
+      (        
+        ( ( x=<ADDCMD> | x=<REMCMD> )
+	  ( ( LOOKAHEAD(2) <WHITESP> ( wildcard() | rhsExpression() | stringLiteral() ) )+ ) ) | 	
+	x=<LISTCMD> |
+	x=<CLEARCMD>
+      )
+   )?
+   { jjtThis.setToken(x); }
+}
+
+/* Print command */
+
+void printCmd() : { SimExprToken x; } {
+   (( x=<PRINT> | x=<PANNOT> )
+      ( LOOKAHEAD(2) <WHITESP> ( formatSpec() <WHITESP> )? ( wildcard() | rhsExpression() ) )+ )
+   { jjtThis.setToken(x); }
+}
+
+/* Quit command */
+
+void quitCmd() : { SimExprToken x; } {
+   ( x=<QUIT> | x=<EXIT> )
+   { jjtThis.setToken(x); }
+}
+
+/* Reset command */
+
+void resetCmd() : { SimExprToken x; } {
+   x=<RESET>
+   { jjtThis.setToken(x); } 
+}
+
+/* Run command */
+
+void runCmd() : { SimExprToken x; } {
+   x=<RUN>
+   { jjtThis.setToken(x); }
+}
+
+/* Set command */
+
+void setCmd() : { SimExprToken x; } {
+   x=<SET> ( LOOKAHEAD(2) <WHITESP> assignment() )+
+   { jjtThis.setToken(x); }
+}
+
+/* Show command */
+
+void showCmd() : { SimExprToken x; } {
+   x=<SHOW> ( LOOKAHEAD(2) <WHITESP> ( wildcard() | varExp() | identGroup() ) )*
+   { jjtThis.setToken(x); }     
+}
+
+/* Step command */
+
+void stepCmd() : { SimExprToken x; } {
+   x=<STEP> ( LOOKAHEAD(2) <WHITESP> rhsExpression() ( LOOKAHEAD(2) <WHITESP> varExp() )? )?
+   { jjtThis.setToken(x); }
+}
+
+/* Trace command */
+
+void traceCmd() : { SimExprToken x; } {
+   x=<TRACE>
+
+   ( LOOKAHEAD(2) <WHITESP>
+      (        
+        ( ( x=<ADDCMD> | x=<REMCMD> | x=<ONCMD>  | x=<OFFCMD> )
+	  ( ( LOOKAHEAD(2) <WHITESP> ( wildcard() | rhsExpression() | stringLiteral() ) )+ ) ) | 
+	x=<LISTCMD> |
+	x=<CLEARCMD>
+      )
+   )?
+   { jjtThis.setToken(x); }
+}
+   
+/**** Expression rules ****/
+
+/* Overall expression */
+
+SimExprSimpleNode expression() : { } {
+
+  ( <WHITESP> )?  assignment()	( <WHITESP> )? ( <EOL> | <EOF> ) {
+  
+      /* Cut out redundant nodes */
+      jjtThis.trim();
+
+      /* Resolve variables and evaluate literals */
+      jjtThis.resolve();
+      
+      /* Type check */
+      jjtThis.getType();
+            
+      /* Compress each literal sub-tree into a single node */
+      jjtThis.compressLiteral();
+      
+      /* 
+       * Cut expression() out of the tree - it's always redundant.
+       * (Note that id may have been changed by compressLiteral().)
+       */
+      if (jjtThis.id==JJTEXPRESSION)
+         jjtThis = (SimExprSimpleNode)jjtThis.jjtGetChild(0);
+	 
+      return jjtThis;
+   }      
+}
+
+/* Right to Left assignment */
+
+void assignment() : { SimExprToken x; } {
+   (
+      LOOKAHEAD( varExp() <EQUALS> ) varExp() x=<EQUALS> {
+         jjtThis.setToken(x);
+      }
+   )?
+   rhsExpression()
+} 
+
+/* Right hand side expression */
+
+void rhsExpression() :  { } {
+   conditionalExp()
+}
+
+/* Ternary conditional expression */
+
+void conditionalExp() : { SimExprToken x; } {
+   logicalExp()
+   ( <HOOK> logicalExp() x=<COLON> {
+        jjtThis.setToken(x);
+     }
+     logicalExp()
+   )?
+}
+
+/* Logical expression (boolean) */
+     
+void logicalExp() : { } {
+   bitwiseExp() ( logicalOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Logical operator */
+
+void logicalOp() : { SimExprToken x; } {
+   ( x=<XORL> | x=<ORL> | x=<ANDL> ) {
+      jjtThis.setToken(x);
+   }
+   bitwiseExp()
+}
+
+/* Bitwise expression (numeric) */
+
+void bitwiseExp() : { } {
+   equalityExp() ( bitwiseOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Bitwise operator */
+
+void bitwiseOp() : { SimExprToken x; } {
+   ( x=<CARAT> | x=<ORB> | x=<ANDB> ) {
+      jjtThis.setToken(x);
+   }
+   equalityExp()
+}
+
+/* Equality expression */
+
+void equalityExp() : { } {
+   relationalExp() ( equalityOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Equality operator */
+
+void equalityOp() : { SimExprToken x; } {
+   ( x=<NE> | x=<EQ> ) {
+      jjtThis.setToken(x);
+   }
+   relationalExp()
+}
+
+/*
+ * Relational expression. Numerical operands and boolean result,
+ * so cannot concatenate more than two operands.
+ */
+ 
+void relationalExp() : { SimExprToken x; } {
+   shiftExp()
+   (
+      ( x=<GT> | x=<GE> | x=<LT> | x=<LE> ) {
+         jjtThis.setToken(x);
+      }         
+      shiftExp()
+   )?      
+}
+
+/* Shift expression */
+
+void shiftExp() : { } {
+   additiveExp() ( shiftOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Shift operator */
+
+void shiftOp() : { SimExprToken x; } {
+   ( x=<RSH> | x=<LSH> ) {
+      jjtThis.setToken(x);
+   }
+   additiveExp()
+}
+
+/* Additive expression */
+
+void additiveExp() : { } {
+   multiplicativeExp() ( additiveOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Additive operator */
+
+void additiveOp() : { SimExprToken x; } {
+   ( x=<MINUS> | x=<PLUS> ) {
+      jjtThis.setToken(x);
+   }
+   multiplicativeExp()
+}    
+
+/* Multiplicative expression  (numeric) */
+
+void multiplicativeExp() : { } {
+  unaryExp() ( multiplicativeOp() )*
+   { jjtThis.reverseChildren();}
+}
+
+/* Multiplicative operator */
+
+void multiplicativeOp() : { SimExprToken x; } {
+  ( x=<REM> | x=<DIV> | x=<MUL> ) {
+     jjtThis.setToken(x);
+  }
+  unaryExp()
+}
+
+/* Unary expression */
+
+void unaryExp() : { SimExprToken x; } {
+   ( ( ( x=<MINUS> | x=<PLUS> | x=<TILDE> | x=<BANG> | x=<HOOK> | x=<LT> | x=<GT> ) {
+          jjtThis.setToken(x);
+       }
+     ) unaryExp()
+   ) |
+   LOOKAHEAD(2) castExp() |
+   LOOKAHEAD(2) funcExp() |
+   varExp() |
+   primaryExp()
+}
+
+/* Cast expression */
+
+void castExp() : { SimExprToken x; } {
+  "(" ( x=<INTCAST> | x=<FLOATCAST> ) {
+         jjtThis.setToken(x);
+      }
+  ")" unaryExp()
+}
+
+/* Var expression */
+
+void varExp() : { } {
+   identifier() ( arraySubscript() | structField() )*
+}
+
+/* Array subscript */
+
+void arraySubscript() : { SimExprToken x; } {
+   x=<OPENSQUAREBRACKET> ( rangeExp() )?  <CLOSESQUAREBRACKET>
+   { jjtThis.setToken(x); }
+}
+
+/* Range expression */
+
+void rangeExp() : { } {
+   ( LOOKAHEAD( integerLiteral() <ELLIPSES> )
+     ( integerLiteral() <ELLIPSES> rhsExpression() ) |
+     ( rhsExpression() ( <ELLIPSES> rhsExpression() )? )
+   )
+}
+
+/* Struct field */
+
+void structField() : { SimExprToken x; } {
+   "."
+   x=<IDENTIFIER>
+   { jjtThis.setToken(x); }   
+}
+
+/* Function expression */
+
+void funcExp() : { SimExprToken x; } {
+
+   x=<IDENTIFIER> (
+   
+      /* Functions which take no parameter */
+      ( "()"
+         {
+	    if (x.image.equals("t"))
+               x.kind = T;
+         }	       
+      ) |
+      
+      /* Functions which take a varExp() parameter */
+      LOOKAHEAD("(" varExp() ")") ( "(" varExp() ")" 
+         {
+	    if (x.image.equals("read"))
+               x.kind = READ;
+	    else if (x.image.equals("writ"))
+               x.kind = WRIT;
+	    else if (x.image.equals("acc"))
+               x.kind = ACC;
+	    else if (x.image.equals("changed"))
+               x.kind = CHANGED;
+	    else if (x.image.equals("sizeof"))
+               x.kind = SIZEOF;
+	    else if (x.image.equals("dimensions"))
+               x.kind = DIMS;
+	    else if (x.image.equals("count"))
+               x.kind = COUNT;
+	    else if (x.image.equals("freq"))
+               x.kind = FREQ;
+	    else if (x.image.equals("period"))
+               x.kind = PERIOD;
+	    else if (x.image.equals("queuewords") || x.image.equals("pw"))
+               x.kind = QUEUEWORDS;
+	    else if (x.image.equals("queuespaces") || x.image.equals("ps"))
+               x.kind = QUEUESPACES;
+	    else if (x.image.equals("queuewritestatus"))
+               x.kind = QUEUEWRITESTATUS;
+	    else if (x.image.equals("queuereadstatus"))
+               x.kind = QUEUEREADSTATUS;
+         }	                   
+      ) |
+      
+      /* Other functions */
+      ( "(" rhsExpression() ( "," rhsExpression() )* ")"
+         {
+	    if (x.image.equals("min"))
+               x.kind = MIN;
+	    else if (x.image.equals("max"))
+               x.kind = MAX;
+	    else if (x.image.equals("log"))
+               x.kind = LOG10;
+	    else if (x.image.equals("ln"))
+               x.kind = LN;
+	    else if (x.image.equals("pow"))
+               x.kind = POW;
+	    else if (x.image.equals("dimension"))
+               x.kind = DIM;
+         }	       
+      )
+   )           
+
+   {
+      /* If x.kind still equals IDENTIFIER, wrong number or type of arguments, or unknown function */
+      if (x.kind==IDENTIFIER)
+         throw new SimExprParseException(x.image+" has wrong number/type of arguments or is not a function");
+
+      jjtThis.setToken(x);
+   }             
+}
+
+/* Primary expression */
+
+void primaryExp() : { } {
+   constant() |
+   initialiser() |
+   booleanLiteral() |
+   floatingLiteral() |
+   ( LOOKAHEAD(2) integerDotLiteral() | integerLiteral() ) |
+   (
+      "(" rhsExpression() ")"
+      {
+         /* Give this node a token so we know when to print parentheses during SimExprSimpleNode.expr() */ 
+	 jjtThis.setToken(SimExprToken.newToken(DUMMY));
+	 jjtThis.token.image = "()";
+      }      
+   )
+}
+
+void constant() : { SimExprToken x; } {
+   ( x=<PI> | x=<E> | x=<NULL> ) {
+      jjtThis.setToken(x);
+   }      
+}
+
+void initialiser() : { SimExprToken x; } {
+   x=<OPENBRACE> ( LOOKAHEAD(initElement()) initElement() )* ( rhsExpression() )? <CLOSEBRACE>
+   { jjtThis.setToken(x); }      
+}
+
+void initElement() : { SimExprToken x; } {
+   ( rhsExpression() )? <COMMA>
+   
+   {
+      /*
+       * If this node has no child, set its token so we retain it.
+       * It represents a comma with no value in an initialiser.
+       */
+      if (jjtThis.jjtGetNumChildren()==0) {
+         jjtThis.setToken(SimExprToken.newToken(COMMA));   
+	 jjtThis.token.image = ",";
+      }	 
+   }	 
+}   
+
+/* Identifier */
+
+void identifier() : { SimExprToken x; } {
+   x=<IDENTIFIER> {
+   
+      // If first character is @, remove it and set the bufferView flag
+      jjtThis.setToken(x);
+      if (jjtThis.token.image.charAt(0)=='@') {
+         jjtThis.token.image = jjtThis.token.image.substring(1);
+         jjtThis.bufferView = true;
+      }
+   }     
+}
+
+/* Identifier group (show command only) */
+
+void identGroup() : { SimExprToken x; } {
+   x=<IDENT_GROUP> {   
+     jjtThis.setToken(x);
+   }     
+}
+
+/* Integer literal (numeric) */
+
+void integerLiteral() : { SimExprToken x; } {
+   x=<INTEGER_LITERAL> {   
+     jjtThis.setToken(x);
+   }     
+}
+
+/*
+ * Integer literal followed by "."
+ * We match strings like "5." using this rule, rather than floatingLiteral().
+ * This allows us to parse subscript range expressions like [4..5] correctly
+ * (refer rangeExp()). Otherwise we get a parse exception because the above
+ * expression woule be read as [(4.).(5)]. The node generated by
+ * integerDotLiteral() is converted here to the equivalent floatingLiteral node.
+ */
+
+void integerDotLiteral () : { SimExprToken x; } {
+   ( x=<INTEGER_LITERAL> "." ) {
+      jjtThis.setToken(x);
+      x.kind = FLOATING_LITERAL;
+      x.image += ".";
+      jjtThis.setId(JJTFLOATINGLITERAL);
+   }
+}
+ 
+/* Floating literal (numeric) */
+
+void floatingLiteral() : { SimExprToken x; } {
+   x=<FLOATING_LITERAL> {
+      jjtThis.setToken(x);
+   }     
+}
+
+/* Boolean literal (boolean) */
+
+void booleanLiteral() : { SimExprToken x; } {
+   x=<BOOLEAN_LITERAL> {
+      jjtThis.setToken(x);
+   }     
+}
+
+/* String literal */
+
+void stringLiteral() : { SimExprToken x; } {
+   x=<STRING_LITERAL> {
+      /* Remove surrounding quotes */
+      x.image = x.image.substring(1, x.image.length()-1);
+      jjtThis.setToken(x);
+   }
+}
+
+/* Word (help command only) */
+
+void word() : { SimExprToken x; } {
+   x=<WORD> {
+      jjtThis.setToken(x);
+   }
+}
+
+/* Wildcard (identifier) expression */
+
+void wildcard() : { SimExprToken x; } {
+   x=<WILDCARD_IDENTIFIER> {
+      /* Remove surrounding single quotes */
+      x.image = x.image.substring(1, x.image.length()-1);
+      jjtThis.setToken(x);
+   }      
+}
+

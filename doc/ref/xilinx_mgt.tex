@@ -1,0 +1,443 @@
+\pagebreak
+
+\section{Xilinx VirtexII Pro MGT library - xilinx/mgt.3pl}
+
+    \index{library!xilinx/mgt.3pl}
+    This library provide a simple 16 bit interface to a VirtexII Pro
+    Multi-Gigabit Transceiver (referred to as an MGT or Rocket).
+    
+    This library must be incorporated by using a module statement, e.g. -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/mgt.3pl"
+    \end{lstlisting}
+    
+    The global structures {\bf mgt\_16}, {\bf mgt\_16\_e} and {\bf mgt\_16\_ee}
+    are created. They are defined as follows -
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16,
+           data,   "bits:16",  // data
+           k,      "log",      // true if top 8 bits of data form a K-character
+           contin, "log"       // this is a continuation word
+       );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16_e,
+           data,   "bits:16",  // data
+           k,      "log",      // true if top 8 bits of data form a K-character
+           first,  "log",      // previous word was an idle
+           error,  "log"       // disparity error or not-in-table error
+       );
+    \end{lstlisting}
+
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.gt_16_ee,
+           data,       "bits:16",  // data
+           k,          "log",      // true if top 8 bits of data form a K-character
+           first,      "log",      // previous word was an idle
+           disperr,    "[2]log",   // disparity errors
+           niterr,     "[2]log"    // not-in-table errors
+       );
+    \end{lstlisting}
+
+    {\bf mgt\_16} is used for input data. {\bf mgt\_16\_e} and
+    {\bf mgt\_16\_ee} are used for output data, the former providing a simpler
+    error indication than the latter.
+    
+    The global structure {\bf ds16} is also used and it is created in
+    {\bf stdlib.3pl}. It is 
+    \begin{lstlisting}[gobble=4, language=threepl]
+       struct(global.ds16,
+           data,   "bits:16",  // data
+           k,      "log"       // true if top 8 bits of data form a K-character
+       );
+    \end{lstlisting}
+
+
+    \subsection{library modules}
+
+        \subsubsection{gt\_custom\_16 - a 16-bit Rocket high-speed serial I/O channel}\label{sec:lmgtcustom16}
+
+            {\bf Library: xilinx/mgt.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+                   gt_custom_16 (
+                       queue(out),
+                       clock(ruclk),
+                       value(rxdiag, "[5]log"),
+                       value(txdiag, "[2]log")
+                       <-
+                       str({loc, txp_pin, txn_pin, rxp_pin, rxn_pin, clkp_pin, clkn_pin}),
+                       float(freq),         // MGT base frequency
+                       queue(in),
+                       int(run_length),
+                       value(reset, "log"),
+                       int(tx_diff_ctrl, 500),
+                       int(tx_preemphasis, 0),
+                       value(loopback, "uint:2", 0),
+                       log(los_fsm)
+                   ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the data output.\\
+            {\bf ruclk} is the user interface clock.\\
+            {\bf rxdiag} provides five diagnostic receiver signals.\\
+            {\bf txdiag} provides two diagnostic transmitter signals.
+
+            {\bf Input parameters:} \\
+            {\bf loc} gives the MGT location coordinates.\\
+            {\bf txp\_pin} specifies the transmitter positive output pin.\\
+            {\bf txn\_pin} specifies the transmitter negative output pin.\\
+            {\bf rxp\_pin} specifies the receiver positive input pin.\\
+            {\bf rxn\_pin} specifies the receiver negative input pin.\\
+            {\bf clkp\_pin} specifies the clock input positive pin.\\
+            {\bf clkn\_pin} specifies the clock input negative pin.\\
+            {\bf freq} is the parallel input and output data frequency.\\
+            {\bf in} is the data input.\\
+            {\bf run\_length} is the maximum data run length.\\
+            {\bf reset} when true resets the initialisation flag.\\
+            {\bf tx\_diff\_ctrl} specifies the differential output voltage.\\
+            {\bf tx\_preemphasis} specifies the transmitter preemphasis.\\
+            {\bf loopback} when true connects the MGT in loopback mode.\\
+            {\bf los\_fsm} when true connects enables the MGT loss-of-sync FSM.
+
+            {\bf Description:} \\
+            This module provides a simple interface to procedure
+            {\bf mgt()} \autorefph{sec:lpmgt}, in this library.
+            It creates both an input and an output interface to the
+            VirtexII Pro MGT. The data width is 16 bit. A custom protocol
+            is used. 
+            
+            The particular MGT is selected by the first 7 input arguments.
+            The {\bf loc} does not seem to be required but the transmitter pin,
+            receiever pin and clock pin pairs must be provided. The following
+            combinations apply to the XC2VP4 -           
+            
+            \begin{tabular}{| l || r | r | r | r |}
+            \hline
+            MGT      & TXP  & TXN  & RXP  & RXN  \\
+            location & pin  & pin  & pin  & pin  \\
+            \hline
+            \hline
+            GT\_X0Y0 & AB8  & AB7  & AB9  & AB10 \\
+            \hline
+            GT\_X0Y1 & A8   & A7   & A9   & A10  \\
+            \hline
+            GT\_X1Y0 & AB14 & AB13 & AB15 & AB16 \\
+            \hline
+            GT\_X1Y1 & A14  & A13  & A15  & A16  \\
+            \hline
+            \end{tabular}
+            
+            and for the XC2VP40 -
+
+            \begin{tabular}{| l || r | r | r | r |}
+            \hline
+            MGT      & TXP  & TXN  & RXP  & RXN  \\
+            location & pin  & pin  & pin  & pin  \\
+            \hline
+            \hline
+            GT\_X0Y0 & ap32 & ap33 & ap31 & ap30 \\
+            \hline
+            GT\_X0Y1 &  a32 &  a33 &  a31 &  a30 \\
+            \hline
+            GT\_X1Y0 & ap28 & ap29 & ap27 & ap26 \\
+            \hline
+            GT\_X1Y1 &  a28 &  a29 &  a27 &  a26 \\
+            \hline
+            GT\_X2Y0 & ap20 & ap21 & ap19 & ap18 \\
+            \hline
+            GT\_X2Y1 &  a20 &  a21 &  a19 &  a18 \\
+            \hline
+            GT\_X3Y0 & ap16 & ap17 & ap15 & ap14 \\
+            \hline
+            GT\_X3Y1 &  a16 &  a17 &  a15 &  a14 \\
+            \hline
+            GT\_X4Y0 &  ap8 &  ap9 &  ap7 &  ap6 \\
+            \hline
+            GT\_X4Y1 &   a8 &   a9 &   a7 &   a6 \\
+            \hline
+            GT\_X5Y0 &  ap4 &  ap5 &  ap3 &  ap2 \\
+            \hline
+            GT\_X5Y1 &   a4 &   a5 &   a3 &   a2 \\
+            \hline
+            \end{tabular}
+            
+            {\bf freq} is an immediate floating point value which specifies the
+            MGT base frequency in Hz. For 2.5GHz serial the base frequency
+            is 125.0MHz (serial rate divided by 20).
+            
+            Input parameter {\bf in} is the input data queue for the transmitter.
+            If the transmitter is not used the argument is omitted. The type is
+            either the struct {\bf ds16} (defined in stdlib.3pl) or the struct
+            {\bf gt\_16}. The most significant byte of the word may be a
+            K-character, which is signified by setting field {\bf k} true. The
+            byte must be one of the allowed K-characters (this is not checked!).
+            For type {\bf gt\_16} the {\bf contin} field should be true if this
+            word is a continuation word, i.e. it is not the first word in a
+            block. This ensures that despite the run length constraint (see
+            Input parameter {\bf run\_length} below) a block will not be split
+            by inserted idles. At the receiving end the first word following an
+            idle can reset a block boundary.
+
+            Input parameter {\bf run\_length} is an immediate integer which
+            specifies the maximum contiguous data run for the transmitter. If
+            data input is continuously available such that this length would be
+            exceeded (and the data {\bf contin} field is not true - see above)
+            then an idle sequence is inserted in the output stream. When no data
+            are available for transmission a continuous stream of idles is
+            transmitted. These idles are used by the receiver to lock initially
+            and to continue checking that lock is maintained. If receiver lock
+            is lost then lock can only be regained at the next idle. In the
+            custom protocol used in this interface the idle sequence is a single
+            16-bit word containing a comma byte. If no argument is supplied
+            to parameter {\bf run\_length} then idles will only be inserted
+            when the input queue is unavailable.
+
+            Input parameter {\bf reset} is used to clear the initialisation flag
+            and execute initialisation process. This initialisation process
+            expects to receive idles only for 6 seconds without error. If an
+            error or a non-idle word is received in this time the received is
+            reset and a further wait ensues. When 6 seconds of idles have been
+            received the initialisation flag is set and the channel can now receive
+            data. The initialisation process occurs immediately following
+            configuration of the FGA. Clearly during this initialisation, and any
+            others that are explicitly induced, the transmitter must be sending
+            idles.
+
+            Input parameter {\bf tx\_diff\_ctrl} specifies the differential
+            output voltage and is 500 by default. Values are 400, 500, 600, 700
+            or 800 which is the differential voltage in mV. The peak-to-peak
+            voltage is twice this figure.
+
+            Input parameter {\bf tx\_preemphasis} specifies the transmitter
+            preemphasis and is 0 by default. values are 0 (10\%), 1 (20\%),
+            2 (25\%) or 3 (33\%).
+
+            Input parameters {\bf tx\_diff\_ctrl} and {\bf tx\_preemphasis} control
+            the transmitter output waveforms to correct for different cable types
+            and lengths. Any changes to the default values are usually done
+            empirically based on the measured error rate.
+
+            Input parameter {\bf loopback} is an immediate integer which specifies
+            the loopback mode. If the argument is omitted or is 0, operation is
+            normal, i.e. loopback is not connected. Value 1 specifies internal
+            parallel mode. Value 2 specifies internal serial mode.
+            
+            Input parameter {\bf los\_fsm} controls the use of the MGT loss-of-sync
+            finite state machine which detects when sync is held/lost. If the argument
+            to this is false then {\bf rxdiag[3]} will only indicate if channel
+            initialisation was successful. If {\bf los\_fsm} is true then  {\bf
+            rxdiag[3]} will be asserted when the receiver has been successfully
+            initialised and remain asserted while sync is OK.
+
+            Output parameter {\bf out} is the output data queue for the receiver.
+            If the receiver is not used the argument is omitted. The type can be
+            struct {\bf ds16}, struct {\bf gt\_16\_e} or  struct {\bf
+            gt\_16\_ee} depending on the level of error
+            detail required. The {\bf k} field in each case is true if the most
+            significant byte of the received word contains a K-character.
+            For {\bf gt\_16\_e} or  {\bf gt\_16\_ee} the {\bf first} field
+            is true then this word follows an idle, which information may be
+            used to reset a block boundary. {\bf Important note - the output
+            queue must not block! The destination module must read it at a rate
+            that precludes it ever becoming full, if necessary reading it to
+            null. Generally the read clock domain must have an equal or higher
+            frequency than the user interface clock {\bf ruclk}, but this may be
+            relaxed if it is known that the serial data source has a guaranteed
+            maximum data rate that would allow a lower queue read clock domain.}
+            For {\bf gt\_16\_e} the {\bf error} field is true if either byte
+            exhibits a disparity error or not-in-table error. {\bf gt\_16\_ee}
+            provides each of these errors separately for each byte.
+            
+            A word in which a disparity error or a not-in-table error occurs is
+            written to the output queue but the error field is true. If the top
+            byte of a word is a K-character the {\bf k} field is true.
+
+            Output parameter {\bf ruclk} is the user interface clock at the base
+            frequency.
+            
+            Output parameter {\bf rxdiag} provides five diagnostic outputs for the
+            receiver. These are -
+            \blist
+            \item   diag[0] - rxcommadet, which is true when a positive or
+                    negative comma is being received
+            \item   diag[1] - rxdisperr[0] or rxnotintable[0], which is true
+                    when a disparity error or a not-in-table error is
+                    flagged for the current upper byte of the 16-bit output
+            \item   diag[2] - rxdisperr[1] or rxnotintable[1], which is true
+                    when a disparity error or a not-in-table error is
+                    flagged for the current lower byte of the 16-bit output
+            \item   diag[3] - is true if the receiver is synchronised, as
+                    indicated by the receiver synchronisation FSM \footnote{if
+                    parameter los\_fsm is true.} , and the
+                    initialisation flag is high
+            \item   diag[4] - is true if the receiver is receiving idles
+            \blend
+            These outputs might be connected to status LEDs to indicate that the
+            receiver is locked and functioning correctly. {\bf diag[0]} will be true
+            while the receiver is receiving idles but will be false when data are
+            received.
+
+            Output parameter {\bf txdiag} provides two diagnostic outputs for the
+            transmitter. These are -
+            \blist
+            \item   diag[0] - is true if the transmitter is sending idles
+            \item   diag[1] - is true if the transmitter is sending a word in which
+                    the top byte is a control character
+            \blend
+
+
+    \subsection{library procedures}
+
+        \subsubsection{mgt - create an MGT high-speed serial I/O channel}\label{sec:lpmgt}
+
+            {\bf Library: xilinx/mgt.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               mgt (
+                   // outputs
+                   value(rxdata),
+                   value(rxchariscomma, "[]log"),
+                   value(rxcharisk, "[]log"),
+                   value(rxcommadet, "log"),
+                   value(rxlossofsync, "uint:2"),
+                   value(rxnotintable, "[]log"),
+                   value(rxbufstatus, "[2]log"),
+                   value(rxcheckingcrc, "log"),
+                   value(rxclkcorcnt, "uint:3"),
+                   value(rxcrcerr, "log"),
+                   value(rxdisperr, "[]log"),
+                   value(rxrealign, "log"),
+                   value(rxrecclk, "log"),
+                   value(rxrundisp, "[]log"),
+                   value(txbuferr, "log"),
+                   value(txkerr, "[]log"),
+                   value(txrundisp, "[]log"),
+                   value(chbondo, "[4]log"),
+                   value(chbonddone, "log")
+                   <-
+                   // attributes
+                   str(loc),
+                   str(txn_pin),
+                   str(txp_pin),
+                   str(rxn_pin),
+                   str(rxp_pin),
+                   log(align_comma_msb),
+                   int(chan_bond_limit),
+                   str(chan_bond_mode),
+                   int(chan_bond_offset),
+                   log(chan_bond_one_shot),
+                   int(chan_bond_seq_1_1),
+                   int(chan_bond_seq_1_2),
+                   int(chan_bond_seq_1_3),
+                   int(chan_bond_seq_1_4),
+                   int(chan_bond_seq_2_1),
+                   int(chan_bond_seq_2_2),
+                   int(chan_bond_seq_2_3),
+                   int(chan_bond_seq_2_4),
+                   log(chan_bond_seq_2_use),
+                   int(chan_bond_seq_len),
+                   int(chan_bond_wait),
+                   log(clk_cor_insert_idle_flag),
+                   log(clk_cor_keep_idle),
+                   int(clk_cor_repeat_wait),
+                   int(clk_cor_seq_1_1),
+                   int(clk_cor_seq_1_2),
+                   int(clk_cor_seq_1_3),
+                   int(clk_cor_seq_1_4),
+                   int(clk_cor_seq_2_1),
+                   int(clk_cor_seq_2_2),
+                   int(clk_cor_seq_2_3),
+                   int(clk_cor_seq_2_4),
+                   log(clk_cor_seq_2_use),
+                   int(clk_cor_seq_len),
+                   log(clk_correct_use),
+                   int(comma_10b_mask),
+                   int(crc_end_of_pkt),
+                   str(crc_format),
+                   int(crc_start_of_pkt),
+                   log(dec_mcomma_detect),
+                   log(dec_pcomma_detect),
+                   log(dec_valid_comma_only),
+                   int(mcomma_10b_value),
+                   log(mcomma_detect),
+                   int(pcomma_10b_value),
+                   log(pcomma_detect),
+                   int(ref_clk_v_sel),
+                   log(rx_crc_use),
+                   int(rx_data_width),
+                   log(rx_decode_use),
+                   int(rx_los_invalid_incr),
+                   int(rx_los_threshold),
+                   log(rx_loss_of_sync_fsm),
+                   log(serdes_10b),
+                   int(termination_imp),
+                   int(tx_crc_force_value),
+                   log(tx_crc_use),
+                   int(tx_data_width),
+                   int(tx_diff_ctrl),
+                   int(tx_preemphasis),
+                   // Inputs
+                   value(chbondi, "[4]log"),
+                   value(enchansync, "log"),
+                   value(enmcommaalign, "log"),
+                   value(enpcommaalign, "log"),
+                   value(loopback, "uint:2"),
+                   value(powerdown, "log"),
+                   value(refclk, "log"),
+                   value(refclk2, "log"),
+                   value(brefclk, "log"),
+                   value(brefclk2, "log"),
+                   value(refclksel, "log"),
+                   value(rxpolarity, "log"),
+                   value(rxreset, "log"),
+                   clock(rxusrclk),
+                   clock(rxusrclk2),
+                   value(txbypass8b10b, "[]log"),
+                   value(txchardispmode, "[]log"),
+                   value(txchardispval, "[]log"),
+                   value(txcharisk, "[]log"),
+                   value(txdata),
+                   value(txforcecrcerr, "log"),
+                   value(txinhibit, "log"),
+                   value(txpolarity, "log"),
+                   value(txreset, "log"),
+                   clock(txusrclk),
+                   clock(txusrclk2)
+
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            See Xilinx documentation.
+
+            {\bf Input parameters:} \\
+            See Xilinx documentation.
+
+            {\bf In-line target execution:} \\
+            no
+
+            {\bf description:} \\
+            This procedure creates an MGT high speed serial I/O channel.
+            For a simpler interface
+            see {\bf gt\_custom\_16} \autorefph{sec:lmgtcustom16} above.
+
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

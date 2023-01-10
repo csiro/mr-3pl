@@ -1,0 +1,127 @@
+This class extends ArrayList. A TDE list is the intermediate form of generated
+code. The list has variable declarations at the front followed by logic using
+those variables. An index, 'variables', is used to maintain the insertion point
+for variables at the head of the list. Method addTDE() appends code TDEs to the
+tail of the list. Method addVTDE inserts TDEs at the end of the leading variable
+section of the list. Field 'index' provides a unique integer to append to the
+end of generated signal names. It is incremented after each use.
+
+There are a number of additional static lists of particular TDEs that are used
+for optimisation. These are -
+
+\blist
+\item connects - CONNECT TDE
+\item dels - DEL TDE
+\item regs - REG TDE
+\item ops - OPERATOR TDE
+\item whens - WHEN TDE
+\item iloops - ILOOP TDE
+\item waits - WAIT TDE
+\item gates - AND, OR, XOR TDE
+\item sels - SELECT TDE
+\item execps - EXECP TDE
+\item dffs - DFF TDE
+\blend
+
+These lists avoid the need to scan the entire TDE list when optimising
+particular TDE types.
+
+Another static list, {\bf branches}, contains details of branch statements for
+later optimisation.
+
+The static list {\bf start\_dffs} is built up as ILOOPs are optimised. It is
+later scanned to eliminate duplicate DFF elements with common start signal.
+
+{\bf static  HashMap\verb'<'String,TDE\verb'>' uelements} is a map of
+elements created using the ELEMENT TDE. Static {\bf current\_uelement} is
+the most recent ELEMENT TDE to which connections can be added without
+explicitly using the element identifier.
+
+
+
+\subsection{method optimise}
+
+    This method is called from the Main method (ThreePL.jj) after
+    immediate execution. Optimisation, including that done in this
+    method, is described in a later chapter.
+
+\subsection{method ncode}
+
+    This method generates the EDIF netlist. It does this in the following
+    steps -
+    
+    The TDE list is traversed (skipping the initial signal declaration
+    section) calling TDE.ncode() on each to generate netlist elements and nets
+    via XTDECode methods.
+    
+    \begin{lstlisting}[gobble=8, language=java]
+        Iterator<TDE>   it   = iterator();
+        TDE             tde  = null;
+        while (it.hasNext()) {
+        tde = it.next();
+        if (tde.isActive())
+            tde.ncode(family);
+        }
+    \end{lstlisting}
+    
+    A list of external ports is built from data previously extracted
+    when processing IBUF and OBUF TDEs in XTDECode.
+
+    \begin{lstlisting}[gobble=8, language=java]
+        family.makePorts();
+    \end{lstlisting}
+    
+    Any flip-flops in output pads whose outputs are used internally as well are
+    duplicated by a CLB flip-flop (XNetListOptimise.optimiseOBUF() and
+    XNetListOptimise.optimiseOBUFT()). Gates with output not connected, gates
+    with one input and gates with duplicated inputs are removed or modified as
+    appropriate. Family-specific devices such as XORCY, MUXF etc. are similarly
+    optimised.
+     
+    \begin{lstlisting}[gobble=8, language=java]
+        passes = family.optimiseNetlist();
+    \end{lstlisting}
+
+    Generic elements are converted to family-specific ones where necessary.
+    Up to this point gates are as wide as required by the context. Here they are
+    converted to combinatorial logic matching the CLBs in the FPGA family.
+        
+    \begin{lstlisting}[gobble=8, language=java]
+        family.convertGenericToSpecific();
+    \end{lstlisting}
+
+    The netlist file header is written out.
+    
+    The netlist cells are then written out to the netlist file.
+    
+    \begin{lstlisting}[gobble=8, language=java]
+        Element.outputCells(pw, view);
+    \end{lstlisting}
+
+    The list of external ports is now written to the netlist file.
+    
+    \begin{lstlisting}[gobble=8, language=java]
+        TDECode.outputExterns(pw);
+    \end{lstlisting}
+
+    Element instances are written.
+   
+    \begin{lstlisting}[gobble=8, language=java]
+        Element.outputInstances(pw, view);
+    \end{lstlisting}
+
+    The nets are now written.
+    
+    \begin{lstlisting}[gobble=8, language=java]
+        Net.outputInstances(pw);
+    \end{lstlisting}
+
+    The netlist file is now completed by writing out the part specification
+    and the final curly bracket.
+    
+    Finally constraints are written to the .ncf (ISE) or .xdc (Vivado) file.
+
+    \begin{lstlisting}[gobble=8, language=java]
+        family.outputConstraints(author, netlistcomments);
+    \end{lstlisting}
+

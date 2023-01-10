@@ -1,0 +1,1086 @@
+// Include file for procedures common to all Xilinx FPGAs
+nomodule
+
+// Map of Xilinx library elements allowed for the current
+// device. This is initialised in the device files 
+// xc2c.3pl, xc2s.3pl, xc2v.3pl, xc2vp.3pl, xc3s.3pl,
+// xc4v.3pl, xc5v.3pl, xc6s.3pl, xc6v.3pl, xc7.3pl,
+// xc95.3pl and xcv.3pl.
+var(file.elementMap, "map");
+
+// Map of allowed I/O pin attributes and their types in calls to iopins().
+var(iopinsAttributes, "map");
+
+iopinsAttributes["diff_term"] = "log";
+iopinsAttributes["differential"] = "log";
+iopinsAttributes["drive"] = "uint";
+iopinsAttributes["dutycycle"] = "float";
+iopinsAttributes["frequency"] = "float";
+iopinsAttributes["ibuf_delay_value"] = "uint";
+iopinsAttributes["ibufg"] = "log";
+iopinsAttributes["ifd_delay"] = "uint";
+iopinsAttributes["iostandard"] = "str";
+iopinsAttributes["noshadow"] = "log";
+iopinsAttributes["period"] = "float";
+iopinsAttributes["pulldown"] = "log";
+iopinsAttributes["pullup"] = "log";
+iopinsAttributes["slew"] = "str";
+iopinsAttributes["tnm"] = "str";
+iopinsAttributes["keeper"] = "log";             // ? - no reference to this anywhere
+iopinsAttributes["schmitt_trigger"] = "log";    // ? - no reference to this anywhere
+
+// 3PL contains a map of attributes recognised for each mode (modeAttributes in
+// threepl/exec/var.java).
+// This map is used to verify attributes when they are applied to a variable.
+// The map is initialised within 3PL with attributes used internally by 3PL itself.
+// Additional attributes related to constraints are added to the map here.
+// These attributes are processed by 3PL library procedures iopins(),
+// generateConstraints() and processPinAttributes().
+
+addmodeattribute("input", "ibuf_delay_value", "uint");
+addmodeattribute("input", "ifd_delay_value", "uint");
+addmodeattribute("input", "tnm", "str");
+addmodeattribute("input", "pullup", "log");
+addmodeattribute("input", "pulldown", "log");
+addmodeattribute("input", "diff_term", "log");
+addmodeattribute("input", "iostandard", "str");
+addmodeattribute("input", "slew", "str");
+addmodeattribute("input", "drive", "uint");
+
+addmodeattribute("output", "ibuf_delay_value", "uint");
+addmodeattribute("output", "ifd_delay_value", "uint");
+addmodeattribute("output", "slew", "str");
+addmodeattribute("output", "drive", "uint");
+addmodeattribute("output", "tnm", "str");
+addmodeattribute("output", "pullup", "log");
+addmodeattribute("output", "pulldown", "log");
+addmodeattribute("output", "iostandard", "str");
+
+addmodeattribute("clock", "tnm", "str");
+addmodeattribute("clock", "diff_term", "log");
+addmodeattribute("clock", "iostandard", "str");
+
+// Map of I/O standards already specified for an I/O pin.
+// This is used to avoid applying the same I/O standard
+// to both input and output of a bi-directional port.
+// The key is the pin label, e.g. "P32" or "H19", and the
+// value is the I/O standard string
+var(file.iostandards_done, "map");
+
+// Map of pin attributes.
+// The key is the pin label, e.g. "P32" or "H19", and the value
+// is a map containing the attributes for that pin.
+// The nested attributes map key is an attribute name and the
+// value is its value.
+var(pinAttributes, "map");
+
+// A list of path delay constraints.
+// Each entry is a structure, "delstruct".
+var(path_delays, "list");
+
+// structure for input, output and path delay constraints
+struct(delstruct,
+    {from, to}, "str",      // from, to timing group name
+    {in, out},  "log",      // an input or output constraint, else path constraint
+    time,       "float"     // maximum delay time
+);
+
+// Map of timing group names for Vivado.
+// This is not used for ISE.
+// The key is the timing group name and the value is a list of
+// signal identifiers in that timing group.
+var(vivado_timing_names, "map");
+
+
+global function
+elementCheck(str(element)) {
+    return(elementMap[element] != null);
+}
+
+global procedure
+elementCheck(str({element, name})) {
+    if (elementMap[element] == null)
+        texit("Library module/procedure " + name + " cannot be used with " + directive("family"));
+}
+
+// Append a line to the NCF file
+global procedure
+addncfline (str(line)) {
+    if (startswith(directive("postProcessTool"), "ise"))
+        special(0, line);
+}
+
+// Append an attribute/value to the NCF file for a net.
+global procedure
+netaddncf (value(sig), str({attr, val})) {
+    if (!startswith(directive("postProcessTool"), "ise"))
+        return;
+    str(fmt);
+    if (val == "")
+        fmt = "NET %n " + attr + ";";
+    else
+        fmt = "NET %n " + attr + "=" + val + ";";
+    if (matched(sig))
+        special(0, fmt,, sig);
+    else
+        special(0, fmt);
+}
+
+// Append an attribute/value to the NCF file for an element.
+global procedure
+elementaddncf (str({id, attr, val})) {
+    if (!startswith(directive("postProcessTool"), "ise"))
+        return;
+    if (id == "")
+        id = currentelement();
+    str(fmt, "INST "+ id + " " + attr + "=" + val + ";");
+    special(0, fmt);
+}
+
+// Append a line to the XDC file
+global procedure
+addxdcline (str(fmt), value(sig)) {
+    if (startswith(directive("postProcessTool"), "ise"))
+        return;
+    if (matched(sig))
+        special(1, fmt,, nullarg(sig));
+    else
+        special(1, fmt);
+}
+
+// Specify a timing constraint for a maximum path delay from
+// a timing group to another.
+// 'from' and 'to' are timing group names.
+// 'time' is the maximum delay in second.
+global procedure
+maxdelay (str({from, to}), float(time)) {
+    var(del, delstruct);
+    del.from = from;
+    del.to   = to;
+    del.in   = false;
+    del.out  = false;
+    del.time = time * 1.0e9;    // convert to ns
+    append(path_delays,, del);
+}
+
+// Declare a period for a clock that is a lower frequency than another clock.
+// Arguments:
+//  string  divgroup    new timing group for divided clock
+//  string  igroup      timing group for input clock
+//  float   ratio       clock frequency division ratio
+//
+global procedure
+period_mul (str({divgroup, igroup}), float(ratio)) {
+    addncfline("TIMESPEC TS_" + divgroup + "=PERIOD " + divgroup + " " + "TS_" + igroup + " * " + ratio + ";");
+}
+
+// Declare a period for a clock that is a higher frequency than another clock.
+// Arguments:
+//  string  divgroup    new timing group for divided clock
+//  string  igroup      timing group for input clock
+//  float   ratio       clock frequency multiplication ratio
+//
+global procedure
+period_div (str({divgroup, igroup}), float(ratio)) {
+    addncfline("TIMESPEC TS_" + divgroup + "=PERIOD " + divgroup + " " + "TS_" + igroup + " / " + ratio + ";");
+}
+
+// Test a clock variable to see if it has been used.
+global function
+clockused (clock(c)) {
+    var(m, "map", attributes(c, true));
+    return(m["clk_sinks"] != 0);
+}
+
+// Create an FDRE flip-flop.
+global procedure
+fdre (
+    value(q, "log")
+    <-
+    value(d, "log", false),
+    clock(c),
+    value(ce, "log", true),
+    value(r, "log", false),
+    str(init, "R")
+) {
+    if (matched(d) && domain(d) != c)
+        texit("fdre() - d input clock domain not that of the clock input");
+    if (matched(ce) && domain(ce) != c)
+        texit("fdre() - ce input clock domain not that of the clock input");
+    if (matched(r) && domain(r) != c)
+        texit("fdre() - r input clock domain not that of the clock input");
+    element("FDRE");
+    elementoutput(q <- , "Q");
+    elementinput(, d, "D");
+    elementinput(, c, "C");
+    elementinput(, ce, "CE");
+    elementinput(, r, "R");
+    elementend();
+    attributes(q, domain=c);
+}
+
+// Create an FDSE flip-flop.
+global procedure
+fdse (
+    value(q, "log")
+    <-
+    value(d, "log", false),
+    clock(c),
+    value(ce, "log", true),
+    value(s, "log", false),
+    str(init, "S")
+) {
+    if (matched(d) && domain(d) != c)
+        texit("fdse() - d input clock domain not that of the clock input");
+    if (matched(ce) && domain(ce) != c)
+        texit("fdse() - ce input clock domain not that of the clock input");
+    if (matched(s) && domain(s) != c)
+        texit("fdse() - s input clock domain not that of the clock input");
+    element("FDSE");
+    elementoutput(q <- , "Q");
+    elementinput(, d, "D");
+    elementinput(, c, "C");
+    elementinput(, ce, "CE");
+    elementinput(, s, "S");
+    elementend();
+    attributes(q, domain=c);
+}
+
+// Create an FDRSE flip-flop.
+global procedure
+fdrse (
+    value(q, "log")
+    <-
+    value(d, "log", false),
+    clock(c),
+    value(ce, "log", true),
+    value(r, "log", false),
+    value(s, "log", false),
+    str(init, "R")
+) {
+    if (matched(d) && domain(d) != c)
+        texit("fdrse() - d input clock domain not that of the clock input");
+    if (matched(ce) && domain(ce) != c)
+        texit("fdrse() - ce input clock domain not that of the clock input");
+    if (matched(r) && domain(r) != c)
+        texit("fdrse() - r input clock domain not that of the clock input");
+    if (matched(s) && domain(s) != c)
+        texit("fdrse() - s input clock domain not that of the clock input");
+    element("FDRSE");
+    elementoutput(q <- , "Q");
+    elementinput(, "D", d);
+    elementinput(, "C", c);
+    elementinput(, "CE", ce);
+    elementinput(, "R", r);
+    elementinput(, "S", s);
+    elementend();
+    attributes(q, domain=c);
+}
+
+// Create an FDCE flip-flop.
+global procedure
+fdce (
+    value(q, "log")
+    <-
+    value(d, "log", false),
+    clock(c),
+    value(ce, "log", true),
+    value(clr, "log", false),
+    str(init, "R")
+) {
+    if (matched(d) && domain(d) != c)
+        texit("fdce() - d input clock domain not that of the clock input");
+    if (matched(ce) && domain(ce) != c)
+        texit("fdce() - ce input clock domain not that of the clock input");
+    if (matched(r) && domain(r) != clr)
+        texit("fdce() - clr input clock domain not that of the clock input");
+    element("FDCE");
+    elementoutput(q <- , "Q");
+    elementinput(, d, "D");
+    elementinput(, c, "C");
+    elementinput(, ce, "CE");
+    elementinput(, clr, "CLR");
+    elementend();
+    attributes(q, domain=c);
+}
+
+// Create an FDPE flip-flop.
+global procedure
+fdpe (
+    value(q, "log")
+    <-
+    value(d, "log", false),
+    clock(c),
+    value(ce, "log", true),
+    value(pre, "log", false),
+    str(init, "S")
+) {
+    if (matched(d) && domain(d) != c)
+        texit("fdpe() - d input clock domain not that of the clock input");
+    if (matched(ce) && domain(ce) != c)
+        texit("fdpe() - ce input clock domain not that of the clock input");
+    if (matched(r) && domain(r) != clr)
+        texit("fdpe() - pre input clock domain not that of the clock input");
+    element("FDPE");
+    elementoutput(q <- , "Q");
+    elementinput(, d, "D");
+    elementinput(, c, "C");
+    elementinput(, ce, "CE");
+    elementinput(, pre, "PRE");
+    elementend();
+    attributes(q, domain=c);
+}
+
+// Add pullups to a bus.
+//
+global module
+pullup (value(in)) {
+    int(n, size(in));
+    type(t, "["+n+"]log");
+    value(in_, t, cast(in, t));
+    for (int(i) ; i<n ; i++) {
+        element("PULLUP");
+        elementconnect("O", 2, in_[i]);
+        elementend();
+    }
+}
+
+global procedure
+append_ncf_file (str(filename)) {
+    file(f, ropen(filename));
+    for (;;) {
+        s = readln(f);
+        if (hadeof(f))
+            return;
+        addncf(s);
+    }
+    close(f);
+}
+
+// Shift register.
+// If the reset parameter is used, the implementation will use flip flops,
+// otherwise the implementation will use Xilinx LUT shift registers. The
+// data type is any target type. The initialisation array is type int which
+// will be mapped into the data type bit for bit. Only one of parameters
+// 'len' and 'varlen' should be passed an argument. If 'len' is zero and
+// 'varlen' has no argument, there is no delay between input and output.
+global function
+del (
+    value(in),
+    int(len, 1),
+    var(init, immediate),
+    value(step, "log", true),
+    value(varlen, "uint:4"),
+    value(reset, "log"),
+) {
+    value(out, type(in));
+    
+    if (hasqueuereads(in))
+        texit("del() - input contains queue reads");    
+    
+    if (matched(step) && istargconst(step) && !targconsttoimmed(step))
+        step := used();
+
+    if (matched(len))
+        del(out <- in, len, nullarg(init), step,, nullarg(reset));
+    else
+        del(out <- in,, nullarg(init), step, nullarg(varlen), nullarg(reset));
+    return(out);
+}
+
+global function
+sequence (var(s), type(stype), value(step, "log", true)) {
+    value(out, stype);
+    del(out <- out, dimension(s), s, step);
+    return(out);
+}
+
+global module
+sequence (value(out) <- var(s), value(step, "log", true)) {
+    del(out <- out, dimension(s), s, step);
+}
+
+// Create a string or string array representing one or more FPGA pins.
+// 'id'     is an optional identifier for the string or compound string type
+//          variable to be created.
+// 't'      is a string giving the type of the argument specifying the pins.
+//          This would be "str" for a single pin otherwise a compound type.
+//          The compound type must contain only primitives of type "str"
+//          but otherwise can be arrays and structs arbitrarily nested.
+// 'pins'   is a string or compound type of strings with which the variable
+//          is to be initialised. The argument may be a variable or compound
+//          constant but in either case must match the specified
+//          type 't'.
+// The remaining arguments specify attributes for the pin(s). An argument which
+// is of form key=value specifies a named attribute where 'key' is the attribute.
+// The value may be an array, in which case the dimensionality must match that
+// specified by 't' and the entries are given for each pin. If the value is not
+// an array, and 't' indicates an array, then one will be created of
+// appropriate dimensions and filled with the single value supplied.
+// If the argument is not keymatch then it must be an attribute map. In that
+// case the map entries will be extracted and treated the same way as
+// keymatch arguments as described above.
+//
+// The attribute arguments must at least contain the "loc" attribute or
+// a fatal error is issued.
+//
+global procedure
+iopins (ident(id), type(t), var(pins, t), varargs) {
+    str(st, typevalstring(t));
+    if (st == "str")    // for primitive change to array for uniformity
+        st = "[1]str";
+    
+    if (varexists(id)) {
+        switch (id.context) {
+        case "global":
+            str(local.name, "global."+id.id);
+        case "file":
+            str(local.name, "file."+id.id);
+        case "calling":
+            texit("iopins() - cannot have 'calling' context");
+        case "local":
+            texit("iopins() - cannot have 'local' context");
+        case "default":
+            str(local.name, "calling."+id.id);
+        }
+        var(name->, t, pins);
+    }
+
+    if (dimension(inkeys) != 0)
+        setPinAttributes(mapAttributes(st, inkeys, inargs), t, pins);
+}
+
+// Create an attributes map for each of a set of I/O pins.
+// An entry is created for each pin in map 'pinAttributes' where the key
+// is the FPGA pin string and the value is the attributes map for that pin.
+//  'am'    is an attributes map whose entries are to be copied into the
+//          created map for the pin.
+//  't'     is the variable type of the pins specifier
+//  'pins'  is the pins specification variable
+//
+procedure
+setPinAttributes (var(am), type(t), var(pins, t)) {
+    int(index); // index for successive pins when attribute is compound.
+    setPinAttributes_(am, pins, &index);
+
+    // If 'v' is type "str" then set the attributes map for that pin in
+    // global map 'pinAttributes'.
+    // Otherwise index through array or struct calling setPinAttributes_
+    // recursively.
+    procedure
+    setPinAttributes_ (var(am), var(v), var(index, "->")) {
+        int(amentries, entries(am));
+        str(key);
+        
+        if (dimensions(v) == 0) {
+            // not an array - want type str, but may be a struct
+            if (isstruct(v)) {
+                // is a struct - iterate through fields calling recursively
+                int(n, numfields(v));
+                for (int(i) ; i<n ; i++)
+                    setPinAttributes_(am, getfield(v, i), index);
+            } else if (typestring(v) == "str") {
+                // is a string - copy attributes from the provided map 'am' to the
+                // new map for the pin. If the map entry is a single value then
+                // copy it.
+                var(nm, "map");
+                if (pinAttributes[v] != null)
+                    nm = pinAttributes[v];
+                else
+                    pinAttributes[v] = nm;
+                for (int(j) ; j<amentries ; j++) {
+                    key = am[j];
+                    nm[key] = am[key];
+                }
+                index->++;
+            } else
+                texit("setPinAttributes() - argument is not type str (" + typestring(v) + ")");
+        } else {
+            // an array - iterate through first subscript calling recursively
+            int(m, dimension(v));
+            for (int(i) ; i<m ; i++)
+                setPinAttributes_(am, v[i], index);
+        }
+    }
+}
+
+// Create an attribute map from a pair of lists of attribute names and values
+// 'st'         is a string giving the type of the argument specifying the pins.
+//              This would be "str" for a single pin otherwise a compound type.
+//              The compound type must contain only primitives of type "str"
+//              but otherwise can be arrays and structs arbitrarily nested.
+// 'attribs'    is a string array of attribute identifiers.
+// 'avals'      is an array of pointers to associated attribute values.
+//              Each value must be a single value.
+// The map is returned.
+//
+function
+mapAttributes (str(st), var(attribs, "[]str"), var(avals, "[]->")) {
+    int(n, dimension(attribs));     // number of attribute arguments
+    var(am, "map");                 // New attribute map
+    
+    if (n != 0) {
+        for (int(i) ; i<n ; i++) {
+            if (avals[i]-> == null)
+                texit(pname + "() - keymatch argument has no value");
+            if (attribs[i] == "") {
+                // No key - argument should be a map.
+                if (typestring(avals[i]->) != "map")
+                    texit(pname + "() - argument is not keymatch or type \"map\"");
+                // get the argument map
+                var(argmap, "map", avals[i]->);
+                int(e, entries(argmap));
+                for (int(i) ; i<e ; i++) {  // iterate through map entries
+                    str(amkey, argmap[i]);  // key for map entry
+                    if (amkey == "loc")
+                        texit(pname + "() - attribute map entry cannot be 'loc'");
+                    str(ats, allowedPinAttType(amkey));  // allowed type for key
+                    str(ets, typestring(argmap[amkey])); // map entry type for key
+                    if (strlen(ats) == 0)
+                        texit(pname + "() - attribute '" + amkey + "' is unknown");
+                    if (ets != ats)                 // is type not as allowed
+                        texit(pname + "() - attribute '" + amkey +
+                                        "' is wrong type (" + ets + " not " + ats + ")");
+                    am[amkey] = argmap[amkey];
+                }
+            } else {
+                // Has a key - add the attribute.
+                str(attr, tolower(attribs[i]));
+                str(ats, allowedPinAttType(attr));  // allowed type for argument key
+                str(vts, typestring(avals[i]->));   // argument value type
+                if (strlen(ats) == 0)
+                    texit(pname + "() - attribute '" + attr + "' is unknown");
+                if (vts != ats)                     // is type not as allowed?
+                    texit(pname + "() - attribute '" + attr +
+                                        "' is wrong type (" + vts + " not " + ats + ")");
+                am[attr] = avals[i]->;
+            }
+        }
+    }
+    return(am);
+}
+
+global procedure processPinAttributes (var(ptr, "->")) {
+    str(modename, mode(ptr->));
+    // Get the attributes map of the variable.
+    var(iattr, "map", attributes(ptr->));    
+    
+    if (iattr["loc"] == null)
+        return; // no pins specified - return
+        
+    var(locs, "[]str", iattr["loc"]);
+    int(pins, dimension(locs));
+    
+    if (modename == "clock") {
+        // clock mode
+        //-----------
+        if (varexists(locs) && pinAttributes[locs[0]] != null) {
+            var(pm, "map", pinAttributes[locs[0]]);
+            for (int(j) ; j<entries(pm) ; j++) {
+                str(key, pm[j]);
+                if (iattr[key] == null)
+                    iattr[key] = pm[key];
+            }
+        }
+        return;
+    }
+    
+    // input or output mode
+    //---------------------
+
+    // Copy attributes from the pin attribute maps into the variable map
+    // if the variable map has no entry for the attribute.
+    for (int(i) ; i<pins ; i++) {
+        if (pinAttributes[locs[i]] != null) {
+            var(pm, "map", pinAttributes[locs[i]]);
+            for (int(j) ; j<entries(pm) ; j++) {
+                str(key, pm[j]);
+                if (iattr[key] != null) {
+                    if (dimension(iattr[key]) == 0)
+                        break;  // non-array attribute already present - ignore pin attribute
+                    iattr[key][i] = pm[key];
+                } else {
+                    type(pt, type(pm[key]));
+                    var(n, "["+pins+"]" + typestring(pm[key]));
+                    n[i] = pm[key];
+                    iattr[key] = n;
+                }
+            }
+        }
+    }
+    return;
+}
+    
+global procedure
+generateConstraints () {
+    var(mlist, "list", varlist(true));
+    int(n, entries(mlist));
+    int(pins);
+    
+    for (int(i) ; i<n ; i++) {
+        var(v, "->", mlist[i]);
+        // Get the attributes map of the variable.
+        var(iattr, "map", attributes(v->));    
+
+        if (iattr["loc"] != null)
+            var(locs, "[]str", iattr["loc"]);
+        if (varexists(locs))
+            pins = dimension(locs);
+
+        switch (mode(v->)) {
+        case "input":
+            var(tnm, "["+pins+"]str");
+            var(iostandard, "["+pins+"]str");
+            var(ibufg, "["+pins+"]log");
+            var(differential, "["+pins+"]log");
+            var(ibuf_delay_value, "["+pins+"]uint");
+            var(ifd_delay_value, "["+pins+"]uint");
+            var(pullup, "["+pins+"]log");
+            var(pulldown, "["+pins+"]log");
+            var(diff_term, "["+pins+"]log");
+            
+            // Copy from attributes map to local variables.
+            // Note and otherwise ignore any that are not recognised.
+            int(mentries, entries(iattr));
+            for (int(j) ; j<mentries ; j++) {
+                str(key, iattr[j]);
+                switch (key) {
+                case "tnm":              condgrab(iattr, key, pins);
+                case "iostandard":       condgrab(iattr, key, pins);
+                case "ibufg":            condgrab(iattr, key, pins);
+                case "differential":     condgrab(iattr, key, pins);
+                case "ibuf_delay_value": condgrab(iattr, key, pins);
+                case "ifd_delay_value":  condgrab(iattr, key, pins);
+                case "pullup":           condgrab(iattr, key, pins);
+                case "pulldown":         condgrab(iattr, key, pins);
+                case "diff_term":        condgrab(iattr, key, pins);
+                case "loc":              // OK - ignore.
+                case "ids":              // OK - ignore.
+                case "readdomain":       // OK - ignore.
+                default:
+                    msg(identifier(v->) + " non-standard input attribute '" + key + "'");
+                }
+            }
+
+            // Generate constraints from attributes.
+            for (int(i) ; i<pins ; i++) {
+                if (wasassigned(tnm) && tnm[i] != "")
+                    IOconstraint(locs[i], "tnm", tnm[i]);
+                if (wasassigned(iostandard) && iostandard[i] != "")
+                    IOconstraint(locs[i], "iostandard", iostandard[i]);
+                if (wasassigned(ibuf_delay_value) && ibuf_delay_value[i] != 0)
+                    IOconstraint(locs[i], "ibuf_delay_value", ibuf_delay_value[i]);
+                if (wasassigned(ifd_delay_value) && ifd_delay_value[i] != 0)
+                    IOconstraint(locs[i], "ifd_delay_value", ifd_delay_value[i]);
+                if (wasassigned(pullup) && pullup[i])
+                    IOconstraint(locs[i], "pullup", pullup[i]);
+                if (wasassigned(pulldown) && pulldown[i])
+                    IOconstraint(locs[i], "pulldown", pulldown[i]);
+                if (wasassigned(diff_term) && diff_term[i])
+                    IOconstraint(locs[i], "diff_term", diff_term[i]);
+            }
+        
+        case "output":
+            var(differential, "["+pins+"]log");
+            var(tnm, "["+pins+"]str");
+            var(defaultout, "["+pins+"]log");
+            var(noshadow, "["+pins+"]log");
+            var(drive, "["+pins+"]uint");
+            var(slew, "["+pins+"]str");
+            var(pullup, "["+pins+"]log"); 
+            var(pulldown, "["+pins+"]log"); 
+            var(diff_term, "["+pins+"]log");
+            var(iostandard, "["+pins+"]str");
+            
+            // Copy from attributes map to local variables.
+            // Note and otherwise ignore any that are not recognised.
+            int(mentries, entries(iattr));
+            for (int(j) ; j<mentries ; j++) {
+                str(key, iattr[j]);
+                switch (key) {
+                case "differential": condgrab(iattr, key, pins);
+                case "tnm":          condgrab(iattr, key, pins);
+                case "defaultout":   condgrab(iattr, key, pins);
+                case "noshadow":     condgrab(iattr, key, pins);
+                case "drive":        condgrab(iattr, key, pins);
+                case "slew":         condgrab(iattr, key, pins);
+                case "pullup":       condgrab(iattr, key, pins);
+                case "pulldown":     condgrab(iattr, key, pins);
+                case "diff_term":    condgrab(iattr, key, pins);
+                case "iostandard":   condgrab(iattr, key, pins);
+                case "loc":          // OK - ignore.
+                case "direct":       // OK - ignore.
+                case "ids":          // OK - ignore.
+                case "writedomain":  // OK - ignore.
+                default:
+                    msg(identifier(v->) + " non-standard output attribute '" + key + "'");
+                }
+            }
+            
+            // Generate constraints from attributes.
+            for (int(i) ; i<pins ; i++) {
+                if (wasassigned(tnm) && tnm[i] != "")
+                    IOconstraint(locs[i], "tnm", tnm[i]);
+                if (wasassigned(drive) && drive[i] != 0)
+                    IOconstraint(locs[i], "drive", drive[i]);
+                if (wasassigned(slew) && slew[i] != "")
+                    IOconstraint(locs[i], "slew", slew[i]);
+                if (wasassigned(pullup) && pullup[i])
+                    IOconstraint(locs[i], "pullup", pullup[i]);
+                if (wasassigned(pulldown) && pulldown[i])
+                    IOconstraint(locs[i], "pulldown", pulldown[i]);
+                if (wasassigned(diff_term) && diff_term[i])
+                    IOconstraint(locs[i], "diff_term", diff_term[i]);
+                if (wasassigned(iostandard) && iostandard[i] != "")
+                    IOconstraint(locs[i], "iostandard", iostandard[i]);
+            }
+        
+        case "clock":
+            log(external, varexists(locs));
+            
+            var(diff_term, "log");
+            var(tnm, "str");
+            var(iostandard, "str");
+            var(valid, "log");
+            
+            // Copy from attributes map to local variables.
+            // Note and otherwise ignore any that are not recognised.
+            int(mentries, entries(iattr));
+            for (int(j) ; j<mentries ; j++) {
+                str(key, iattr[j]);
+                switch (key) {
+                case "tnm":          condgrab(iattr, key);
+                case "iostandard":   condgrab(iattr, key);
+                case "diff_term":    condgrab(iattr, key);
+                case "loc":          // OK - ignore.
+                case "ibufg":        // OK - ignore.
+                case "differential": // OK - ignore.
+                case "ids":          // OK - ignore.
+                case "frequency":    // OK - ignore.
+                case "period":       // OK - ignore.
+                case "dutycycle":    // OK - ignore.
+                case "valid":        condgrab(iattr, key);
+                default:
+                    msg(identifier(v->) + " non-standard input attribute '" + key + "'");
+                }
+            }
+            
+            if (attribute(v->, "frequency") == null)
+                continue;
+            float(period, 1.0 / attribute(v->, "frequency"));
+            float(period_ns, period * 1.0e9);
+
+            // For input clock apply constraints to port.
+            if (external) {
+                for (int(i) ; i<pins ; i++) {
+                    if (iostandard != "")
+                        IOconstraint(locs[i], "iostandard", iostandard);
+                    if (diff_term)
+                        IOconstraint(locs[i], "diff_term", diff_term);
+                    if (tnm != "")
+                        IOconstraint(locs[i], "tnm", tnm);
+                    if (directive("family") == "XC2C" || directive("family") == "XC95")
+                        IOconstraint(locs[i], "BUFG", "CLK");
+                }
+            }
+                        
+            // For internal clock apply timing name constraint to net.
+            // Attribute 'valid' indicates that the clock drives clocked
+            // logic elements as distinct from non-clocking inputs to which it is
+            // connected, e.g. clock managers or clock buffers.            
+            if ((!external || directive("family") == "XC2C" || directive("family") == "XC95") &&
+                    !attribute(v->, "invertedclock") && valid) {
+                if (tnm != "NONE") {
+                    if (tnm == "")
+                        tnm = toupper(identifier(v->));
+		    if (!startswith(directive("postProcessTool"), "ise")) {
+                        // XDC
+                        var(l, "list");
+                        append(l,, identifier(v->, "ext"));
+                        vivado_timing_names[tnm] = l;
+                        special(1, "create_clock -name " + tnm + " -period " + period_ns + " [get_nets %n];",, v->);
+                    } else {
+                        // NCF
+                        special(0, "NET %n " + "TNM=" + tnm + ";",, v->);
+                        if (attribute(v->, "frequency") != null && attribute(v->, "frequency") != 0.0) {
+                            special(0, "TIMESPEC TS_" + tnm + "=PERIOD " + tnm + " " + period_ns + ";");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Append path delay constraints.
+    int(e, entries(path_delays));
+    for (int(i) ; i<e ; i++) { 
+	if (startswith(directive("postProcessTool"), "ise")) {
+            str(name, path_delays[i].from + "_" + path_delays[i].to);
+            addncfline("TIMESPEC TS_" + name + "=FROM " + path_delays[i].from + " TO " + path_delays[i].to + " " + path_delays[i].time + " DATAPATHONLY;");
+        } else {
+            if (vivado_timing_names[path_delays[i].from] == null)
+                texit("generateConstraints() - timing group " + path_delays[i].from + " is empty");
+            if (vivado_timing_names[path_delays[i].to] == null)
+                texit("generateConstraints() - timing group " + path_delays[i].to + " is empty");
+            if (path_delays[i].in) {
+                // Is an input maximum delay constraint.
+                // The 'to' field is a clock timing group name which will
+                // have a single entry (the clock net name).
+                str(clk, path_delays[i].to);
+                var(tnfrom, "list", vivado_timing_names[path_delays[i].from]);
+                int(tnfe, entries(tnfrom));
+                for (int(j) ; j<tnfe ; j++) {
+                    str(n, tnfrom[j]);
+                    addxdcline("set_input_delay -clock " + clk + " " + path_delays[i].time + " [get_ports " + n + "]");
+                }
+            } else if (path_delays[i].out) {
+                // Is an output maximum delay constraint.
+                // The 'from' field is a clock timing group name which will
+                // have a single entry (the clock net name).
+                str(clk, path_delays[i].from);
+                var(tnto, "list", vivado_timing_names[path_delays[i].to]);
+                int(tnte, entries(tnto));
+                for (int(j) ; j<tnte ; j++) {
+                    str(n, tnto[j]);
+                    addxdcline("set_output_delay -clock " + clk + " " + path_delays[i].time + " [get_ports " + n + "]");
+                }
+            } else {
+                // An input to output path maximum delay constraint.
+                // Both the 'from' and 'to' fields may have multiple nets.
+                var(tnfrom, "list", vivado_timing_names[path_delays[i].from]);
+                var(tnto, "list", vivado_timing_names[path_delays[i].to]);
+                int(tnfe, entries(tnfrom));
+                int(tnte, entries(tnto));
+                for (int(j) ; j<tnfe ; j++) {
+                    str(ef, tnfrom[j]);
+                    for (int(k) ; k<tnte ; k++) {
+                        str(et, tnto[k]);
+                        addxdcline("set_max_delay -from " + ef + " -to " + et + " " + path_delays[i].time /*+ " -datapathonly"*/);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Create a variable in the calling context whose identifier is
+    // 'key'.
+    //
+    // If 'pins' has an argument the new variable will be assigned an array whose dimension
+    // equals the number of pins and each entry will be the entry in map 'm' for the key.
+    //
+    // If 'pins' does not have an argument the new variable will be assigned the entry in
+    // map 'm' for the key.
+    //
+    procedure
+    condgrab (var(m, "map"), str(key), int(pins)) {       
+        if (m[key] == null)
+            return;
+        str(varname, "calling." + key);
+        if (matched(pins))
+            varname-> = toarray(m[key], pins);
+        else
+            varname-> = m[key];
+    }
+}
+
+// Get the allowed primitive type of an attribute.
+// 'attr'   is the attribute
+//              
+// A fatal error occurs if the attribute is not recognised in the calling
+// context.
+//
+function
+allowedPinAttType (str(attr)) {
+    if (iopinsAttributes[attr] == null)
+        texit("iopins() - '" + attr + "' is not a recognised pin attribute");
+    return(iopinsAttributes[attr]);
+}
+
+/* THESE DON'T SEEM TO BE USED!
+// For an array of port locations generate constraint file lines
+// for each.
+procedure
+constraintncf (var(locs, "[]str"), str(con), var(val)) {
+    if (!startswith(directive("postProcessTool"), "ise"))
+        return;
+    str(v);
+    switch (typestring(val)) {
+    case "str": v = toupper(val);
+    case "int": v = cast(val, "str");
+    case "uint": v = cast(val, "str");
+    case "float": v = cast(val, "str");
+    case "log": v = val ? "TRUE" : "FALSE";
+    default: return; // ignore - probably null
+    }
+    str(port);
+    int(n, dimension(locs));
+    for (int(i) ; i<n ; i++) {
+        port = "PORT_" + locs[i];
+        special(0, "NET " + port + " " + toupper(con) + "=" + v + ";");
+    }
+}
+
+// For an array of port locations generate constraint file lines
+// for each.
+procedure
+constraintxdc (var(locs, "[]str"), str(con), var(val)) {
+    if (startswith(directive("postProcessTool"), "ise"))
+        return;
+    str(v);
+    switch (typestring(val)) {
+    case "str": v = toupper(val);
+    case "int": v = cast(val, "str");
+    case "uint": v = cast(val, "str");
+    case "float": v = cast(val, "str");
+    case "log": v = val ? "TRUE" : "FALSE";
+    default: return; // ignore - probably null
+    }
+    str(port);
+    int(n, dimension(locs));
+    for (int(i) ; i<n ; i++) {
+        port = "PORT_" + locs[i];
+        special(1, "set_property " + toupper(con) + " " + v + " [get_ports " + port + "];");
+    }
+}
+*/
+
+// Generate an I/O constraint.
+//  loc is the I/O pad designation
+//  con is the constraint identifier string
+//  val is the constraint value
+//
+global procedure
+IOconstraint (str(loc), str(con), var(val)) {
+    str(CON, toupper(con));
+    str(v);
+    switch (typestring(val)) {
+    case "str": v = toupper(val);
+    case "int": v = cast(val, "str");
+    case "uint": v = cast(val, "str");
+    case "float": v = cast(val, "str");
+    case "log": v = val ? "TRUE" : "FALSE";
+    default: return; // ignore - probably null
+    }
+    str(port);
+    // For I/O standard constraint make sure only done once
+    // in case of bi-directional port.
+    if (con == "iostandard") {
+        if (file.iostandards_done[loc] != null) {
+            return;
+        }
+        file.iostandards_done[loc] = true;
+    }
+    port = "PORT_" + loc;
+    
+    if (startswith(directive("postProcessTool"), "ise")) {  // NCF
+        // special case for pullup and pulldown - no value, just constraint string
+        if (CON == "PULLUP" || CON == "PULLDOWN") {
+            if (v == "TRUE")
+                special(0, "NET " + port + " " + CON + ";", port);
+        } else
+            special(0, "NET " + port + " " + CON + "=" + v + ";", port);
+    } else {                     // XDC file
+        if (con == "tnm") {
+            var(tnl, "list");
+            if (vivado_timing_names[v] != null)
+                tnl = vivado_timing_names[v];
+            else
+                vivado_timing_names[v] = tnl;
+            append(tnl,, port);
+        } else
+            special(1, "set_property " + CON + " " + v + " [get_ports " + port + "];", port);
+    }
+}
+
+/* NOT USED?
+procedure
+add_tnm (str({tnm, port})) {
+    var(tnl, "list");
+    if (vivado_timing_names[val] != null)
+        tnl = vivado_timing_names[val];
+    else
+        vivado_timing_names[val] = tnl;
+    append(tnl,, port);
+}
+*/
+
+global procedure
+elementLogProperty (str(id), str(prop), log(l)) {
+    if (!matched(l))
+        return;
+    elementproperty(id, prop, (l?"TRUE":"FALSE"));
+}
+
+global procedure
+elementIntProperty (str(id), str(prop), int({n, min, max})) {
+    if (!matched(n))
+        return;
+    if (n < min)
+        texit("Property too small, element " + id + " property " + prop + "(" + n + "(" + n +   ") < " + min);
+    if (n > max)
+        texit("Property too large, element " + id + " property " + prop + "(" + n + "(" + n +   ") > " + max);
+    str(fmt, "%d");
+    str(s, format(fmt, n));
+    elementproperty(id, prop, s);
+}
+
+global procedure
+elementBinProperty (str(id), str(prop), int({n, min, max}), int(bits)) {
+    if (!matched(n))
+        return;
+    if (n < min)
+        texit("Property too small, element " + id + " property " + prop + "(" + n + ") < " + min);
+    if (n > max)
+        texit("Property too large, element " + id + " property " + prop + "(" + n + ") > " + max);
+    elementproperty(id, prop, inttobinstring(n, bits));
+}
+
+global procedure
+elementHexProperty (str(id), str(prop), int({n, min, max}), int(digits)) {
+    if (!matched(n))
+        return;
+    prop = toupper(prop);
+    if (n < min)
+        texit("Property too small, element " + id + " property " + prop + "(" + n + ") < " + min);
+    if (n > max)
+        texit("Property too large, element " + id + " property " + prop + "(" + n + ") > " + max);
+    elementproperty(id, prop, inttohexstring(n, digits));
+}
+
+global procedure
+elementFloatProperty (str(id), str(prop), float({n, min, max}), int(digits)) {
+    if (!matched(n))
+        return;
+    if (n < min)
+        texit("Property too small, element " + id + " property " + prop + "(" + n + ") < " + min);
+    if (n > max)
+        texit("Property too large, element " + id + " property " + prop + "(" + n + ") > " + max);
+    str(fmt, "%."+digits+"f");
+    str(s, format(fmt, n));
+    elementproperty(id, prop, s);
+}
+
+
+global procedure
+elementStrProperty (str(id), str({prop, v}), varargs) {
+    if (!matched(v))
+        return;
+    int(n, dimension(inargs));
+    v = toupper(v);
+    if (n == 0) {
+        elementproperty(id, prop, v);
+        return;
+    }
+    for(int(i) ; i<n ; i++) {
+        if (v == inargs[i]->) {
+            elementproperty(id, prop, v);
+            return;
+        }
+    }
+    texit("Property value incorrect, element " + id + " property " + prop
+            + " value " + v);
+}
+
+// include the Xilinx unified library - low level elements (rarely used)?
+// don't bother!
+//source "xilinx/xulib.3pl"

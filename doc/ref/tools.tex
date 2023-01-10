@@ -1,0 +1,698 @@
+\pagebreak
+
+\chapter{Miscellaneous tools}\label{ch:misctools}
+
+    The 3PL source directory {\bf sources/tools} contains miscellaneous
+    scripts and programs related to configuration file generation or CPU to FPGA
+    interfaces. The {\bf make} files for each of these installs them in 
+    {\bf \verb'~'/install/3pl}. In most cases the installation simply copies the files.
+    
+    The following utility programs should be executed on the host computer -
+    
+    \hspace*{1cm}{\bf bin2c} \\
+    \hspace*{1cm}{\bf bin2py} \\
+    \hspace*{1cm}{\bf info2c} \\
+    \hspace*{1cm}{\bf info2py} \\
+    \hspace*{1cm}{\bf edif2bit} \\
+    \hspace*{1cm}{\bf run\_ISE} \\
+    \hspace*{1cm}{\bf run\_Vivado} \\
+    
+    {\bf bin2c} and {\bf bin2py} can be run on the Zynq CPU however they require
+    the .bit file as input. Similarly {\bf info2c} and {\bf info2py} can be run
+    on the Zynq CPU but they require the .info file as input.
+
+    edif2bit, run\_ISE and run\_Vivado execute Xilinx software tools and hence
+    cannot execute on the Zynq CPU.
+
+    The remaining tools are used by CPU code on the Zynq and hence should be
+    copied to the Zynq CPU, probably again to {\bf \verb'~'/install/3pl} there -
+    
+    \hspace*{1cm}{\bf cpu\_serial.c} \\
+    \hspace*{1cm}{\bf cpu\_serial.h} \\
+    \hspace*{1cm}{\bf cpu\_serial.py} \\
+    \hspace*{1cm}{\bf fpga\_py\_extension.c} \\
+    \hspace*{1cm}{\bf fpga.c} \\
+    \hspace*{1cm}{\bf fpga.h} \\
+    \hspace*{1cm}{\bf fpga.py} \\
+    \hspace*{1cm}{\bf mk\_setup} \\
+    \hspace*{1cm}{\bf setup.py} \\
+            
+    \section{bin2c/}
+    
+        Type: Python3 script\\
+        Source: {\bf sources/tools/bin2c}\\
+        Target: any\\
+        Execute: on host computer or on Zynq CPU
+    
+        Convert a binary compressed FPGA configuration bit file to a C
+        include file containing an initialised byte array as C source code.
+        By this means the configuration can be included in the application
+        program and can be loaded by the CPU application code without the
+        need to read an external file during execution.        
+        
+        Execute by -
+        
+        {\bf bin2c {\em design\_name}}
+        
+        which will read {\bf {\em
+        design\_name}.bit.gz} and produce a C include file {\bf {\em
+        design\_name}\_include.h}.
+        
+        This is currently only applicable to the Zynq platform. In principle it
+        could be used for platforms whose configuration can be loaded via a
+        serial link from CPU to FPGA, or some other channel, but a procedure to
+        do that would have to be created for each specific platform.
+        
+        The following application code for design name {\em prog} illustrates
+        the inclusion of the configuration data and the configuration
+        loading procedure -
+        \begin{lstlisting}[gobble=4, language=C]
+            .
+            .
+            
+            #include "prog_cinclude.h"
+            .
+            .
+
+            int main (int argc, const char *argv[]) {
+
+                fpga_open();
+
+                fpga_configdata_load(prog_fpga_config_data, prog_fpga_config_size);
+
+                .
+                .
+            }
+        \end{lstlisting}
+        The source for {\bf fpga\_configdata\_load} is in 
+        {\bf sources/tools/fpga} and also {\bf \verb'~'/install/3pl/src/fpga.c}
+        and the object file is {\bf \verb'~'/install/3pl/lib/fpga.o}.
+        
+        Variables {\bf prog\_fpga\_config\_data} and {\bf prog\_fpga\_config\_size}
+        are defined in the included file {\bf prog\_cinclude.h}.
+
+    \section{bin2py/}
+    
+        Type: Python3 script\\        
+        Source: {\bf sources/tools/bin2py}\\
+        Target: any\\
+        Execute: on host computer or on Zynq CPU
+    
+        Convert a binary compressed or uncompressed FPGA configuration bit file
+        to a Python3 source file containing an initialised byte array as Python3
+        source code to be imported. By this means the configuration can be
+        embedded in the application program and can be loaded by the CPU
+        application code without the need to read an external file during
+        execution.
+        
+        Execute by -
+        
+        {\bf bin2py {\em design\_name}}
+        
+        which will read {\bf {\em design\_name}.bit} or {\bf {\em
+        design\_name}.bit.gz} and produce a Python3 file {\bf {\em
+        design\_name}\_config.py}.
+        
+        The following application code for design name {\em prog} illustrates
+        the inclusion of the configuration data and the configuration
+        loading procedure -
+        \begin{lstlisting}[gobble=4, language=Python]
+        import sys
+        import os
+        sys.path.append(os.environ['HOME'] + "/install/3pl")
+        from fpga import *
+        import prog_fpga as fpga
+        import prog_config as config
+
+        FPGA_OPEN()
+        FPGA_CONFIGDATA_LOAD(config.data, len(config.data))
+        .
+        .
+        \end{lstlisting}
+        In the above {\bf from fpga import *} defines low level functions for
+        communication between the CPU and the FPGA.       
+        
+        {\bf import prog\_fpga as fpga} imports a definition of the application
+        level FPGA interface functions and has been created by executing {\bf
+        info2py}. The same effect could be obtained by importing {\bf info2py.py}.
+        
+        {\bf import prog\_config as config} imports a Python3 source version of the
+        FPGA configuration file (preferably compressed) and is created by {\bf
+        edif2bit}.
+
+
+        
+    \section{info2c/}
+
+        Type: Python3 script\\
+        Source: {\bf sources/tools/info2c}\\
+        Target: Zynq or any with serial interface\\       
+        Execute: on host computer or on Zynq CPU
+
+        Generate CPU/FPGA zynq interface functions for C from the 3PL
+        information file (design.info). This generates an include file
+        {\bf {\em design\_name}\_include.h}.
+
+
+    \section{info2py/}
+    
+        Type: Python3 script        
+        Source: {\bf sources/tools/info2py}\\
+        Target: Zynq or any with serial interface\\       
+        Execute: on host computer or on Zynq CPU
+    
+        Generate CPU/FPGA interface functions for
+        Python3 from the 3PL information file (design.info).
+        
+        This can be executed as a main program (\verb'~'/install/3pl/bin/info2py) and will
+        generate a Python3 source file of CPU/FPGA interface functions that can be
+        imported into the CPU application program.
+        
+        Alternatively this file (\verb'~'/install/3pl/include/info2py.py) can be imported
+        into the application program in which case it will create the interface
+        functions internally and will compile them into a module.
+
+        info2py is a copy of into2py.py included so that it can be
+        invoked as a main program without the file name extension, e.g.
+        {\bf info2py prog} rather than {\bf python3 infotopy.py prog}.
+
+        This source will import {\bf serial/cpu\_serial/cpu\_serial.py}
+        for FPGA platforms which have a serial interface, or
+        {\bf zynq/fpga/fpga.py} in the case of Zynq.
+
+        To execute {\bf info2py} and get an importable file -
+        
+        {\bf info2py {\em design\_name}}
+        
+        which will read {\bf {\em design\_name}.info} and create a Python3
+        source file {\bf {\em design\_name}\_fpga.py} which can be imported by the
+        Python3 application program. The imported file defines all the FPGA
+        interface functions.
+        
+        If info2py.py is imported into the application program the FPGA interface
+        JSON description can be read from the .info file or from a version stored
+        in block RAM in the FPGA. The following code illustrates both of these
+        cases with one of them commented out -
+        
+        \begin{lstlisting}[gobble=4, language=Python]
+        import sys
+        import os
+        sys.path.append(os.environ['HOME'] + "/install/3pl")
+        from fpga import *
+        import info2py
+
+        FPGA_OPEN()
+
+        # From .info file
+        #fpga = info2py.info_from_file("prog")
+        
+        # From FPGA
+        fpga = info2py.info_from_fpga()
+        .
+        .
+        \end{lstlisting}
+
+
+
+
+
+
+    \section{edif2bit/}
+        
+        Type: shell/TCL script\\        
+        Source: {\bf sources/tools/edif2bit}\\
+        Target: any\\        
+        Execute: on a Linux host computer
+        
+        Generate an FPGA configuration bit file
+        from the EDIF netlist file. This invokes the Xilinx ISE or
+        Vivado tools as appropriate and hence must be executed on a host
+        containing these tools.
+        
+        Execute by -
+        
+        {\bf edif2bit {\em design\_name}}
+        
+        which will read {\bf {\em design\_name}.edif} and either
+        {\bf {\em design\_name}.ncf}
+        (ISE) or {\bf {\em design\_name}.xdc} (Vivado) and produce the configuration
+        file {\bf {\em design\_name}.bit}.
+        
+        optional command line arguments include -tools ("ise" or "vivado") to
+        manually select place-and-route software, -compress to run gzip on the
+        bit file and -info to append the .info file and .rpt file to the
+        configuration file. This last option appends meta-data to the configuration
+        file to document its production.
+        
+        The bit file can be incorporated into the CPU application program by using
+        bin2c or bin2py and then loaded into the FPGA during proggram execution as
+        described in previous sections.
+        
+        Alternatively the FPGA configuration can be loaded from the bit file
+        by the application program. The bit file may be compressed,
+        i.e. "prog.bit" or "prog.bit.gz".
+        
+        The following example is in C -
+        \begin{lstlisting}[gobble=4, language=C]
+        #include <stdio.h>
+        #include <stdint.h>
+        #include "fpga.h"
+        #include "prog.h"
+
+        int main (int argc, const char *argv[]) {
+            int         i;
+
+            fpga_open();
+            fpga_configfile_load("prog.bit");
+            .
+            .
+        \end{lstlisting}
+        
+        Or in Python3 -
+        
+        \begin{lstlisting}[gobble=4, language=Python]
+        import sys
+        import os
+        sys.path.append(os.environ['HOME'] + "/install/3pl")
+        from fpga import *
+        import prog_fpga as fpga
+        import time
+        import signal
+        import prog_config as config
+
+        FPGA_OPEN()
+        FPGA_CONFIGFILE_LOAD("prog.bit.gz"))
+        .
+        .
+        \end{lstlisting}
+
+
+
+
+                
+    \section{run\_ISE}
+    
+        Type: shell script\\        
+        Source: {\bf sources/tools/run\_ISE}\\
+        Target: any\\
+        Execute: on a Linux host computer
+    
+        Generate an FPGA configuration bit file
+        from the EDIF netlist file using Xilinx ISE tools. This is
+        a very much more primitive and direct script than edif2bit
+        above.
+        
+        Execute by -
+        
+        {\bf run\_ISE {\em design}\_name}
+
+    \section{run\_vivado}
+    
+        Type: shell script\\        
+        Source: {\bf sources/tools/run\_Vivado}\\
+        Target: any\\
+        Execute: on a Linux host computer
+    
+        Generate an FPGA configuration bit
+        file from the EDIF netlist file using Xilinx Vivado
+        tools. This is a very much more primitive and direct
+        script than edif2bit above.
+        
+        Execute by -
+        
+        {\bf run\_Vivado {\em design}\_name}
+
+    \section{serial/}
+    
+        This directory contains interface code for FPGA platforms which have
+        a serial interface between the CPU and the FPGA. An example of this
+        type of platform is the Gadget Factory Papilio board.
+        
+        These procedures can be called directly but for convenience are usually
+        called through the included/imported intervening procedures generated by
+        info2c or info2py
+                
+        See also - \autorefph{ch:serialcpu}.
+                
+        
+        \subsection{cpu\_serial.py}
+    
+            Type: Python3\\
+            Source: {\bf sources/tools/serial/cpu\_serial.py}\\
+            Target: platforms with serial interface to CPU\\
+            Execute: on a Linux or OSX host computer
+            
+            As well as the open and close procedures listed below this file
+            defines necessary low-level CPU/FPGA interface communications functions.
+            These functions are called from the interface code in the Python3 file
+            generated by {\bf info2py} and imported into the application code.
+            
+            \underline{{\bf fpga\_open(port\_name)}} \\
+            Open the serial interface to the FPGA. {\bf port\_name} is a string
+            specifying the serial device to the FPGA, e.g.
+            "/dev/tty.usbmodem14101".
+            
+            \underline{{\bf fpga\_close()}} \\
+            Close the serial interface to the FPGA.
+            
+            \underline{{\bf DMA\_buffer(b)}} \\
+            Set a pointer to the DMA buffer, eg.
+            
+            \begin{lstlisting}[gobble=4, language=Python]
+            dmabuffer = bytearray(4096)
+            DMA_buffer(dmabuffer)
+            \end{lstlisting}
+
+            
+                
+        \subsection{cpu\_serial.c/, cpu\_serial.h}
+    
+            Type: C\\
+            Source: {\bf sources/tools/serial/cpu\_serial.c}, {\bf sources/tools/serial/cpu\_serial.h} \\
+            Target: platforms with serial interface to CPU\\
+            Execute: on a Linux or OSX host computer
+        
+            
+            As well as the open and close procedures listed below this file
+            defines necessary low-level CPU/FPGA interface communications functions.
+            These functions are called from the interface code in the C include file
+            generated by {\bf info2c}.
+            
+            \underline{{\bf  fpga\_open(port\_name))}} \\
+            Open the serial interface to the FPGA. {\bf port\_name} is a string
+            specifying the serial device to the FPGA, e.g.
+            "/dev/tty.usbmodem14101".
+            
+            \underline{{\bf fpga\_close()}} \\
+            Close the serial interface to the FPGA.
+            
+
+        
+            
+
+    \section{zynq/}
+    
+        This directory contains CPU/FPGA interface functions for the Zynq FPGA
+        platform.
+        
+        These procedures can be called directly but for convenience are usually
+        called through the included/imported intervening procedures generated by
+        info2c or info2py
+        
+        See also - \autorefph{ch:zynqcpu}.
+    
+        For this interface to operate the Zynq Linux device tree must provide
+        entries for axi\_mgp0, axi\_mgp1 and axi\_hpbuf and must also provide
+        interrupt events 0 to 15. An example is shown in
+        \autorefph{ch:zynq_device_tree}.
+            
+        
+        \subsection{fpga.c, fpga.h}
+
+            Type: C source\\        
+            Source: {\bf sources/tools/zynq/fpga/fpga.c}, {\bf sources/tools/fpga/fpga.h}\\
+            Target: Zynq\\
+            Execute: on Zynq CPU
+
+            \underline{{\bf fpga\_open ()}} \\
+
+                This maps register space (AXI mgp0), memory space (AXI mgp1), DMA space (AXI HP0, HP1, HP2 and
+                HP3) and events 0 to 15.
+
+            \underline{{\bf fpga\_close ()}} \\
+
+                This unmaps the previously mapped spaces.
+
+            \underline{{\bf fpga\_event\_wait(uint32\_t event\_index)}} \\
+
+                Wait for an event. This enables the event specifies by the event index {\bf ev}
+                and then does a blocking read on /dev/uiox where x is the event unit number. When
+                the read occurs the event is now disabled.
+
+            \underline{{\bf fpga\_event\_control(uint32\_t event\_index, uint32\_t c)}} \\
+
+                Enable or disable the event specified by event index {\bf ev}. This is done by
+                writing 1 or 0 respectively to /dev/uiox where x is the event unit number.
+
+            \underline{{\bf uio\_event\_fd(uint32\_t event\_index)}} \\
+
+                Return the file descriptor for /dev/uiox where x is the event unit number.
+
+            \underline{{\bf uio\_event\_count(uint32\_t event\_index)}} \\
+
+                Return the number of events since the previous wait. If greater than 1 then
+                a number of events have occured before the wait has executed iyts blocking read.
+
+            \underline{{\bf uio\_dma\_phys\_address()}} \\
+
+                Return the physical address of the mapped DMA space.
+
+            \underline{{\bf fpga\_configfile\_load(char *filename)}} \\
+
+                Load an FPGA configuration from the specified bit file.
+
+            \underline{{\bf fpga\_configdata\_load(uint8\_t *data, size\_t len)}} \\
+
+                Load an FPGA configuration from an array of char.\\
+                {\bf data} is the array of char.\\
+                {\bf len} is the dimension of the array.
+
+            \underline{{\bf FPGA\_REG\_READ(addr, type, dww)}} \\
+
+                Read an FPGA value or queue mode variable.\\
+                {\bf addr} is the address of the interface.\\
+                {\bf type} is the type of the returned value.\\
+                {\bf dww} is the number of 32-bit words to be transfered.
+
+            \underline{{\bf FPGA\_REG\_WRITE(addr, val, dww)}} \\
+
+                Write to an FPGA static or queue mode variable.\\
+                {\bf addr} is the address of the interface.\\
+                {\bf val} is the value to be written.\\
+                {\bf dww} is the number of 32-bit words to be transfered.
+
+            \underline{{\bf FPGA\_MEM\_READ(addr, loc, type, dww)}} \\
+
+                Read an FPGA cmemory or rmemory mode variable.\\
+                {\bf addr} is the address of the interface.\\
+                {\bf loc} is the address within the memory.\\
+                {\bf type} is the type of the returned value.\\
+                {\bf dww} is the number of 32-bit words transfered.
+
+            \underline{{\bf FPGA\_MEM\_WRITE(addr, loc, val, dww)}} \\
+
+                Write to an FPGA cmemory or rmemory mode variable.\\
+                {\bf addr} is the address of the interface.\\
+                {\bf loc} is the address within the memory.\\
+                {\bf val} is the value to be written.\\
+                {\bf dww} is the number of 32-bit words transfered.
+
+
+        \subsection{fpga.py}
+
+            Type: Python3 source\\        
+            Source: {\bf sources/tools/zynq/fpga/fpga.py}\\
+            Target: Zynq\\
+            Execute: on Zynq CPU
+
+            Python3 low-level CPU/FPGA interface communications. functions. This
+            imports low-level communication functions from {\bf fpga\_read\_write.c}
+            which has been added to the Python3 library by {\bf
+            sources/tools/zynq/lib\_py\_ext/setup.py} below as Python3 module {\bf
+            fpga.py}.
+
+            \underline{{\bf fpga\_open ()}} \\
+
+                This calls fpga\_c\_open() in fpga\_read\_write.c (below) to map register space
+                (AXI mgp0), memory space (AXI mgp1), DMA space (AXI HP0, HP1, HP2 and HP3) and
+                events 0 to 15.
+
+                It then saves the current value of each event device /sys/class/uio/uiox/event where x is 0 to
+                15. This value increments on each event occurence since oper-up and the initial value prior to
+                execution is needed to determine how many events have occured between interrupts (blocking reads
+                of the event device /dev/uiox).
+
+            \underline{{\bf fpga\_close ()}} \\
+
+                This calls fpga\_c\_close() in fpga\_read\_write.c (below) to unmap
+                the previously mapped spaces.
+
+            \underline{{\bf comms\_write (mem, address, memaddress, dba)}} \\
+
+                Write to the FPGA.\\
+                {\bf mem} is 0 for a register or queue, 1 for cmemory or rmemory.\\
+                {\bf address} is the address of the interface.\\
+                {\bf memaddress} is the address within a memory if {\bf mem} is 1.\\
+                {\bf dba} is a byte array containing the data. The size of the byte array
+                indicates the number of bytes to write.
+
+            \underline{{\bf comms\_read (mem, address, memaddress, bytes)}} \\
+
+                Read from the FPGA.\\
+                {\bf mem} is 0 for a value or queue, 1 for cmemory or rmemory.\\
+                {\bf address} is the address of the interface.\\
+                {\bf memaddress} is the address within a memory if {\bf mem} is 1.\\
+                {\bf bytes} is the number of bytes to read.\\
+                The data is returned as a byte array.
+
+            \underline{{\bf event\_wait (ev)}} \\
+
+                Wait for an event. This enables the event specifies by the event index {\bf ev}
+                and then does a blocking read on /dev/uiox where x is the event index. When
+                the read occurs the event is now disabled.
+
+            \underline{{\bf event\_enable (ev)}} \\
+
+                Enable the event specified by event index {\bf ev}. This is done by
+                writing 1 to /dev/uiox where x is the event index.
+
+            \underline{{\bf event\_disable (ev)}} \\
+
+                Disable the event specified by event index {\bf ev}. This is done by
+                writing 0 to /dev/uiox where x is the event index.
+
+            \underline{{\bf dma\_phys\_address ()}} \\
+
+                This function returns the physical address of the DMA mapped space.
+
+            \underline{{\bf dma\_get\_word (addr)}} \\
+
+                This function gets one 32-bit word from the DMA mapped space. {\bf addr}
+                is an address offset into the DMA address space.
+
+            \underline{{\bf dma\_put\_word (addr, data)}} \\
+
+                This function puts one 32-bit word into the DMA mapped space. {\bf addr}
+                is an address offset into the DMA address space and {\bf data} is the data word.
+
+        \subsection{fpga\_py\_extension.c}
+
+            Type: C source\\        
+            Source: {\bf sources/tools/zynq/fpga\_py\_extension.c}\\
+            Target: Zynq\\
+            Execute: on Zynq CPU
+
+            Python3 C extension code. This provides links from the Python3 interface functions
+            into functions in {\bf fpga.c}. It is added to the Python3 library as module
+            {\bf fpga\_read\_write} by executing {\bf setup.py} (below).
+
+
+            \underline{{\bf py\_fpga\_open()}} \\
+
+                Called as fpga\_open() in python.\\
+                Calls fpga\_open() in fpga.c.
+                This maps register space (AXI mgp0), memory space (AXI mgp1), DMA space (AXI HP0, HP1, HP2 and
+                HP3) and events 0 to 15.
+
+            \underline{{\bf py\_fpga\_close()}} \\
+
+                Called as fpga\_close() in python.\\
+                Calls fpga\_close() in fpga.c.
+                This unmaps the previously mapped spaces.
+
+            \underline{{\bf py\_fpga\_configfile\_load(fname)}} \\
+
+                Called as fpga\_configfile\_load() in python.\\
+                Calls fpga\_configfile\_load() in fpga.c.\\
+                {\bf fname} is the file name of the configuration bit file. This will have a .bit
+                file name extension or .bit.gz if compressed,
+
+            \underline{{\bf py\_fpga\_configdata\_load(data, len)}} \\
+
+                Called as fpga\_configdata\_load(data, len) in python.\\
+                {\bf data} is a byte array containing the configuration bit pattern.\\
+                {\bf len} is the dimension of the array.\\
+                The configuration byte array is contained in an imported module created by {\bf bin2py}
+                (which itself is a Python3 script).
+
+            \underline{{\bf py\_fpga\_burst\_read(is\_mem, address, n\_words)}} \\
+
+                Called as fpga\_burst\_read(mem, adress, words) in python.\\
+                Read an FPGA value, queue, cmemory or rmemory mode variable.\\
+                {\bf is\_mem} is 1 for cmemory or rmemory mode and 1 otherwise.\\
+                {\bf address} is the address of the interface.\\
+                {\bf n\_words} is the number of 32-bit words to be transfered.
+
+            \underline{{\bf py\_fpga\_burst\_write(is\_mem, address, n\_words, data)}} \\
+
+                Called as fpga\_burst\_write(mem, address, words, data) in python.\\
+                Write to an FPGA static, queue, cmemory or rmemory mode variable.\\
+                {\bf is\_mem} is 1 for cmemory or rmemory mode and 1 otherwise.\\
+                {\bf address} is the address of the interface.\\
+                {\bf n\_words} is the number of 32-bit words to be transfered.\\
+                {\bf data} is the data, a byte array.
+
+            \underline{{\bf py\_uio\_event\_wait(event\_no)}} \\
+
+                Called by uio\_event\_wait(ev) in python.\\
+                Calls fpga\_event\_wait() in fpga.c.\\
+                {\bf event\_no} is the event index, 0 to 15.\\
+                Wait for an event. This enables the event specifies by the event index {\bf ev}
+                and then does a blocking read on /dev/uiox where x is the event unit number. When
+                the read occurs the event is now disabled.
+
+            \underline{{\bf py\_uio\_event\_fd(event\_no)}} \\
+
+                Called by uio\_event\_fd(ev) in python.\\
+                {\bf event\_no} is the event index, 0 to 15.\\
+                Return the file descriptor for /dev/uiox where x is the event unit number.
+
+            \underline{{\bf py\_uio\_event\_unit(event\_no)}} \\
+
+                Called by uio\_event\_unit(ev) in python.\\
+                {\bf event\_no} is the event index, 0 to 15.\\
+                Return the event number x for /dev/uiox where x is the event unit number.
+
+            \underline{{\bf py\_uio\_event\_count(event\_no)}} \\
+
+                Called by uio\_event\_count(ev) in python.\\
+                Return the number of events since the previous wait. If greater than 1 then
+                a number of events have occured before the wait has executed iyts blocking read.
+
+            \underline{{\bf py\_uio\_event\_control(event\_no, c)}} \\
+
+                Called by uio\_event\_control(ev, c) in python.\\
+                Calls fpga\_event\_control() in fpga.c.\\
+                Enable or disable the event specified by event index {\bf ev}. This is done by
+                writing 1 or 0 respectively to /dev/uiox where x is the event unit number.
+
+            \underline{{\bf py\_uio\_dma\_get\_word(address)}} \\
+
+                Called by uio\_dma\_get\_word(addr) in python.\\
+                Returns a 32-bit word from the DMA space with offset {\bf address}.
+
+            \underline{{\bf py\_uio\_dma\_put\_word(address, data)}} \\
+
+                Called by uio\_dma\_put\_word(addr, data) in python.\\
+                Copies a 32-bit word {\bf data} from the DMA space with offset {\bf address}.
+
+            \underline{{\bf py\_uio\_dma\_phys\_address()}} \\
+
+                Called by uio\_dma\_phys\_address() in python.\\
+                Returns the physical address of the DMA space.
+
+
+
+        \subsection{setup.py}
+
+            Type: Python3 source\\        
+            Source: {\bf sources/tools/zynq/setup.py}\\
+            Target: Zynq\\
+            Execute: on Zynq CPU
+
+            A Python3 source file to add {\bf fpga\_read\_write.c} above as a C
+            extension to the Python3 library. {\bf mk\_setup} is a shell
+            script to execute {\bf setup.py} which will add module {\bf
+            fpga\_read\_write} to the Python3 library.
+
+        \subsection{mk\_setup}
+
+            Type: shell command file\\        
+            Source: {\bf sources/tools/zynq/mk\_setup}\\
+            Target: Zynq\\
+            Execute: on Zynq CPU
+
+            This command file adds the C extension described above to the Python3 library.
+            It also compiles fpga.c to fpga.o.
+            Execute by typing {\bf mk\_setup} to the shell.
+

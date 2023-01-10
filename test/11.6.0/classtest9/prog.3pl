@@ -1,0 +1,23 @@
+var(cp, "->", classptr(c));
+class(cl, cp->());
+var(clp, "->", &cl);
+var(m, "map");
+m["abc"] = clp;
+println(m["abc"]->.j[1] + " (234)");
+var(ppp, "->", &m["abc"]->.j[2]);
+println(ppp-> + " (345)");
+
+int(o1, 123);
+int(i1, 456);
+ccc(o1 <- i1);
+println("i1 " + i1 + " o1 " + o1);
+
+class c () {
+    var(j, "[3]int", {123, 234, 345});
+    println("c() called");
+}
+
+class ccc (int(o) <- int(i)) {
+    o = i;
+    println("c() called");
+}

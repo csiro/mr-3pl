@@ -1,0 +1,42 @@
+# program 3PL version 11.5.1M (devel svn 9985:9991M, dun202)
+# timestamp 2021-11-16 10:26:14 +1100
+# 
+#         ALU = false
+#         FIFO = false
+#         OS = mac os x
+#         QUEUEREG = false
+#         arch = x86_64
+#         compileOnly = false
+#         compilerMakeDate = 2021-11-16 10:25:48 +1100
+#         continuous = false
+#         currentDirectory = /Users/dun202/eclipse/3PL
+#         date = 2021-11-16 10:26:14 +1100
+#         designName = prog
+#         family = XC3S
+#         filePath = false
+#         forceExec = true
+#         gatesNotLuts = false
+#         intTruncWarning = false
+#         intermediateOnly = false
+#         listNets = false
+#         listTDEs = false
+#         listTDEsSel = 0
+#         locations = false
+#         netFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest3/prog.net
+#         netlistDisplay = false
+#         netlistFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest3/prog.edn
+#         optimiseConnect = true
+#         outputDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/classtest3/
+#         parentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/classtest3/
+#         part = xc3s500evq100-4
+#         postProcessTool = ise
+#         reportFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest3/prog.rpt
+#         rptToFile = false
+#         sigList = false
+#         skipPostProc = true
+#         sourceFile = prog.3pl
+#         srlAddrWidth = 4
+#         unassOut = fatal
+#         version = 11.5.1M (devel svn 9985:9991M, dun202)
+#     
+NET PORT_P89 IOSTANDARD=LVCMOS33;

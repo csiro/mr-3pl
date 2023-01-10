@@ -1,0 +1,195 @@
+\pagebreak
+
+\section{General UART Library File - uart.3pl}
+
+    \index{library!uart.3pl}
+    This library provides a general Universal Asynchronous Receiver/Transmitter
+    which can be dynamically configured. For a simple UART see the next
+    chapter, "Simple UART library file - uarts.3pl". These modules can only be
+    used where the current clock is 100MHz, 50MHz or 16MHz.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "uart.3pl"
+    \end{lstlisting}
+
+    \subsection{global variables}
+
+        A {\bf value} mode variable is created for each baud rate.
+        These are type {\bf log} and oscillate at 16 times the baud
+        rate. The variables are -
+
+        \begin{tabular}{| l l l |}
+        \hline
+        uart\_brc16\_500000 & uart\_brc16\_460800 & uart\_brc16\_307200 \\ \hline
+        uart\_brc16\_230400 & uart\_brc16\_153600 & uart\_brc16\_115200 \\ \hline
+        uart\_brc16\_76800  & uart\_brc16\_57600  & uart\_brc16\_38400  \\ \hline
+        uart\_brc16\_19200  & uart\_brc16\_9600   & uart\_brc16\_4800   \\ \hline
+        uart\_brc16\_2400   & uart\_brc16\_1200   & uart\_brc16\_600    \\ \hline 
+        uart\_brc16\_300    &                   &                   \\ \hline  
+        \end{tabular}
+
+        Two {\bf static} mode variables are created, one a millisecond clock,
+        the other a microsecond clock. These are {\bf uart\_brc\_us} and
+        {\bf uart\_brc\_ms} and are type {\bf log}.
+
+    \subsection{library modules}
+
+        \subsubsection{uart\_tx - general UART transmitter}\label{sec:lmuarttx}
+
+            {\bf Library: uart.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               uart_tx (
+                   value({txd, txbusy}, "log")
+                   value(brc, "log")
+                   <-
+                   queue(in, "bits:8"),
+                   value(brc16, "log"),
+                   value(txen, "log", true),
+                   value(cts, "log"),
+                   value(csize, "uint:2", 3),
+                   value(parenb, "log")
+                   value(parodd, "log", false)
+                   value(cstopb, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf txd} is the serial output.\\
+            {\bf brc} is the baud rate clock.
+
+            {\bf Input parameters:} \\
+            {\bf in} is the 8-bit input.\\
+            {\bf br16} is the 16 times baud rate clock.\\
+            {\bf txen} is transmit enable.\\
+            {\bf cts} is 'clear to send'.\\
+            {\bf csize} is 0 to 2 for 6, 7 or 8 bits.\\
+            {\bf parenb} is parity enable.\\
+            {\bf parodd} selects odd parity.\\
+            {\bf cstopb} adds a second stop bit.
+
+            {\bf description:} \\
+            A UART output section. {\bf txd} is the transmit output, usually
+            connected direct to an output pin.
+
+            {\bf in} is the input data, always 8 bits.
+
+            Transmission occurs only if {\bf txen} and {\bf cts} (if connected)
+            are asserted. If either go false the transmitter will stop at the
+            end of the current character. {\bf cts} usually connects to an
+            output pin. {\bf txbusy} indicates the transmitter is operating.
+
+            {\bf brc16} is a clock enable signal at 16 times the output baud
+            rate. {\bf csize} is the char size (0 = 5 bits, 1 = 6 bits, 2 = 7
+            bits, 3 = 8 bits). If PARENB is true, an even parity bit is added,
+            odd if {\bf parodd} is also true. If {\bf cstopb} is true, a second
+            stop bit is added. It is unsafe to change any of these while {\bf
+            txbusy} is high.
+
+            {\bf brc} is the internal baud clock, 1/16 the rate of {\bf brc16},
+            and is brought out in case anything wants it
+
+            The default is 8-bit characters, no parity, 1 stop bit.
+
+            Flow-control ({\bf cts}) has not yet been tested.
+            {\bf uart\_tx} cannot produce BREAK.
+
+
+        \subsubsection{uart\_rx - general UART receiver}\label{sec:lmuartrx}
+
+            {\bf Library: uart.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module
+               uart_rx (
+                   queue(out, "bits:8"), value({oferr, operr, overflow, rts}, "log")
+               <-
+                   value({rxd, brc16}, "log"),
+                   value(rxen, "log", true),
+                   value(csize, "uint:2", 3),
+                   value(parenb, "log")
+                   value(parodd, "log", true)
+                   value(cstopb, "log")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf out} is the 8-bit output output.\\
+            {\bf oferr} indicates a framing error.\\
+            {\bf operr} indicates a parity error.\\
+            {\bf overflow} indicates an output queue buffer overflow.\\
+            {\bf rts} is 'ready to send'.
+
+            {\bf Input parameters:} \\
+            {\bf rxd} is the serial input.\\
+            {\bf br16} is the 16 times baud rate clock.\\
+            {\bf rxen} is receive enable.\\
+            {\bf parenb} is parity enable.\\
+            {\bf parodd} selects odd parity.\\
+            {\bf cstopb} expects a second stop bit.
+
+            {\bf description:} \\
+            A UART receiver section. {\bf rxd} is the receive input, usually
+            connected direct to an input pin.
+
+            {\bf oferr} is true if there was a framing error, and {\bf operr} indicates
+            a parity error (can only occur if {\bf parenb} is true). {\bf oferr} and
+            {\bf operr} are valid whenever out is available.
+
+            Optional input {\bf rxen} if false will disable the receiver when the
+            current character is complete. Output {\bf rts} is true when the
+            receiver will accept a character. It goes false when {\bf rxen} is
+            false or a received character was not acknowledged before the
+            expected start of the next character.
+
+            {\bf brc16}, {\bf csize}, {\bf parenb}, {\bf parodd} and {\bf cstopb} have the same
+            meanings as in {\bf uart\_out()}.
+
+            Flow-control ({\bf rts}) is supported but has not been tested.
+            BREAK should be detect but is not.
+
+
+
+
+
+
+    \subsection{library procedures}
+    
+        \subsubsection{uart\_brc16 - create baud rate clocks}\label{sec:lpuartbrc16}
+
+            {\bf Library: uart.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               uart_brc16 () {
+             \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            None.
+
+            {\bf Input parameters:} \\
+            None.
+       
+            {\bf description:} \\
+            This procedure should be called once in each UART installation.
+            It generates the global 16 x baud rate clock signals from the
+            given input clock, which must be the same clock given to the
+            calls to {\bf uart()}.
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

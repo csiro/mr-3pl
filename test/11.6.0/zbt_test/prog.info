@@ -1,0 +1,128 @@
+{
+    "version": {
+        "major": 1,
+        "minor": 0
+    },
+    "directives": {
+        "ALU": "false",
+        "BOARD": "avnet/microzed_7020",
+        "BUILD": "build/fpga/icrozed_",
+        "FIFO": "false",
+        "OS": "mac os x",
+        "QUEUEREG": "false",
+        "arch": "x86_64",
+        "compileOnly": "false",
+        "compilerMakeDate": "2021-08-06 15:23:59 +1000",
+        "continuous": "false",
+        "currentDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5",
+        "date": "2021-12-10 17:37:00 +1100",
+        "designName": "prog",
+        "family": "XC7",
+        "filePath": "false",
+        "forceExec": "true",
+        "gatesNotLuts": "false",
+        "intTruncWarning": "false",
+        "intermediateOnly": "false",
+        "listNets": "true",
+        "listTDEs": "true",
+        "listTDEsSel": "0",
+        "locations": "false",
+        "netFile": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5/prog.net",
+        "netlistDisplay": "false",
+        "netlistFile": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5/prog.edn",
+        "optimiseConnect": "true",
+        "outputDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5/",
+        "parentDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5/",
+        "part": "xc7z020clg400-1",
+        "postProcessCompress": "true",
+        "postProcessTool": "vivado",
+        "reportFile": "/Users/dun202/src/mine/3PL/test/11.6.0/classtest5/prog.rpt",
+        "rptToFile": "true",
+        "sigList": "false",
+        "skipPostProc": "true",
+        "sourceFile": "prog.3pl",
+        "srlAddrWidth": "5",
+        "unassOut": "fatal",
+        "version": "11.5.1M (devel svn 9947M, dun202)"
+    },
+    "spaces": {
+        "reg": {
+            "bus": "axi_mgp0",
+            "read_addr_bits": 2,
+            "write_addr_bits": 4,
+            "interfaces": {
+                "infoword": {
+                    "interface": "cpu.read_value",
+                    "write": false,
+                    "data_addr": 1,
+                    "data_bits": 32,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 32
+                    }
+                },
+                "inforeset": {
+                    "interface": "cpu.write_static",
+                    "write": true,
+                    "data_addr": 1,
+                    "data_bits": 0
+                },
+                "QAR": {
+                    "interface": "cpu.write_queue",
+                    "write": true,
+                    "data_depth": 2,
+                    "data_addr": 2,
+                    "avail_thresh_addr": 3,
+                    "check": false,
+                    "data_bits": 19,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 19
+                    }
+                },
+                "QAW": {
+                    "interface": "cpu.write_queue",
+                    "write": true,
+                    "data_depth": 2,
+                    "data_addr": 4,
+                    "avail_thresh_addr": 5,
+                    "check": false,
+                    "data_bits": 19,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 19
+                    }
+                },
+                "QI": {
+                    "interface": "cpu.write_queue",
+                    "write": true,
+                    "data_depth": 2,
+                    "data_addr": 6,
+                    "avail_thresh_addr": 7,
+                    "check": false,
+                    "data_bits": 12,
+                    "data_type": {
+                            "type": "bits",
+                            "bits": 12
+                    }
+                },
+                "QO": {
+                    "interface": "cpu.read_queue",
+                    "write": false,
+                    "data_depth": 2,
+                    "data_addr": 2,
+                    "avail_thresh_addr": 8,
+                    "check": false,
+                    "data_bits": 12,
+                    "data_type": {
+                            "type": "bits",
+                            "bits": 12
+                    }
+                }
+            }
+        }
+    },
+    "events": {
+    }
+}
+

@@ -1,0 +1,896 @@
+nosource
+
+// DSP48 block. This is used in Virtex4.           
+global procedure
+dsp48 (
+    value(bcout, "bits:18"),
+    value(pcout, "bits:48"),
+    value(p, "bits:48")
+    <-   
+    str({loc, b_input}),
+    int({areg, breg, creg, mreg, preg, opmodereg,
+         carryinreg, subtractreg, carryinselreg}),
+    
+    clock(clk),
+    value(a, "bits:18"),
+    value(b, "bits:18"),
+    value(c, "bits:48"),
+    value(opmode, "uint:7"),
+    value(subtract, "log"),
+    value(carryinsel, "uint:2"),
+    value(bcin, "bits:18"),
+    value(pcin, "bits:48"),
+    value({carryin, cea, ceb, cec, cem, cep,
+           cectrl, cecinsub, cecarryin, rsta, rstb, rstc, rstm,
+           rstp, rstctrl, rstcarryin}, "log", false)
+) {
+    int(arrayformat, 2);
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "dsp48"+idn++);
+    element("DSP48", id);
+    
+    // Tie unused clock enables high or low as appropriate (Xilinx advice).
+    if (!matched(cea))           cea := (areg == 2);
+    if (!matched(ceb))           ceb := (breg == 2);
+    if (!matched(cec))           cec := (creg == 1);
+    if (!matched(cem))           cem := (mreg == 1);
+    if (!matched(cep))           cep := (preg == 1);
+    if (!matched(cectrl))        cectrl := (opmodereg + carryinselreg != 0);
+    if (!matched(cecarryin))     cecarryin := (carryinreg == 1);
+    if (!matched(cecinsub))      cecinsub := (subtractreg == 1);
+
+    elementclockinput(id, "CLK", nullarg(clk));
+    
+    elementinput(id, "A",            nullarg(a)          , arrayformat);
+    elementinput(id, "B",            nullarg(b)          , arrayformat);
+    elementinput(id, "C",            nullarg(c)          , arrayformat);
+    elementinput(id, "OPMODE",       nullarg(opmode)     , arrayformat);
+    elementinput(id, "SUBTRACT",     nullarg(subtract)  );
+    elementinput(id, "CARRYINSEL",   nullarg(carryinsel) , arrayformat);
+    elementinput(id, "BCIN",         nullarg(bcin)       , arrayformat);
+    elementinput(id, "PCIN",         nullarg(pcin)       , arrayformat);
+    elementinput(id, "CARRYIN",      nullarg(carryin)   );
+    elementinput(id, "CEA",          nullarg(cea)       );
+    elementinput(id, "CEB",          nullarg(ceb)       );
+    elementinput(id, "CEC",          nullarg(cec)       );
+    elementinput(id, "CEM",          nullarg(cem)       );
+    elementinput(id, "CEP",          nullarg(cep)       );
+    elementinput(id, "CECTRL",       nullarg(cectrl)    );
+    elementinput(id, "CECINSUB",     nullarg(cecinsub)  );
+    elementinput(id, "CECARRYIN",    nullarg(cecarryin) );
+    elementinput(id, "RSTA",         rsta               );
+    elementinput(id, "RSTB",         rstb               );
+    elementinput(id, "RSTC",         rstc               );
+    elementinput(id, "RSTM",         rstm               );
+    elementinput(id, "RSTP",         rstp               );
+    elementinput(id, "RSTCTRL",      rstctrl            );
+    elementinput(id, "RSTCARRYIN",   rstcarryin         );
+
+    elementoutput(nullarg(bcout)       <-    id, "BCOUT" , arrayformat);
+    elementoutput(nullarg(pcout)       <-    id, "PCOUT" , arrayformat);
+    elementoutput(nullarg(p)           <-    id, "P"     , arrayformat);
+
+    elementStrProperty(id, "B_INPUT", nullarg(b_input), "DIRECT", "CASCADE");
+    elementIntProperty(id, "AREG", areg, 0, 2);
+    elementIntProperty(id, "BREG", breg, 0, 2);
+    elementIntProperty(id, "CREG", creg, 0, 1);
+    elementIntProperty(id, "MREG", mreg, 0, 1);
+    elementIntProperty(id, "PREG", preg, 0, 1);
+    elementIntProperty(id, "OPMODEREG", opmodereg, 0, 1);
+    elementIntProperty(id, "CARRYINREG", carryinreg, 0, 1);
+    elementIntProperty(id, "SUBTRACTREG", subtractreg, 0, 1);
+    elementIntProperty(id, "CARRYINSELREG", carryinselreg, 0, 1);
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    elementend(id);
+}
+
+// DSP48A1 block. This is used in Spartan6.           
+global procedure
+dsp48a1 (
+    value(p, "bits:48"),
+    value(bcout, "bits:18"),
+    value(pcout, "bits:48"),
+    value(mfout, "bits:36"),
+    value(ccout, "bits:1"),
+    value(cfout, "bits:1")
+    <-   
+    str(loc),
+    str(carryinsel, "CARRYIN"),
+    str(rsttype, "SYNC"),
+    int({a0reg, b0reg, }, 0),
+    int({a1reg, b1reg, creg, dreg, mreg, preg, opmodereg,
+         carryinreg, carryoutreg}, 1),
+    
+    clock(clk),
+    value(a, "bits:18"),
+    value(b, "bits:18"),
+    value(c, "bits:48"),
+    value(d, "bits:18"),
+    value(opmode, "uint:8"),
+    value(pcin, "bits:48"),
+    value(cin, "bits:1"),
+    value({cea, ceb, cec, ced, cem, cep,
+           cecy, ceo, rsta, rstb, rstc, rstd, rstm,
+           rstp, rstcy, rsto}, "log", false)
+) {
+    int(arrayformat, 2);
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "dsp48"+idn++);
+    element("DSP48A1", id);
+    
+    // Tie unused clock enables high or low as appropriate (Xilinx advice).
+    if (!matched(cea))           cea := (a0reg != 0 || a1reg != 0);
+    if (!matched(ceb))           ceb := (b0reg != 0 || b1reg != 0);
+    if (!matched(cec))           cec := (creg != 0);
+    if (!matched(ced))           ced := (dreg != 0);
+    if (!matched(cem))           cem := (mreg != 0);
+    if (!matched(cep))           cep := (preg != 0);
+
+    elementclockinput(id, "CLK", nullarg(clk));
+    
+    elementinput(id, "A",      nullarg(a),      arrayformat);
+    elementinput(id, "B",      nullarg(b),      arrayformat);
+    elementinput(id, "C",      nullarg(c),      arrayformat);
+    elementinput(id, "D",      nullarg(d),      arrayformat);
+    elementinput(id, "OPMODE", nullarg(opmode), arrayformat);
+    elementinput(id, "PCIN",   nullarg(pcin),   arrayformat);
+    elementinput(id, "CIN",    nullarg(cin) );
+    elementinput(id, "CEA",    cea          );
+    elementinput(id, "CEB",    ceb          );
+    elementinput(id, "CEC",    cec          );
+    elementinput(id, "CED",    ced          );
+    elementinput(id, "CEM",    cem          );
+    elementinput(id, "CEP",    cep          );
+    elementinput(id, "RSTA",   rsta         );
+    elementinput(id, "RSTB",   rstb         );
+    elementinput(id, "RSTC",   rstc         );
+    elementinput(id, "RSTM",   rstm         );
+    elementinput(id, "RSTP",   rstp         );
+    elementinput(id, "RSTCY",  rstcy        );
+    elementinput(id, "RSTO",   rsto         );
+
+    elementoutput(nullarg(p)     <- id, "P"     , arrayformat);
+    elementoutput(nullarg(bcout) <- id, "BCOUT" , arrayformat);  
+    elementoutput(nullarg(pcout) <- id, "PCOUT" , arrayformat);  
+    elementoutput(nullarg(mfout) <- id, "MFOUT" , arrayformat);  
+    elementoutput(nullarg(ccout) <- id, "CCOUT"              );
+    elementoutput(nullarg(cfout) <- id, "CFOUT"                  );
+
+    elementIntProperty(id, "A0REG", a0reg,       0, 1);
+    elementIntProperty(id, "A1REG", a1reg,       0, 1);
+    elementIntProperty(id, "B0REG", b0reg,       0, 1);
+    elementIntProperty(id, "B1REG", b1reg,       0, 1);
+    elementIntProperty(id, "CREG", creg,        0, 1);
+    elementIntProperty(id, "DREG", dreg,        0, 1);
+    elementIntProperty(id, "MREG", mreg,        0, 1);
+    elementIntProperty(id, "PREG", preg,        0, 1);
+    elementIntProperty(id, "OPMODEREG", opmodereg,   0, 1);
+    elementIntProperty(id, "CARRYINREG", carryinreg,  0, 1);
+    elementIntProperty(id, "CARRYOUTREG", carryoutreg, 0, 1);
+    elementStrProperty(id, "B_INPUT", nullarg(b_input), "DIRECT", "CASCADE");
+    elementStrProperty(id, "CARRYIN", nullarg(carryinsel), "OPMODE5");
+    //elementStrProperty(id, nullarg(rsttype), "SYNC", "ASYNC"); ?????????????
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+
+    elementend(id);
+}
+
+// DSP48E block. This is used in Virtex5.           
+global procedure
+dsp48e (
+    value(acout, "bits:30"),
+    value(bcout, "bits:18"),
+    value(pcout, "bits:48"),
+    value(p, "bits:48"),
+    value(carryout, "[4]log"),
+    value({carrycascout, multsignout, patterndetect, patternbdetect,
+            overflow, underflow}, "log")
+    <-   
+    str({loc, a_input, b_input, use_mult, use_simd, sel_pattern, sel_mask,
+        sel_rounding_mask, autoreset_pattern_detect_optinv, use_pattern_detect}),
+    int({areg, acascreg, breg, bcascreg, creg, mreg, preg, opmodereg,
+        alumodereg, carryinreg, multcarryinreg, carryinselreg,
+        pattern, mask}),
+    log({autoreset_pattern_detect}),
+    clock(clk),
+    value(a, "bits:30"),
+    value(b, "bits:18"),
+    value(c, "bits:48"),
+    value(opmode, "uint:7"),
+    value(alumode, "uint:4"),
+    value(carryinsel, "uint:3"),
+    value(acin, "bits:30"),
+    value(bcin, "bits:18"),
+    value(pcin, "bits:48"),
+    value({carryin, cea1, cea2, ceb1, ceb2, cec, cem, cep, cealumode,
+           cectrl, cemultcarryin, cecarryin, rsta, rstb, rstc, rstm,
+           rstp, rstctrl, rstallcarryin, rstalumode, carrycascin,
+           multsignin}, "log", false)
+) {
+    int(arrayformat, 2);
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "dsp48"+idn++);
+    element("DSP48E", id);
+    
+    // Tie unused clock enables high or low as appropriate (Xilinx advice).
+    if (!matched(cea1))          cea1 := (areg == 2);
+    if (!matched(cea2))          cea2 := (areg != 0);
+    if (!matched(cealumode))     cealumode := (alumodereg == 1);
+    if (!matched(ceb1))          ceb1 := (breg == 2);
+    if (!matched(ceb2))          ceb2 := (breg != 0);
+    if (!matched(cec))           cec := (creg == 1);
+    if (!matched(cecarryin))     cecarryin := (carryinreg == 1);
+    if (!matched(cectrl))        cectrl := (opmodereg + carryinselreg != 0);
+    if (!matched(cem))           cem := (mreg == 1);
+    if (!matched(cemultcarryin)) cemultcarryin := (multcarryinreg == 1);
+    if (!matched(cep))           cep := (preg == 1);
+
+    elementclockinput(id, "CLK", nullarg(clk));
+    
+    elementinput(id,   "A",               nullarg(a),         arrayformat);
+    elementinput(id,   "B",               nullarg(b),         arrayformat);
+    elementinput(id,   "C",               nullarg(c),         arrayformat);
+    elementinput(id,   "OPMODE",          nullarg(opmode),    arrayformat);
+    elementinput(id,   "ALUMODE",         nullarg(alumode),   arrayformat);
+    elementinput(id,   "CARRYINSEL",      nullarg(carryinsel),arrayformat);
+    elementinput(id,   "ACIN",            nullarg(acin),      arrayformat);
+    elementinput(id,   "BCIN",            nullarg(bcin),      arrayformat);
+    elementinput(id,   "PCIN",            nullarg(pcin),      arrayformat);
+    elementinput(id,   "CARRYIN",         nullarg(carryin)       );
+    elementinput(id,   "CEA1",            nullarg(cea1)          );
+    elementinput(id,   "CEA2",            nullarg(cea2)          );
+    elementinput(id,   "CEB1",            nullarg(ceb1)          );
+    elementinput(id,   "CEB2",            nullarg(ceb2)          );
+    elementinput(id,   "CEC",             nullarg(cec)           );
+    elementinput(id,   "CEM",             nullarg(cem)           );
+    elementinput(id,   "CEP",             nullarg(cep)           );
+    elementinput(id,   "CEALUMODE",       nullarg(cealumode)     );
+    elementinput(id,   "CECTRL",          nullarg(cectrl)        );
+    elementinput(id,   "CEMULTCARRYIN",   nullarg(cemultcarryin) );
+    elementinput(id,   "CECARRYIN",       nullarg(cecarryin)     );
+    elementinput(id,   "RSTA",            rsta                   );
+    elementinput(id,   "RSTB",            rstb                   );
+    elementinput(id,   "RSTC",            rstc                   );
+    elementinput(id,   "RSTM",            rstm                   );
+    elementinput(id,   "RSTP",            rstp                   );
+    elementinput(id,   "RSTCTRL",         rstctrl                );
+    elementinput(id,   "RSTALLCARRYIN",   rstallcarryin          );
+    elementinput(id,   "RSTALUMODE",      rstalumode             );
+    elementinput(id,   "CARRYCASCIN",     nullarg(carrycascin)   );
+    elementinput(id,   "MULTSIGNIN",      nullarg(multsignin)    );
+
+    elementoutput(nullarg(acout)          <-  id, "ACOUT"          , arrayformat);   
+    elementoutput(nullarg(bcout)          <-  id, "BCOUT"          , arrayformat);   
+    elementoutput(nullarg(pcout)          <-  id, "PCOUT"          , arrayformat);   
+    elementoutput(nullarg(p)              <-  id, "P"              , arrayformat);
+    elementoutput(nullarg(carryout)       <-  id, "CARRYOUT"       , arrayformat);
+    elementoutput(nullarg(carrycascout)   <-  id, "CARRYCASCOUT"                );
+    elementoutput(nullarg(multsignout)    <-  id, "MULTSIGNOUT"                 );
+    elementoutput(nullarg(patterndetect)  <-  id, "PATTERNDETECT"               );
+    elementoutput(nullarg(patternbdetect) <-  id, "PATTERNBDETECT"              );
+    elementoutput(nullarg(overflow)       <-  id, "OVERFLOW"                    );
+    elementoutput(nullarg(underflow)      <-  id, "UNDERFLOW"                   );
+
+    elementStrProperty(id, "A_INPUT", nullarg(a_input), "DIRECT", "CASCADE");
+    elementStrProperty(id, "B_INPUT", nullarg(b_input), "DIRECT", "CASCADE");
+    elementStrProperty(id, "USE_MULT", nullarg(use_mult), "NONE", "MULT",  "MULT_S");
+    elementStrProperty(id, "USE_SIMD", nullarg(use_simd), "ONE48", "TWO24", "FOUR12");
+    elementStrProperty(id, "SEL_PATTERN", nullarg(sel_pattern), "PATTERN", "C");
+    elementStrProperty(id, "SEL_MASK", nullarg(sel_mask), "MASK", "C");
+    elementStrProperty(id, "SEL_ROUNDING_MASK", nullarg(sel_rounding_mask), "SEL_MASK", "MODE1", "MODE2");
+    elementStrProperty(id, "AUTORESET_PATTERN_DETECT_OPTINV", nullarg(autoreset_pattern_detect_optinv), "MATCH", "NOT_MATCH");
+    elementStrProperty(id, "USE_PATTERN_DETECT", nullarg(use_pattern_detect), "NO_PATDET", "PATDET");
+    elementIntProperty(id, "AREG", areg,            0, 2);
+    elementIntProperty(id, "ACASCREG", acascreg,        0, 2);
+    elementIntProperty(id, "BREG", breg,            0, 2);
+    elementIntProperty(id, "BCASCREG", bcascreg,        0, 2);
+    elementIntProperty(id, "CREG", creg,            0, 1);
+    elementIntProperty(id, "MREG", mreg,            0, 1);
+    elementIntProperty(id, "PREG", preg,            0, 1);
+    elementIntProperty(id, "OPMODEREG", opmodereg,       0, 1);
+    elementIntProperty(id, "ALUMODEREG", alumodereg,      0, 1);
+    elementIntProperty(id, "CARRYINREG", carryinreg,      0, 1);
+    elementIntProperty(id, "MULTCARRYINREG", multcarryinreg,  0, 1);
+    elementIntProperty(id, "CARRYINSELREG", carryinselreg,   0, 1);    
+    elementHexProperty(id, "PATTERN", nullarg(pattern), 0, 0xffffffffffff, 12);
+    elementHexProperty(id, "MASK", nullarg(mask),       0, 0xffffffffffff, 12);
+    elementLogProperty(id, "AUTORESET_PATTERN_DETECT", nullarg(autoreset_pattern_detect));
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+    
+    elementend(id);
+}
+
+// DSP48E1 block. This is used in Virtex6 and Virtex7.
+global procedure
+dsp48e1 (
+    value(acout, "bits:30"),
+    value(bcout, "bits:18"),
+    value(pcout, "bits:48"),
+    value(p, "bits:48"),
+    value(carryout, "[4]log"),
+    value({carrycascout, multsignout, patterndetect, patternbdetect,
+            overflow, underflow}, "log")
+    <-   
+    str({loc, a_input, b_input, use_mult, use_simd, sel_pattern, sel_mask,
+        sel_rounding_mask, autoreset_pattern_detect_optinv, use_pattern_detect}),
+    int({areg, adreg, acascreg, breg, bcascreg, creg, dreg, mreg, preg,
+        inmodereg, opmodereg, alumodereg,
+        carryinreg, multcarryinreg, carryinselreg,
+        pattern, mask}),
+    log({autoreset_pattern_detect}),
+    clock(clk),
+    value(a, "bits:30"),
+    value(b, "bits:18"),
+    value(c, "bits:48"),
+    value(d, "bits:25"),
+    value(opmode, "uint:7"),
+    value(alumode, "uint:4"),
+    value(inmode, "uint:5"),
+    value(carryinsel, "uint:3"),
+    value(acin, "bits:30"),
+    value(bcin, "bits:18"),
+    value(pcin, "bits:48"),
+    value({carryin, cea1, cea2, ceb1, ceb2, cec, ced, cem, cep, cealumode,
+           cectrl, cemultcarryin, cecarryin, rsta, rstb, rstc, rstd, rstm,
+           rstp, rstctrl, rstallcarryin, rstinmode, rstalumode, carrycascin,
+           multsignin}, "log", false)
+) {
+    int(arrayformat, 2);
+    if (!varexists(idn))
+        int(file.idn);   // unique digit to append to created element identifiers
+    str(id, "dsp48"+idn++);
+    element("DSP48E1", id);
+    
+    // Tie unused clock enables high or low as appropriate (Xilinx advice).
+    if (!matched(cea1))          cea1 := (areg == 2);
+    if (!matched(cea2))          cea2 := (areg != 0);
+    if (!matched(cealumode))     cealumode := (alumodereg == 1);
+    if (!matched(ceb1))          ceb1 := (breg == 2);
+    if (!matched(ceb2))          ceb2 := (breg != 0);
+    if (!matched(cec))           cec := (creg == 1);
+    if (!matched(ced))           ced := (dreg == 1);
+    if (!matched(cecarryin))     cecarryin := (carryinreg == 1);
+    if (!matched(cectrl))        cectrl := (opmodereg + carryinselreg != 0);
+    if (!matched(cem))           cem := (mreg == 1);
+    if (!matched(cemultcarryin)) cemultcarryin := (multcarryinreg == 1);
+    if (!matched(cep))           cep := (preg == 1);
+
+
+    elementclockinput(id, "CLK", nullarg(clk));
+    
+    elementinput(id,  "A",              nullarg(a),          arrayformat);
+    elementinput(id,  "B",              nullarg(b),          arrayformat);
+    elementinput(id,  "C",              nullarg(c),          arrayformat);
+    elementinput(id,  "D",              nullarg(d),          arrayformat);
+    elementinput(id,  "OPMODE",         nullarg(opmode),     arrayformat);
+    elementinput(id,  "ALUMODE",        nullarg(alumode),    arrayformat);
+    elementinput(id,  "INMODE",         nullarg(inmode),     arrayformat);
+    elementinput(id,  "CARRYINSEL",     nullarg(carryinsel), arrayformat);
+    elementinput(id,  "ACIN",           nullarg(acin),       arrayformat);
+    elementinput(id,  "BCIN",           nullarg(bcin),       arrayformat);
+    elementinput(id,  "PCIN",           nullarg(pcin),       arrayformat);
+    elementinput(id,  "CARRYIN",        nullarg(carryin)       );
+    elementinput(id,  "CEA1",           nullarg(cea1)          );
+    elementinput(id,  "CEA2",           nullarg(cea2)          );
+    elementinput(id,  "CEB1",           nullarg(ceb1)          );
+    elementinput(id,  "CEB2",           nullarg(ceb2)          );
+    elementinput(id,  "CEC",            nullarg(cec)           );
+    elementinput(id,  "CED",            nullarg(ced)           );
+    elementinput(id,  "CEM",            nullarg(cem)           );
+    elementinput(id,  "CEP",            nullarg(cep)           );
+    elementinput(id,  "CEALUMODE",      nullarg(cealumode)     );
+    elementinput(id,  "CECTRL",         nullarg(cectrl)        );
+    elementinput(id,  "CEMULTCARRYIN",  nullarg(cemultcarryin) );
+    elementinput(id,  "CECARRYIN",      nullarg(cecarryin)     );
+    elementinput(id,  "RSTA",           rsta                   );
+    elementinput(id,  "RSTB",           rstb                   );
+    elementinput(id,  "RSTC",           rstc                   );
+    elementinput(id,  "RSTD",           rstd                   );
+    elementinput(id,  "RSTM",           rstm                   );
+    elementinput(id,  "RSTP",           rstp                   );
+    elementinput(id,  "RSTCTRL",        rstctrl                );
+    elementinput(id,  "RSTALLCARRYIN",  rstallcarryin          );
+    elementinput(id,  "RSTINMODE",      rstinmode              );
+    elementinput(id,  "RSTALUMODE",     rstalumode             );
+    elementinput(id,  "CARRYCASCIN",    nullarg(carrycascin)   );
+    elementinput(id,  "MULTSIGNIN",     nullarg(multsignin)    );
+
+    elementoutput(nullarg(acout)          <- id, "ACOUT"          , arrayformat);
+    elementoutput(nullarg(bcout)          <- id, "BCOUT"          , arrayformat);
+    elementoutput(nullarg(pcout)          <- id, "PCOUT"          , arrayformat);
+    elementoutput(nullarg(p)              <- id, "P"              , arrayformat);
+    elementoutput(nullarg(carryout)       <- id, "CARRYOUT"       , arrayformat);
+    elementoutput(nullarg(carrycascout)   <- id, "CARRYCASCOUT"                );
+    elementoutput(nullarg(multsignout)    <- id, "MULTSIGNOUT"                 );
+    elementoutput(nullarg(patterndetect)  <- id, "PATTERNDETECT"               );
+    elementoutput(nullarg(patternbdetect) <- id, "PATTERNBDETECT"              );
+    elementoutput(nullarg(overflow)       <- id, "OVERFLOW"                    );
+    elementoutput(nullarg(underflow)      <- id, "UNDERFLOW"                   );
+
+    elementStrProperty(id, "A_INPUT", nullarg(a_input), "DIRECT", "CASCADE");
+    elementStrProperty(id, "B_INPUT", nullarg(b_input), "DIRECT", "CASCADE");
+    elementStrProperty(id, "USE_MULT", nullarg(use_mult), "NONE", "MULT",  "MULT_S");
+    elementStrProperty(id, "USE_SIMD", nullarg(use_simd), "ONE48", "TWO24", "FOUR12");
+    elementStrProperty(id, "SEL_PATTERN", nullarg(sel_pattern), "PATTERN", "C");
+    elementStrProperty(id, "SEL_MASK", nullarg(sel_mask), "MASK", "C");
+    elementStrProperty(id, "SEL_ROUNDING_MASK", nullarg(sel_rounding_mask), "SEL_MASK", "MODE1", "MODE2");
+    elementStrProperty(id, "AUTORESET_PATTERN_DETECT_OPTINV", nullarg(autoreset_pattern_detect_optinv), "MATCH", "NOT_MATCH");
+    elementStrProperty(id, "USE_PATTERN_DETECT", nullarg(use_pattern_detect), "NO_PATDET", "PATDET");
+    elementIntProperty(id, "AREG", areg,            0, 2);
+    elementIntProperty(id, "ADREG", adreg,           0, 2);
+    elementIntProperty(id, "ACASCREG", acascreg,        0, 2);
+    elementIntProperty(id, "BREG", breg,            0, 2);
+    elementIntProperty(id, "BCASCREG", bcascreg,        0, 2);
+    elementIntProperty(id, "CREG", creg,            0, 1);
+    elementIntProperty(id, "DREG", dreg,            0, 1);
+    elementIntProperty(id, "MREG", mreg,            0, 1);
+    elementIntProperty(id, "PREG", preg,            0, 1);
+    elementIntProperty(id, "INMODEREG", inmodereg,       0, 1);
+    elementIntProperty(id, "OPMODEREG", opmodereg,       0, 1);
+    elementIntProperty(id, "ALUMODEREG", alumodereg,      0, 1);
+    elementIntProperty(id, "CARRYINREG", carryinreg,      0, 1);
+    elementIntProperty(id, "MULTCARRYINREG", multcarryinreg,  0, 1);
+    elementIntProperty(id, "CARRYINSELREG", carryinselreg,   0, 1);
+    elementHexProperty(id, "PATTERN", nullarg(pattern), 0, 0xffffffffffff, 12);
+    elementHexProperty(id, "MASK", nullarg(mask),       0, 0xffffffffffff, 12);
+    elementLogProperty(id, "AUTORESET_PATTERN_DETECT", nullarg(autoreset_pattern_detect));
+    if (matched(loc)) elementStrProperty(id, "LOC", loc);
+    
+    elementend(id);
+}
+
+
+// out := a * b
+//  a   25 bits signed
+//  b   18 bits signed
+//  out 43 bits signed
+// unsigned arguments must be 1 bit smaller
+global module
+dspmul (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    int({areg, breg, mreg, preg}),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e));
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if ((areg != 0 || breg != 0 || mreg != 0 || preg != 0) &&
+        (hasqueuereads(a) || hasqueuereads(b) || hasqueuereads(c)))
+        texit("dspmul() - cannot mix registers and queue inputs");
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value({v1, v2, v3}, "empty");
+    type({t1, t2});
+    argadjust(v1, v2, t1 <- a, b, "*", false);
+    value(v, t1);
+    argadjust(, v3, t2 <- v, c, "+", true);
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        clk=pipelined ? currentclock() : null,
+        a=forcecast(v1, "bits:25"),
+        b=forcecast(v2, "bits:18"),
+        c=forcecast(v3, "bits:48"),
+        areg=areg,
+        breg=breg,
+        mreg=mreg,
+        preg=preg,
+        use_mult="MULT",
+        opmode=0x05,
+        alumode=0,
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, t2);
+}
+
+// returns a * b
+//  a   25 bits signed
+//  b   18 bits signed
+//  out 43 bits signed
+// unsigned arguments must be 1 bit smaller
+global function
+dspmul (
+    value(a),
+    value(b)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    value({v1, v2}, "empty");
+    type(t1);
+    argadjust(v1, v2, t1 <- a, b, "*", false);
+    value(result, "bits:48");
+    p->(
+        p=result
+        <-   
+        a=forcecast(v1, "bits:25"),
+        b=forcecast(v2, "bits:18"),
+        use_mult="MULT",
+        opmode=0x05,
+        alumode=0
+    );
+    return(forcecast(result, t1));
+}
+
+// out := a * b + c
+//  a   25 bits signed
+//  b   18 bits signed
+//  c   48 bits signed
+//  out 48 bits signed
+// unsigned arguments must be 1 bit smaller
+global module
+dspmuladd (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    value(c),
+    int({areg, breg, creg, mreg, preg}),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if ((areg != 0 || breg != 0 || creg != 0 || mreg != 0 || preg != 0) &&
+        (hasqueuereads(a) || hasqueuereads(b) || hasqueuereads(c)))
+        texit("dspmuladd() - cannot mix registers and queue inputs");
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value({v1, v2, v3}, "empty");
+    type({t1, t2});
+    argadjust(v1, v2, t1 <- a, b, "*", false);
+    value(v, t1);
+    argadjust(, v3, t2 <- v, c, "+", true);
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        clk=pipelined ? currentclock() : null,
+        a=forcecast(v1, "bits:25"),
+        b=forcecast(v2, "bits:18"),
+        c=forcecast(v3, "bits:48"),
+        areg=areg,
+        breg=breg,
+        creg=creg,
+        mreg=mreg,
+        preg=preg,
+        use_mult="MULT",
+        opmode=0x35,
+        alumode=0,
+        cea1=(areg == 2) ? true : null,
+        cea2=(areg != 0) ? true : null,
+        ceb1=(breg == 2) ? true : null,
+        ceb2=(breg != 0) ? true : null,
+        cec=(creg == 1) ? true : null,
+        cem=(mreg == 1) ? true : null,
+        cep=(preg == 1) ? true : null,
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, t2);
+}
+
+// out := a * b - c
+//  a   25 bits signed
+//  b   18 bits signed
+//  c   48 bits signed
+//  out 48 bits signed
+// unsigned arguments must be 1 bit smaller
+global module
+dspmulsub (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    value(c),
+    int({areg, breg, creg, mreg, preg}),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if ((areg != 0 || breg != 0 || creg != 0 || mreg != 0 || preg != 0) &&
+        (hasqueuereads(a) || hasqueuereads(b) || hasqueuereads(c)))
+        texit("dspmulsub() - cannot mix registers and queue inputs");
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value({v1, v2, v3}, "empty");
+    type({t1, t2});
+    argadjust(v1, v2, t1 <- a, b, "*", false);
+    value(v, t1);
+    argadjust(, v3, t2 <- v, c, "-", true);
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        clk=pipelined ? currentclock() : null,
+        a=forcecast(v1, "bits:25"),
+        b=forcecast(v2, "bits:18"),
+        c=forcecast(v3, "bits:48"),
+        areg=areg,
+        breg=breg,
+        creg=creg,
+        mreg=mreg,
+        preg=preg,
+        use_mult="MULT",
+        opmode=0x35,
+        alumode=1,
+        carryin=true,
+        cea1=(areg == 2) ? true : null,
+        cea2=(areg != 0) ? true : null,
+        ceb1=(breg == 2) ? true : null,
+        ceb2=(breg != 0) ? true : null,
+        cec=(creg == 1) ? true : null,
+        cem=(mreg == 1) ? true : null,
+        cep=(preg == 1) ? true : null,
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, t2);
+}
+
+// out := a - b * c
+//  a   48 bits signed
+//  b   25 bits signed
+//  c   18 bits signed
+//  out 48 bits signed
+// unsigned arguments must be 1 bit smaller
+global module
+dspsubmul (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    value(c),
+    int({areg, breg, creg, mreg, preg}),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if ((areg != 0 || breg != 0 || creg != 0 || mreg != 0 || preg != 0) &&
+        (hasqueuereads(a) || hasqueuereads(b) || hasqueuereads(c)))
+        texit("dspsubmul() - cannot mix registers and queue inputs");
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value({v1, v2, v3}, "empty");
+    type({t1, t2});
+    argadjust(v1, v2, t1 <- b, c, "*", false);
+    value(v, t1);
+    argadjust(, v3, t2 <- v, a, "-", true);
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        clk=pipelined ? currentclock() : null,
+        a=forcecast(v1, "bits:25"),
+        b=forcecast(v2, "bits:18"),
+        c=forcecast(v3, "bits:48"),
+        areg=areg,
+        breg=breg,
+        creg=creg,
+        mreg=mreg,
+        preg=preg,
+        use_mult="MULT",
+        opmode=0x35,
+        alumode=3,
+        cea1=(areg == 2) ? true : null,
+        cea2=(areg != 0) ? true : null,
+        ceb1=(breg == 2) ? true : null,
+        ceb2=(breg != 0) ? true : null,
+        cec=(creg == 1) ? true : null,
+        cem=(mreg == 1) ? true : null,
+        cep=(preg == 1) ? true : null,
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, t2);
+}
+
+// out := a op b
+//  a   48 bits
+//  b   48 bits
+//  out 48 bits
+//  op  5 bit operation code -
+//      4   0b00100      a ^ b
+//      5   0b00101    ~(a ^ b)
+//      6   0b00110    ~(a ^ b)
+//      7   0b00111      a ^ b
+//      12  0b01100      a & b
+//      13  0b01010      a & ~b
+//      14  0b01110    ~(a & b)
+//      15  0b01111     ~a | b
+//      29  0b10100    ~(a ^ b)
+//      21  0b10101      a ^ b
+//      22  0b10110      a ^ b
+//      23  0b10111    ~(a ^ b)
+//      28  0b11100      a | b
+//      29  0b11101      a | ~b
+//      30  0b11110    ~(a ^ b)
+//      31  0b11111     ~a & b
+global module
+dsplog (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    value(op, "uint:5"),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        use_mult="NONE",
+        a=forcecast(a>>18, "bits:30"),
+        b=forcecast(a, "bits:18"),
+        c=forcecast(b, "bits:48"),
+        opmode= 0b0110011 | ((op & 0x10000) >> 1),
+        alumode=op & 0b1111,
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, type(out));
+}
+
+
+// out := a op (gate & b)
+//  a       48 bits signed
+//  b       48 bits signed
+//  out     48 bits signed
+//  add     log
+//  gate    log
+// add true for addition, false for subtraction
+// gate false adds or subtracts 0 instead of b
+global module
+dspaddsub (
+    value(out), value(pat, "log")
+    <-
+    value(a),
+    value(b),
+    value(add, "log", true),
+    value(gate, "log", true),
+    int({areg, breg, preg}),
+    int(pattern),
+    int(mask, 0xffffffffffff)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if ((areg != 0 || breg != 0 || preg != 0) &&
+        (hasqueuereads(a) || hasqueuereads(b)))
+        texit("dspaddsub() - cannot mix registers and queue inputs");
+    log(use_pat, matched(pattern));
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value({v1, v2}, "empty");
+    type(t);
+    argadjust(v1, v2, t <- a, b, "+", false);
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-   
+        areg=areg,
+        breg=areg,
+        creg=breg,
+        preg=preg,
+        a=forcecast(v2, "bits:48")>>18,
+        b=forcecast(v2, "bits:18"),
+        c=forcecast(v1, "bits:48"),
+        opmode=gate?0b0110011:0b0000011,
+        alumode=add?0:0b11,
+        use_mult="none",
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? pattern : null,
+        mask=use_pat ? mask : null
+    );
+    out := forcecast(result, t);
+}
+
+global module
+dspcounter (
+    value(out), value(pat, "log")
+    <-
+    value(step, "log", true),
+    value(reset, "log", false),
+    value(pattern, "bits:48", 0),
+    int(mask, 0xffffffffffff),
+    value(up, "log", true)
+) {
+    switch (directive("family")) {
+    case "xc5v": var(local.p, "->", procptr(dsp48e)); 
+    case "xc6v": var(local.p, "->", procptr(dsp48e1));
+    case "xc7": var(local.p, "->", procptr(dsp48e1));
+    default: texit("library module dspmul() cannot be used with " + directive("family"));
+    }
+    
+    if (hasqueuereads(step))
+        texit("dspcounter() - argument to input parameter step has queue reads");
+    if (hasqueuereads(reset))
+        texit("dspcounter() - argument to input parameter reset has queue reads");
+    if (hasqueuereads(pattern))
+        texit("dspcounter() - argument to input parameter pattern has queue reads");
+    if (hasqueuereads(up))
+        texit("dspcounter() - argument to input parameter up has queue reads");
+    log(use_pat, matched(pattern));
+    log(const_pat, istargconst(pattern));
+    int(patt_attr, const_pat ? pattern : 0);
+    str(use_pattern_detect, use_pat ? "PATDET" : "NO_PATDET");
+    value(result, "bits:48");
+    p->(
+        p=result,
+        patterndetect=pat
+        <-
+        clk=currentclock(),
+        c=const_pat ? null : pattern,
+        carryin=up,
+        opmode=0b0000010,
+        alumode=up?0:0b11,        
+        preg=1,
+        use_mult="none",
+        sel_pattern=const_pat ? "pattern" : "c",
+        use_pattern_detect=use_pattern_detect,
+        pattern=use_pat ? patt_attr : null,        
+        mask=use_pat ? mask : null,
+        cep=step,
+        rstp=reset
+    );
+    out := forcecast(result, type(out));
+}

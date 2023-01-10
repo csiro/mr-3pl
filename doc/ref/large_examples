@@ -1,0 +1,1213 @@
+    \section{HYMOD video display}\label{exvd}
+
+        This is code to drive a colour display with
+        overlay graphics from a high-speed serial
+        data stream. It is a complete code example
+        of a non-trivial application. It is slightly
+        simplified in that it does not recognise
+        control codes in the high speed serial video
+        input stream and hence only handles full 720x625
+        frames.
+
+        The example uses {\em immediate} functions to
+        initialise large LUTs in block RAM.
+
+        \begin{lstlisting}{language={threepl}}
+            struct count {
+                uint:10 x;
+                uint:10 y;
+            };
+            struct hstate {
+                active, "log",
+                hsync,  "log"
+            };
+            struct vstate {
+                blank_line, "log",
+                field,      "uint:1"
+            };
+            struct v {
+                video,  "log",
+                hsync,  "log",
+                field,  "uint:1",
+                data,   "uint:16"
+            };
+            struct od {
+                data,   "uint:16",
+                hsync,  "log",
+                field,  "uint:1"
+            };
+
+            int(lines, 625);        // lines per frame
+            int(line_clocks, 864);  // clock periods per line
+            int(vwidth, 720);       // active video width
+            int(vheight, 576);      // active video lines
+
+            useclock(c100);
+
+            pipe(vdata, hs_serial); // video pixels in from external source
+            pipe(vaddr, "uint:19"); // video in frame store address
+            pipe({x, y}, "uint:10");// pixel coordinates
+            pipe(addr, "uint:19");  // display video frame store address
+            pipe(hs, hstate);       // horizontal state
+            pipe(vs, vstate);       // vertical state
+            pipe({g, v}, "uint:16"); // graphics and video from frame store
+            pipe(vid, v);           // display video data
+            pipe(o, od);            // display output data
+
+            rram(hstab, hstate, "uint:10", init1());
+            rram(vstab, vstate, "uint:10", init2());
+            int(graph, 0);
+            int(video, 1);
+            pipe(gaddrdata, mem_ad);
+            pipe(vaddrdata, mem_ad);
+
+            /*
+             * Graphics input from CPU
+             */
+            cpu_pipe_w(gaddrdata <- 1);
+            extramwrite(graph, gaddrdata);
+
+            /*
+             * Video input from high speed serial port
+             */
+            fsaddr(vaddr <- vwidth, vheight);
+            sdc_in(vdata <- 0);
+            [
+                sync {
+                    vaddrdata.address <<- vaddr;
+                    vaddrdata.data <<- vdata.data;
+                }
+            ]
+            extramwrite(video, vaddrdata);
+
+            /*
+             * Display pipeline
+             */
+            fsaddr(addr <- vwidth, vheight);
+            extramread(g <- graph, addr);
+            extramread(v <- video, addr);
+
+            [
+                // Generate x and y pixel coordinates.
+                static({i, j}, "uint:10");
+                sync {
+                    x <<- i;
+                    y <<- j;
+                    when (i == (line_clocks-1)) par {
+                        reset(i);
+                        when (j == (lines-1))
+                            reset(j)
+                        else
+                            j++;
+                    } else
+                        i++;
+                }
+            ]
+
+            // Use the pixel coordinates to get the current
+            // horizontal and vertical state from lookup tables.
+            get_state(hs <- hstab, x, hstate);
+            get_state(vs <- vstab, y, vstate);
+
+            [
+                // From the horizontal and vertical state
+                // put together a display stream. If the current
+                // state is an active pixel, read both the graphics
+                // and video pixels but select one as the displayed pixel
+                // ( graphics if it is non-zero, video otherwise).
+                static uint:1    field;
+
+                sync {
+                    when (hs.hsyc)
+                        field <<- vs.field;
+                    when (vs.video)
+                        vid.data <<- (g != 0) ? g : v;
+                    vid.video <<- hs.active & !vs.blank_line;
+                    vid.hsyc <<- hs.hsync;
+                    vid.field <<- field;
+                }
+            ]      
+
+            [
+                // From the display stream construct the actual
+                // display stream for the output device.
+                o.data <<- vid.video ? vid.data : 0x8010;
+                o.hsync <<- vid.hsync;
+                o.field <<- vid.field;
+            ]
+
+            // Change the pipeline to the output frequency.
+            useclock(mezz_clk1);
+            pipe(om, od); buffersize(om, 16);
+
+            om <- o;
+
+            [
+                static(vidout, "uint:16");
+                externout(vidout,, mezza_pins[0..15]);
+                static(syncout, "log");
+                externout(syncout,, mezza_pins[20]);
+                static(fieldout, "log");
+                externout(fieldout,, mezza_pins[21]);
+
+                vidout <- om.data;      // 16 bit colour video out
+                syncout <- !om.hsync;   // horizontal sync out
+                fieldout <- om.field;   // field bit out
+            ]
+
+        // Get the horizontal or vertical state based on the
+        // pixel coordinate 'in'.
+        module
+        get_state (pipe(out, type) <- rram(mem), pipe(in, "uint:10"), str(type)) {
+            seq {
+                rramread(mem, 0, in);
+                sync while (true) {
+                    rramread(mem, 0, in);
+                    out <<- cast(rramout(hs, 0), type); // RAM output is "bits"
+                }
+            }
+        }
+
+        // Generate a sequence of interlaced frame store addresses
+        module
+        fsaddr (pipe(out, "uint:19") <- int({width, height})) {
+            static(x, "uint:"+bitsfor(width));
+            static(y, "uint:"+bitsfor(height));
+            static(next_line, "uint:19");
+            value({last_pixel, end_f0, end_f1}, "log");
+
+            end_f0 := (y == (height/2-1)) && (x == (width-1));
+            end_f1 := (y == (height-1)) && (x == (width-1));
+            last_pixel := (x == width-1);
+
+            sync {
+                when (end_f0)
+                    out <<- width;
+                when (end_f1)
+                    out <<- 0;
+                when (last_pixel && !end_f0 && !end_f1)
+                    out <<- next_line;
+                when (!end_f0 && !end_f1 && !last_pixel))
+                    out <<- out + 1;
+                when (x == 0)
+                    next_line <- out + 2*width;
+                when (x == (width-1)) par {
+                    reset(x);
+                    when (y == (height-1))
+                        reset(y)
+                    else
+                        y++;
+                } else
+                    x++;
+            }
+        }
+
+        // Construct an initialisation array for the horizontal
+        // state lookup table.
+        function
+        init1 () {
+            int(htable, "["+line_clocks+"]hstate");
+
+            for (int(i, 144) ; i<line_clocks ; i++)
+                htable[i].active = true;
+            htable[12].hstate = true;
+            return(htable);
+        }
+
+        // Construct an initialisation array for the vertical
+        // state lookup table.
+        function
+        init2 () {
+            int(vtable, "["+LINES+"]vstate");
+
+            /* vertical blanking -  623-624, 0-21, 310-334 */
+            vtable[623].blank_line = true;
+            vtable[624].blank_line = true;
+            for (int(i, 0) ; i<=21 ; i++)
+                vtable[i].blank_line = true;
+            for (int(i, 310) ; i<=334 ; i++)
+                vtable[i].blank_line = true;
+
+            /* field 1 - 312-624 */
+            for (int(i, 312) ; i<=624 ; i++)
+                vtable[I].field = 1;
+            return(vtable);
+        }
+        \end{lstlisting}
+        There are three pipelines in this code. One small pipeline takes
+        graphics data from the CPU and writes them into the frame store.
+        A second small pipeline takes live video and writes it into the frame
+        store. The third pipeline scans the frame store selecting video or
+        graphics pixels and writes them to the display device via the
+        mezzanine.
+        
+        Data flow through the display pipeline is governed by a mezzanine
+        clock which is slower than the pipeline clock. The pipeline frequency
+        is changed near the end by an asynchronous pipe. The
+        pipeline is fed by modules which run continuously, each being limited
+        by output pipe availability.
+        
+        The module {\em fsaddr()} is used both by the video input pipeline
+        and the display pipeline. It continuously outputs a sequence of
+        interlaced frame store addresses based on the image width and height.
+        This code avoids using multiplication, generating interlaced line
+        start addresses using addition. Multiplication in an FPGA with no
+        hardware multiplier (the I/O HYMOD Virtex-E) is very slow and uses
+        considerable hardware.
+        
+        The display data stream has a complicated protocol. To generate this
+        there are two lookup tables, {\em hstab} and {\em vstab}, which store
+        horizontal and vertical state patterns. These tables are read using
+        the pixel coordinates {\em x} and {\em y} as addresses. The state
+        values indicate where pixels, horizontal blanking and vertical
+        blanking are required and whether the odd or even interlaced field is
+        being displayed. An interesting feature of this code is that it
+        initialises the tables using immediate functions ({\em init1()} and
+        {\em init2()}) which return arrays of values (in this case structs).
+
+
+    \section{HYMOD camera input}\label{excam}
+
+        Code for the HYMOD camera input mezzanine
+        board. It sends a stream of interlaced colour or monochrome
+        pixels out through high speed serial port 0 (with
+        interspersed control characters for EOL and EOF)
+        and also saves interlaced frames in alternating
+        external ZBT RAMs. Frames cam be read from the external
+        RAM by the CPU, synchronised with beginning of frame.
+        Frame store toggling is inhibited during CPU frame
+        transfer.
+        \begin{lstlisting}{language={threepl}}
+        module "hymod1_io_hdr.3pl"
+        module "mvlib.3pl"
+
+            struct(ctl,
+                {run, enable, reset},   "log"
+            );
+            struct(status,
+                {f0, fidle, awin},  "log"
+            );
+            struct(pixctl,
+                {y, cr, ctlv},  "uint:8",
+                ctl,            "log"
+            );
+
+            useclock(c100);
+
+
+            int(XSIZE, 720);        // image width
+            int(YSIZE, 576);        // image height
+            int(CTL_ADDR, 1);       // CPU-writable control register address
+            int(STATUS_ADDR, 1);    // CPU-readable status register address
+            int(TRIG_ADDR, 2);      // CPU-writable read trigger address
+            int(READ_ADDR, 2);      // CPU-readable image data address
+
+            pipe(p1, pix);
+            pipe(pa1, pixa);
+            pipe({w0, w1, r0, r1}, mem_ad);
+            pipe({d0, d1, d}, "bits:16");
+            pipe(pc1, pixctl);
+            pipe(s1, hs_serial);
+
+            static(ctl_reg, ctl);       // control register
+            static(stat_reg, status);   // status register
+            static(fs_toggle, "log", true); // Frame store toggling allowed
+            static(bankw, "uint:1");    // current FS bank being written
+            static(go, "log");          // trigger frame store reading
+
+            slave_reg_w(ctl_reg <- CTL_ADDR);
+            slave_reg_r(stat_reg,, STATUS_ADDR);
+
+            // Camera interface
+            mezzpix(p1 <- ctl_reg.run, ctl_reg.enable);
+
+            // Store in RAM
+            pixmaddr(pa1 <- XSIZE,, p1, false);
+            ram_select(w0, w1, bankw, stat_reg.awin <- pa1, fs_toggle);
+            extramwrite(0, w0);
+            extramwrite(1, w1);
+
+            // Send out via HSS.
+            add_ctl(pc1 <- p1);
+            hss_sequence(s1 <- pc1);
+            sdc_out(0, s1);
+
+            /*
+             * Read RAM from CPU
+             */
+            slave_reg_w(, go <- TRIG_ADDR);
+            read_control(r0, r1, fs_toggle <- go, ~bankw);
+            extramread(d0 <- 0, r0.address);
+            extramread(d1 <- 1, r1.address);
+            fsread(d <- d0, d1);
+            cpu_pipe_r(d, READ_ADDR);
+
+            sdc_reset(ctl_reg.reset);
+
+
+        module
+        ram_select (
+            pipe({o0, o1}, mem_ad),
+            static(bankw, "uint:1"),
+            static(awin, "log")
+            <-
+            pipe(in, pixa),
+            static({status_reg, fs_toggle}, "log")
+        ) {
+            value({last_pixel, line_80}, "log");
+            last_pixel := in.address == (XSIZE * YSIZE - 1);
+            line_80 := in.address == (XSIZE * 80);
+
+            sync {
+                when (bankw == 0) par {
+                    o1.address <<- in.address;
+                    o1.data <<- cast((in.cr << 8) | in.y, "bits:18");
+                } else par {
+                    o0.address <<- in.address;
+                    o0.data <<- cast((in.cr << 8) | in.y, "bits:18");
+                }
+                when (last_pixel) par {
+                    awin <- true;
+                    when (fs_toggle)
+                        bankw <- ~bankw;
+                }
+                when (line_80)
+                    reset(awin);
+            }
+        }
+
+        module
+        add_ctl(pipe(out, pixctl) <- pipe(in, pix)) {
+            out.y <<- in.y;
+            out.cr <<- in.cr;
+            when (in.hr && !in.vr)
+                out.ctlv <<- K28_0;
+            when (in.vr && !in.field0)
+                out.ctlv <<- K28_1;
+            when (in.vr && in.field0)
+                out.ctlv <<- K28_2;
+            out.ctl <<- in.hr || in.vr;
+        }
+
+        module
+        hss_sequence (pipe(out, hs_serial) <- pipe(in, pixctl)) {
+            static({cr, y}, "uint:8");
+
+            when (in.ctl) seq {
+                sync {
+                    out.data <<- cast(in.ctlv, "bits:8");
+                    out.ctl <<- true;
+                    cr <- in.cr;
+                    y <- in.y;
+                }
+                out.data <<- cast(cr, "bits:8");    // out.ctl 'false' by default
+                out.data <<- cast(y, "bits:8");     // out.ctl 'false' by default
+            } else seq {
+                sync {
+                    out.data <<- cast(in.cr, "bits:8"); // out.ctl 'false' by default
+                    y <- in.y;
+                }
+                out.data <<- cast(y, "bits:8");     // out.ctl 'false' by default
+            }
+        }
+
+        module
+        read_control (
+            pipe({r0, r1}, mem_ad), static(fs_toggle, "log")
+            <-
+            static(go, "log"), value(bankr, "uint:1")
+        ) {
+            static(running, "log");
+            static(addr, "uint:20");
+            value(last_pixel, "log");
+
+            last_pixel := (addr == XSIZE * YSIZE - 1);
+
+            when (go) par {
+                    running <- true;
+                    fs_toggle <- false;
+            }
+            when (running) sync {
+                when (bankr == 1) par {
+                    r1.address <<- addr;
+                    addr++;
+                } else par {
+                    r0.address <<- addr;
+                    addr++;
+                }
+                when (last_pixel) par {
+                    running <- false;
+                    fs_toggle <- true;
+                }
+            }
+        }
+
+        module
+        fsread (pipe(out, "bits:32") <- pipe({i0, i1}, "bits:16")) {
+            converge(out <- i0);
+            converge(out <- i1);
+        }
+
+        procedure
+        converge (pipe(out, "bits:32") <- pipe(in, "bits:16")) {
+            static(word0, "log");
+            static(word, "bits:16");
+
+            sync {
+                when (word0) par {
+                    word <- in;
+                    word0 <- false;
+                } else par {
+                    out <<- (word << 16) | in;
+                    word0 <- true;
+                }
+            }
+        }
+        \end{lstlisting}
+        
+        The camera interface, {\em mezzpix}, is a library module. The pixel
+        stream from this is passed through {\em pixmaddr} which adds an
+        interlaced frame store address to each pixel. The pixel stream is then
+        routed by module {\em ram\_select} to one of two calls to library
+        module {\em extramwrite} which write to the frame stores. The static
+        variable {\em bankw} controls which frame store the image is written
+        to. At the end of each frame the frame store is toggled via
+        {\em bankw} unless static variable {\em fs\_toggle} is false, which
+        happens during readout so that frame store toggling will be inhibited
+        if the readout takes too long.
+        
+        For transmission via a high speed serial channel the pixel stream is
+        passed to module {\em add\_ctl} which adds EOL and EOF control
+        characters to the stream. Note that, along with module {\em pixmaddr},
+        it is a destination for pipe {\em p1}, hence {\em p1} will only
+        advance when both destination modules have read a pixel. The pixel
+        stream with control codes now passes to module {\em hss\_sequence}
+        which sends out any control codes as separate bytes in the output
+        stream. Finally library module {\em sdc\_out} transmits the pixel
+        stream through channel 0.
+        
+        The CPU controls frame grabbing through a static register
+        {\em ctl\_reg} whose type is a struct containing 3 logical fields.
+        {\em enable} is the AtoD chip enable, {\em run} is raised to start
+        frame grabbing on the next even field and {\em reset} can be raised to
+        reset everything.
+        
+        A frame readout is initiated when the CPU writes to address
+        {\em TRIG\_ADDR}. The call to module {\em slave\_reg\_w} in this case
+        has no argument to the static data register parameter so no data is
+        stored. The access parameter however is passed static "log" variable
+        {\em go}. This static variable will be high fo one clock cycle when
+        the address is written to, the data written being ignored.
+        
+        Module {\em read\_control} gets the {\em go} pulse and lowers
+        {\em fs\_toggle} and puts out a non-interlaced address stream
+        through one of two pipe outputs depending on the value of
+        {\em bankw} (it selects the opposite frame store of the one being
+        written). The read address streams go to two calls to library
+        module {\em extramread} to read one of the two frame stores. The
+        resulting pipelines go to module {\em fsread} which simply accepts
+        input from either of its two input pipes and accumulates 16 bit word
+        pairs and outputs a 32 bit word. A procedure {\em converge} is used
+        to avoid duplicating the code for each input pipe.
+        
+        The 32 bit data stream is piped into a CPU-readable pipe interface
+        provided by library module {\em cpu\_pipe\_r}.
+        
+        
+        
+    \section{stereo processing}\label{stereo}
+
+        The following example is an implementation of the
+        stereo matching algorithm previously developed for the
+        VMEbus CLP, of which it required two. On the 12 FPGAs
+        (XC4008Es and XC4013Es) with 8 frame stores it
+        originally handled 256x256 images at frame rate with a
+        depth of 32 (5 bits) using four passes each of depth
+        8. This implementation for a 3,000,000 gate XC2V3000
+        requires no frame stores outside the FPGA and handles
+        720x576 pixel frames in 8.3ms for a depth of 64 (6
+        bits) and hence could do four passes to get a depth of
+        256 (8 bits) at frame rate.
+
+        The original implementation was written in CCGL and
+        took several months to write and debug. This {\bf 3PL}
+        version took about 1.5 days to write. It has not been
+        debugged and had the benefit of the previous coding
+        experience. The code is illustrative only and may contain
+        coding or algorithmic errors!
+
+        This code assumes that the two input pixel streams
+        arrive through high speed serial ports 0 and 1 at 50
+        MHz, which is simplistic. In practice the input streams
+        would be buffered through frame stores to decouple the
+        video rate and processing rates. Also it is usual to
+        embed control codes in a video stream to indicate
+        end-of-line and end-of-field to allow variable frame
+        sizes and to ensure that synchronisation can be
+        recovered in the event of lost data. The code would be
+        extended to embrace both of these considerations.
+
+        \begin{lstlisting}{language={threepl}}
+        // Stereo matching using the census algorithm. Frames
+        // are 720x576 pixels. 64 disparities are computed
+        // and the maximum found. Using a 50MHz processing
+        // clock instead of the default 100MHz to ease the
+        // timing, the processing time is 8.3ms.
+        // None of the 11 off-chip frame stores are used.
+        // In practice input data should be buffered through
+        // frame stores to allow for a difference in the
+        // input data rate and the processing rate.
+        // Using the external frame stores we could also do
+        // four passes over the data to compute a depth of
+        // 8 bits in 33.2ms.
+            int(width, 720);    // line length
+            int(height, 576);   // field height
+            int(clen, 5);       // census window size
+            int(wlen, 11);      // averaging window size
+
+            struct(pixel_pair,  // left-right pixel pair
+                {l, r}, "uint:8"
+            );
+
+            struct(census_pair, // left-right census pair
+                {l, r}, "uint:15"
+            );
+
+            struct(census_quad, // census pairs wlen rows apart
+                {l_top, l_bot, r_top, r_bot},   "uint:15", 
+                {row1, col1, ltrow12},          "log"
+            );
+
+            struct(partial,     // partial averaging window results
+                {tr, br},               "uint:5",
+                {row1, col1, ltrow12},  "log"
+            );
+
+            struct(disparity,   // result for one disparity
+                count,  "uint:8",
+                disp,   "uint:6"
+            );
+
+            useclock(uclk);     // do everything at 50MHz (1/2 speed)
+
+            pipe(p, pixel_pair);    // pixel pair pipe
+            pipe(w, "["+clen+"]["+clen+"]pixel_pair"); // pixel pair window pipe
+            pipe(census, census_quad);  // census pipe
+
+            var(census_del, "[64]->");  // census pipe at 64 disparities
+            pipearray(census_del <- census_quad);
+
+            var(part, "[64]->");        // partial averaging window results
+            pipearray(part <- partial);
+
+            var(disp, "[64]->");        // results for 64 disparities
+            pipearray(disp <- disparity);
+
+
+            input_pair(p <-);
+            pixwin(w <- p, width, height, clen, clen, true, 0);
+            census_pair(census <- w);
+            spread_delay(census_del <- census);
+            for (int(i) ; i<64 ; i++)
+                row_run_sum(part[i]-> <- census_del[i]);
+            col_run_sum(disp[0]-> <- 0, part[0]);
+            for (int(i) ; i<64 ; i++)
+                col_run_sum(disp[i]-> <- part[i]);
+            dmax64(m <- disp);
+            sdc_out(0, cast(m.disp, "bits:8"));
+
+
+        // Read the left and right pixel streams from HS serial
+        // ports 0 and 1 and pack.
+        module
+        input_pair (pipe(out, pixel_pair)) {
+            pipe({l, r}, hs_serial);
+
+            sdc_in(l <- 0);
+            sdc_in(r <- 1);
+            sync {
+                out.l <<- l.data;
+                out.r <<- r.data;
+            }
+        }
+
+        // Form packed census stream.
+        // Stream contains census values from left and right images
+        // and delayed values for each by wlen rows. This gives
+        // 4 census values.
+        module
+        census_pair (pipe(out) <- pipe(in) {
+            pipe(c, census_pair);
+            value(step, "log", <in && >out);
+
+            census(cast(c.l, typeof(c.l)) <- w.l);
+            census(cast(c.r, typeof(c.r)) <- w.r);
+            sync {
+                out.l_top <<- line_delay(c.l, step, width*11);
+                out.l_bot <<- c.l;
+                out.r_top <<- line_delay(c.r, step, width*11);
+                out.r_bot <<- c.r;
+            }
+        }
+
+        // Generate a set of 64 census quads. In each case the left stream
+        // top (delayed) and bottom values are the same, but the right
+        // stream top and bottom values are delayed by 0 to 64 pixels.
+        // Generate frame indicators - col1, row1, 1st 11 rows. These
+        // apply to the left bottom values.
+        module
+        spread_delay (var(out, "[64]->") <- pipe(in, census_quad)) {
+            static({row, col}, "uint:10");
+            value(ltrow12, "log",  row < 12);
+            value(row1, "log", row == 0);
+            value(col1, "log", col == 0);
+            static({prev_r_top, prev_r_bot}, "[63]uint:15")
+
+            sync {
+                when (col == (width - 1)) par {
+                    reset(col);
+                    row++;
+                } else
+                    col++;
+                when (row == (height - 1))
+                    reset(row);
+
+                out[0]->.l_top <<- in.l_top;
+                out[0]->.l_bot <<- in.l_bot;
+                out[0]->.r_top <<- in.r_top;
+                out[0]->.r_bot <<- in.r_bot;
+                out[0]->.row1 <<- row1;
+                out[0]->.col1 <<- col1;
+                out[0]->.ltrow12 <<- ltrow12;
+                prev_r_top[0] <- in.r_top;
+                prev_r_bot[0] <- in.r_bot;
+
+                for (int(i, 1) ; i<64 ; i++)
+                    sync {
+                        out[i]->.l_top <<- in.l_top;
+                        out[i]->.l_bot <<- in.l_bot;
+                        if (i < 63) {
+                            prev_r_top[i] <- prev_r_top[i-1];
+                            prev_r_bot[i] <- prev_r_bot[i-1];
+                        }
+                        out[i]->.r_top <<- prev_r_top[i-1];
+                        out[i]->.r_bot <<- prev_r_bot[i-1];
+                        out[i]->.row1 <<- row1;
+                        out[i]->.col1 <<- col1;
+                        out[i]->.ltrow12 <<- ltrow12;
+                    }
+            }
+        }
+
+        // XOR the census values from left and right and count
+        // zeros.
+        // Form row sums of the counts as part of the wlen
+        // averaging window.
+        module
+        row_run_sum (pipe(part) <- pipe(c, census_quad)) {
+            value(c1, "uint:5", count(c.l_bot ^ c.r_bot);
+            value(c2, "uint:5", count(c.l_top ^ c.r_top);
+            static({c1_del, c2_del}, "uint:5");
+            value(step, "log", <c && <part);
+
+            c1_del <- delr(c1, step, 11);
+            c2_del <- delr(c2, step, 11);
+            when (c.col1) par {
+                part.tr <<- 0;
+                part.br <<- 0;
+            }
+            when (!c.col1 && c.ltrow12) par {
+                part.tr <<- part.tr + c1;
+                part.br <<- part.br + c2;
+            }
+            when (!c.col1 && !c.ltrow12) par {
+                part.tr <<- part.tr + c1 - c1_del;
+                part.br <<- part.br + c2 - c2_del;
+            }
+        }
+
+        // Form column sums to complete the wlen averaging window.
+        module
+        col_run_sum (pipe(out, "uint:12") <- pipe(part, partial)) {
+            var(mem, "->", bram2(10, 12));
+            static(raddr, "uint:10", 1);
+            static(waddr, "uint:10");
+            value(prev_sum, "uint:12");
+            static(next_summ "uint:12");
+
+            sync {
+                rread2(mem, 0, raddr);
+                prev_sum := rramout2(mem, 0);
+                when (part.row1) par
+                    next_sum <- part.br;
+                when (!part.row1 && part.ltrow12)
+                    next_sum <- prev_sum + part.br;
+                when (!part.ltrow12)
+                    next_sum <- prev_sum + part.br - part.tr;
+                rwrite2(mem, 1, waddr, next_sum);
+                when (raddr == 719)
+                    reset(raddr);
+                else
+                    raddr++;
+                when (waddr == 719)
+                    reset(waddr);
+                else
+                    waddr++;
+                }
+            }
+        }
+
+        // Output 1 of 64 disparities with maximum count.
+        module
+        dmax64 (pipe(out, disparity) <- value(in, "[64]->")) {
+            pipe(m, "[5][32]disparity");
+
+            int(k, 0);
+            for (int(j, 64) ; j>=4 ; j=j/2) {
+                for (int(i) ; i<j-1 ; i+=2)
+                    if (j == 64)
+                        m[k][i/2] <<- dmax2(in[i]->, in[i+1]->);
+                    else
+                        m[k][i/2] <<- dmax2(m[k-1][i], m[k-1][i+1]);
+                k++;
+            }
+            out <<- dmax2(m[4][0], m[4][1]);
+        }
+
+        // Return 1 of 2 disparities with maximum count.
+        function
+        dmax2 (value({in1, in2}, disparity)) {
+            return(in1.count > in2.count ? in1 : in2)
+        }
+
+        // Form a 15 bit census value from a clen x clen pixel window.
+        // This coding might be better if we had a bit selector in {\bf 3PL}.
+        module
+        census(pipe(out, "[15]log") <- pipe(in, "["+clen+"]["+clen+"]uint:8")) {
+            value(mid, "uint:8", in[clen/2][clen/2];
+            var(partials, "[15]->");
+            pipearray(partials <- "log");
+            var(y; "[15]int", {4, 2, 1, 3, 0, 4, 3, 1, 0, 4, 2, 0, 3, 2, 0});
+            var(x; "[15]int", {4, 4, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0});
+
+            sync {
+                for (int(i) ; i<15 ; i++)
+                    partials[i]-> <<- in[y[i]][x[i]] < mid ? (1<<i) : 0;
+            }
+            sync {
+                for (int(i) ; i<15 ; i++)
+                    out[i] <<- partials[i]->;
+            }
+        }
+
+        // Count the number of 0 bits in an 15 bit word.
+        // We could shorten this if for could be used
+        // for declarations.
+        //
+        // This module can be re-written to use statics
+        // instead of pipes internally. It is really
+        // "signal processing" code. Execute conditionally
+        // on input and output pipes available and delay
+        // the output pipe until the internal register
+        // pipeline is full. The alternative version
+        // is listed later.
+        module
+        count (pipe(out, "uint:5") <- pipe({l, r}, "uint:15")) {
+            pipe(census, "uint:15");
+            var(lutinit, "[8]int", {3, 2, 2, 1, 2, 1, 1, 0});
+            cram(lut1, 1, 2, 3, lutinit);
+            cram(lut2, 1, 2, 3, lutinit);
+            cram(lut3, 1, 2, 3, lutinit);
+            cram(lut4, 1, 2, 3, lutinit);
+            cram(lut5, 1, 2, 3, lutinit);
+            value(b0_2, "uint:3", (census << 0) & 7;
+            value(b3_5, "uint:3", (census << 3) & 7;
+            value(b6_8, "uint:3", (census << 6) & 7;
+            value(b9_11, "uint:3", (census << 9) & 7;
+            value(b12_14, "uint:3", (census << 12) & 7;
+            value({c1, c2, c3, c4, c5}, "uint:3");
+            pipe({cc1, cc2, cc3, ccc1, ccc2}, "uint:5");
+
+            [census <<- l ^ r;]
+
+            c1 := cramread(lut1, 0, b0_2);
+            c2 := cramread(lut2, 0, b3_5);
+            c3 := cramread(lut3, 0, b6_8);
+            c4 := cramread(lut4, 0, b9_11);
+            c5 := cramread(lut5, 0, b12_14);
+
+            cc1 <<- c1 + c2;
+            cc2 <<- c3 + c4;
+            cc3 <<- c5;
+            ccc1 <<- cc1 + cc2;
+            ccc2 <<- cc3;
+            out <<- ccc1 + ccc2;
+        }
+        \end{lstlisting}
+
+        An alternative version of module {\bf count} using
+        static variables instead of pipes could be written as -
+        \begin{lstlisting}{language={threepl}}
+        module
+        count (pipe(out, "uint:5") <- pipe({l, r}, "uint:15")) {
+            static(n, "uint:3");
+            static(census, "uint:15");
+            var(lutinit, "[8]int", {3, 2, 2, 1, 2, 1, 1, 0});
+            cram(lut1, 1, 2, 3, lutinit);
+            cram(lut2, 1, 2, 3, lutinit);
+            cram(lut3, 1, 2, 3, lutinit);
+            cram(lut4, 1, 2, 3, lutinit);
+            cram(lut5, 1, 2, 3, lutinit);
+            value(b0_2, "uint:3", (census << 0) & 7;
+            value(b3_5, "uint:3", (census << 3) & 7;
+            value(b6_8, "uint:3", (census << 6) & 7;
+            value(b9_11, "uint:3", (census << 9) & 7;
+            value(b12_14, "uint:3", (census << 12) & 7;
+            value({c1, c2, c3, c4, c5}, "uint:3");
+            static({cc1, cc2, cc3, ccc1, ccc2}, "uint:5");
+
+            c1 := cramread(lut1, 0, b0_2);
+            c2 := cramread(lut2, 0, b3_5);
+            c3 := cramread(lut3, 0, b6_8);
+            c4 := cramread(lut4, 0, b9_11);
+            c5 := cramread(lut5, 0, b12_14);
+
+            when (<l && <r && (n<5 || >out)) par {
+                census <- l ^ r;
+                cc1 <- c1 + c2;
+                cc2 <- c3 + c4;
+                cc3 <- c5;
+                ccc1 <- cc1 + cc2;
+                ccc2 <- cc3;
+                out <<- ccc1 + ccc2;
+            }
+            when (<l && <r && n<5)
+                n++;
+        }
+        \end{lstlisting}
+
+
+    \section{video warping}\label{warp}
+
+        This code warps video via a look-up table (external
+        ZBT RAM 0). The LUT is pre-computed and loaded from the CPU.
+        The LUT address is the one-dimensional output pixel raster address.
+        The LUT contents are associated x,y pairs for the pixel location
+        in the input frame store. Each coordinate is a 14 bit fixed point
+        value with 10 integer bits and 4 fraction bits.
+
+        The input is a 720x576 video stream through high speed
+        serial port 0. Each pixel is transmitted as three
+        successive bytes of red, green and blue. The input is
+        double buffered through a pair of frame stores (external
+        ZBT RAMs 1 and 2). At the end of each input frame the null pipe
+        {\em warp} is assigned (null) which triggers the frame warp pipeline.
+        
+        Warping iterates through each output pixel raster address mapping to
+        a pair of input frame store coordinates. These coordinates are fixed
+        point with a 10 bit integer part and 4 bit fractional part.
+
+        Four pixels, each of three colour components, are read from the input
+        frame store and a bi-linear interpolation on each colour is carried
+        out. The result is written to a pipe buffer readable by the CPU.
+        
+        To enable interlaced input to overlap warping the input frame store
+        is double buffered. Reading and writing of external ZBT RAM is done
+        by library modules. The frame store cannot be selected dynamically
+        and hence module calls for each frame store must be compiled and the
+        input and output pipes must be controlled so that the desired frame
+        store is selected for reading or writing. The write multiplexing is
+        done by an inline module near the beginning of the initial file module
+        code and the read multiplexing is done within module {\em
+        get\_4\_points}.
+        
+        The mapping LUT is loaded from the CPU prior to operation. The
+        warping rate is 25MHz (4 cycles of 100MHz per pixel) and the maximum
+        video input rate is 100/3MHz (clearly input frames must be long
+        enough for warping to complete). In reality the input pixel stream
+        would have embedded EOL and EOF flags to ensure line and frame
+        synchronisation, but the code as shown simply counts pixels.
+        
+        This code is for illustration and has not been compiled. The code
+        should use line and frame synchronisation and should have a reset
+        to recover from data disruption.
+
+        \begin{lstlisting}{language={threepl}}
+            // newx, newy coordinate pairs
+            struct(cpair,
+                {x, y}, "uint:10"
+            );
+
+            // Address of 4 pixels surrounding point in
+            // input frame store.
+            //
+            // x0,y0    x1,y0
+            //
+            // x0,y1    x1,y1
+            //
+            // Point is delx,dely from x0,y0 where delx and
+            // dely are 4 bit fractions - 0.0000 to 0.1111
+            // binary)
+            struct(quad_address,
+                {x0, y0, x1, y1},   "uint:10",
+                {delx, dely},       "uint:4"
+            );
+
+            // r0,g0,b0   r1,g1,b1
+            //
+            // r2,g2,b2   r3,g3,b3
+            struct(four_points,
+                {r0, r1, r2, r3,
+                 g0, g1, g2, g3,
+                 b0, b1, b2, b3},   "uint:8",
+                {delx, dely},       "uint:4"
+            );
+
+            // colour pixel
+            struct(cpix,
+                {r, g, b},  "uint:8"
+            );
+
+            int(width, 720);
+            int(height, 576);
+            int(clut, 0);                   // coordinate transform LUT
+            int(wfs, 0);                    // write frame store number - 1 or 2
+            int(rfs, 0);                    // read frame store number - 2 or 1
+            str(address, "uint:19");        // frame store address type
+
+            pipe(warp, null);
+
+            //
+            // Interlaced video input from high speed serial port
+            // into frame store
+            //
+            pipe(data_in, hs_serial);
+            pipe(pix, cpix);
+            pipe(pixaddr, address);
+
+            sdc_in(data_in <- 0);
+            [
+                static({r, g}, "uint:8");
+                seq {
+                    r <- data_in.data;
+                    g <- data_in.data;
+                    sync {
+                        pix.r <<- r;
+                        pix.g <<- g;
+                        pix.b <<- data_in.data;
+                    }
+                }
+            ]
+            fs_i_address(pixaddr <-);
+            sync {
+                when (wfs == 1)
+                    extramwrite(1, pixaddr, pix);
+                else
+                    extramwrite(2, pixaddr, pix);
+            }
+
+            //
+            // Warping
+            //
+            pipe(raddr, address);
+            pipe(newcoords, cpair);
+            pipe(a4, quad_address);
+            pipe(p4, four_points);
+
+            fs_ni_address(raddr <-);
+            extramread(newcoords <- 0, raddr);
+            split_coords(a4 <- newcoords); 
+            get_4_points(p4 <- a4);
+            interpolate(new <- p4);
+
+            //
+            // Video output to CPU
+            //
+            cpu_pipe_r(new, 1);
+
+            //
+            // CPU input to mapping LUTs
+            //
+            pipe(lut_address, "uint:19");
+            pipe(lut_data, cpair);
+            cpu_pipe_w(lut_address <- 2);
+            cpu_pipe_w(lut_data <- 3);
+            extramwrite(0, lut_address, lut_data);
+
+
+        //
+        // Form a set of quad coordinates from a coordinate pair -
+        // x  x+1  y  y+1
+        //
+        module
+        split_coords (pipe(out, quad_address) <- pipe(pair, cpair)) {
+            value(xs, "uint:10", pair.x >> 4);
+            value(ys, "uint:10", pair.y >> 4);
+
+            sync {
+                out.x0 <- xs;
+                out.y0 <- ys;
+                out.x1 <- xs + 1;
+                out.y1 <- ys + 1;
+                out.delx <- pair.x & 0x1f;
+                out.dely <- pair.y & 0x1f;
+            }
+        }
+
+        //
+        // Read 4 points at x,y  x+1,y  x,y+1  x+1,y+1.
+        // The reads will execute sequentially since there is only one
+        // port physically into external RAM.
+        //
+        module
+        get_4_points (pipe(out, four_points)  <- pipe(in, quad_address)) {
+            pipe({in0, in1}, quad_address);
+
+            // divert read addresses into pipe in0 if FS 0 is the read
+            // frame store, otherwise into pipe in1
+            when (rfs)
+                in0 <<- in;
+            else
+                in1 <<- in;
+
+            pipe({rgb00, rgb01, rgb02, rgb03, rgb10, rgb11, rgb12, rgb13}, cpix);
+            value(y00, "uint:19", in0.y0 * width);
+            value(y01, "uint:19", in0.y1 * width);
+            value(y10, "uint:19", in1.y0 * width);
+            value(y11, "uint:19", in1.y1 * width);
+
+            // FS0 read pipeline
+            extramread(rgb00 <- 0, y00 + in0.x0);
+            extramread(rgb01 <- 0, y00 + in0.x1);
+            extramread(rgb02 <- 0, y01 + in0.x0);
+            extramread(rgb03 <- 0, y01 + in0.x1);
+
+            // FS1 read pipeline
+            extramread(rgb10 <- 1, y10 + in1.x0);
+            extramread(rgb11 <- 1, y10 + in1.x1);
+            extramread(rgb12 <- 1, y11 + in1.x0);
+            extramread(rgb13 <- 1, y11 + in1.x1);
+
+            pipe({rgb0, rgb1, rgb2, rgb3}, cpix);
+
+            // if FS0 is current read frame store assign from its
+            // read pipeline to the output, otherwise assign from
+            // the alternate pipeline
+            when (rfs == 0) sync {
+                out.r0 <<-  rgb00.r
+                out.r1 <<-  rgb01.r;
+                out.r2 <<-  rgb02.r;
+                out.r3 <<-  rgb03.r;
+                out.g0 <<-  rgb00.g;
+                out.g1 <<-  rgb01.g;
+                out.g2 <<-  rgb02.g;
+                out.g3 <<-  rgb03.g;
+                out.b0 <<-  rgb00.b;
+                out.b1 <<-  rgb01.b;
+                out.b2 <<-  rgb02.b;
+                out.b3 <<-  rgb03.b;
+            } else sync {
+                out.r0 <<-  rgb10.r
+                out.r1 <<-  rgb11.r;
+                out.r2 <<-  rgb12.r;
+                out.r3 <<-  rgb13.r;
+                out.g0 <<-  rgb10.g;
+                out.g1 <<-  rgb11.g;
+                out.g2 <<-  rgb12.g;
+                out.g3 <<-  rgb13.g;
+                out.b0 <<-  rgb10.b;
+                out.b1 <<-  rgb11.b;
+                out.b2 <<-  rgb12.b;
+                out.b3 <<-  rgb13.b;
+            }
+        }
+
+        // perform bi-linear interpolation
+        module
+        interpolate (pipe(out, cpix) <- pipe(in four_points)) {
+            pipe({rp1, rp2, gp1, gp2, bp1, bp2}, "uint:12");
+            pipe({r, g, b}, "uint:8");
+
+            rp1 <<- (in.r2 - in.r0) * in.dely;
+            rp2 <<- (in.r3 - in.r1) * in.dely;
+            r <<- (rp2 - rp1) * in.delx / 256;
+            gp1 <<- (in.g2 - in.g0) * in.dely;
+            gp2 <<- (in.g3 - in.g1) * in.dely;
+            g <<- (gp2 - gp1) * in.delx / 256;
+            bp1 <<- (in.b2 - in.b0) * in.dely;
+            bp2 <<- (in.b3 - in.b1) * in.dely;
+            b <<- (bp2 - bp1) * in.delx / 256;
+            sync {
+                out.r <<- r;
+                out.g <<- g;
+                out.b <<- b;
+            }
+        }
+
+        // generate interlaced address stream for writing incoming
+        // pixels to a frame store
+        module
+        fs_i_address (pipe(out, "uint:19") <-) {
+            static({x, y}, "uint:10");
+            static(field0, "log");
+            static(address, "uint:19");
+            value(eol, "log", x == width - 1);
+            value(eof, "log", y == height / 2 - 1);
+
+            sync {
+                out <<- address;
+                when (eol && !eof ) par {
+                    reset(x);
+                    y++;
+                    address <- address + (width + 1);
+                }
+                when (eol && eof && field0) par {
+                    reset(x);
+                    reset(y);
+                    address <- width;
+                }
+                when (eol && eof && !field0) par {
+                    reset(x);
+                    reset(y);
+                    address <- 0;
+                    wfs <- wfs ^ 1;
+                    rfs <- rfs ^ 1;
+                    warp <<- null;
+                }
+                when (!eol && !eof) par {
+                    x++;
+                    address++;
+                }
+            }
+        }
+
+        // generate non-interlaced address stream for reading pixels
+        // from a frame store
+        module
+        fs_ni_address (pipe(out, cpair) <- ) {
+            static(running, "log");
+            static({x, y}, "uint:10");
+            value(eol, "log", x == width - 1);
+            value(eof, "log", y == height - 1);
+
+            running <- warp;
+
+            when (running) {
+                sync {
+                    out.x <<- x;
+                    out.y <<- y;
+                    when (eol && eof) par {
+                        reset(x);
+                        reset(y);
+                        reset(running);
+                    }
+                    when (eol && !eof) par {
+                        reset(x);
+                        y++;
+                    }
+                    when (!eol)
+                        x++;
+                }
+            }
+        }
+        \end{lstlisting}

@@ -1,0 +1,531 @@
+Directives - initial values.
+----------------------------
+
+	ALU              = false
+	BOARD            = avnet/microzed_7020
+	FIFO             = false
+	OS               = mac os x
+	QUEUEREG         = false
+	arch             = x86_64
+	compileOnly      = false
+	compilerMakeDate = 2021-08-06 15:23:59 +1000
+	continuous       = false
+	currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test
+	date             = 2021-12-17 14:39:14 +1100
+	designName       = prog
+	filePath         = false
+	forceExec        = true
+	gatesNotLuts     = false
+	intTruncWarning  = false
+	intermediateOnly = false
+	listNets         = true
+	listTDEs         = true
+	listTDEsSel      = 0
+	locations        = false
+	netFile          = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.net
+	netlistDisplay   = false
+	netlistFile      = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.edn
+	optimiseConnect  = true
+	outputDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/
+	parentDirectory  = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/
+	postProcessTool  = ise
+	reportFile       = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.rpt
+	rptToFile        = true
+	sigList          = false
+	skipPostProc     = true
+	sourceFile       = prog.3pl
+	unassOut         = fatal
+	version          = 11.5.1M (devel svn 9947M, dun202)
+
+
+Memory requested 746061824 bytes
+3PL version 11.5.1M (devel svn 9947M, dun202).
+Source file /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.3pl
+command line options - rntfs
+2021-12-17 14:39:14 +1100
+
+Parsing source.
+---------------
+
+
+    source files
+    ------------
+
+       prog.3pl
+        FMOD1    /Users/dun202/lib/3PL/boards/avnet   microzed_7020.3pl
+            FMOD2    /Users/dun202/lib/3PL/xilinx   xc7.3pl
+                SRC      /Users/dun202/lib/3PL/xilinx   common.3pl
+                FMOD3    /Users/dun202/lib/3PL/xilinx   postprocess.3pl
+                FMOD4    /Users/dun202/lib/3PL   stdlib.3pl
+                FMOD5    /Users/dun202/lib/3PL/xilinx   clocks.3pl
+                FMOD6    /Users/dun202/lib/3PL/xilinx   io.3pl
+                FMOD7    /Users/dun202/lib/3PL/xilinx   dsp48.3pl
+                FMOD8    /Users/dun202/lib/3PL/xilinx   gtp_dual.3pl
+            FMOD9    /Users/dun202/lib/3PL/xilinx   zynq_axi.3pl
+                FMOD10    /Users/dun202/lib/3PL   jsontype.3pl
+                SRC      /Users/dun202/lib/3PL/xilinx   cpu.3pl
+        FMOD11    /Users/dun202/lib/3PL   qdr2_ram.3pl
+
+
+Immediate execution.
+--------------------
+
+
+Executing leader modules.
+-------------------------
+
+	module "gtp_dual" order 0
+	-------------------------
+
+	module "directories and board type" order 99
+	--------------------------------------------
+
+	module "assign attribute procedure" order 100
+	---------------------------------------------
+
+
+
+
+Executing main module.
+----------------------
+
+
+
+
+Executing trailer modules.
+--------------------------
+
+	module "zynq processor" order 0
+	-------------------------------
+
+	zynq_axi.3pl:821:38:  - WARNING
+	'par' block at zynq_axi.3pl:821:38:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:884:13:  - WARNING
+	'par' block at zynq_axi.3pl:884:13:  has mixture of statements with and without queue accesses
+
+	class qdr2_ram order 0
+	----------------------
+
+	qdr2_ram - write ports 1 read ports 1
+
+	qdr2_ram.3pl:266:17:  - WARNING
+	'par' block at qdr2_ram.3pl:266:17:  has mixture of statements with and without queue accesses
+
+	qdr2_ram.3pl:405:13:  - WARNING
+	'par' block at qdr2_ram.3pl:405:13:  has mixture of statements with and without queue accesses
+
+	class CPU_API order 1
+	---------------------
+
+	zynq_axi.3pl:1658:9:  - WARNING
+	'par' block at zynq_axi.3pl:1658:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1747:9:  - WARNING
+	'par' block at zynq_axi.3pl:1747:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1754:33:  - WARNING
+	'par' block at zynq_axi.3pl:1754:33:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1747:9:  - WARNING
+	'par' block at zynq_axi.3pl:1747:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1747:9:  - WARNING
+	'par' block at zynq_axi.3pl:1747:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1747:9:  - WARNING
+	'par' block at zynq_axi.3pl:1747:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1658:9:  - WARNING
+	'par' block at zynq_axi.3pl:1658:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1693:9:  - WARNING
+	'par' block at zynq_axi.3pl:1693:9:  has mixture of statements with and without queue accesses
+
+	zynq_axi.3pl:1783:9:  - WARNING
+	'par' block at zynq_axi.3pl:1783:9:  has mixture of statements with and without queue accesses
+
+	module "generate constraints" order 100
+	---------------------------------------
+
+
+
+
+Creating target-mode variable logic.
+------------------------------------
+
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_1.if_1.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_2.if_2.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_3.if_3.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_0.if_0.forvar_0.queuearray_4.if_4.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_6.if_6.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_7.if_7.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_8.if_8.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_5.if_5.forvar_1.queuearray_9.if_9.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_11.if_11.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_12.if_12.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_13.if_13.q' unused - deleted
+	queue variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.queuearray_10.if_10.forvar_2.queuearray_14.if_14.q' unused - deleted
+	static variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.write_static_0.out' unused - deleted
+	static variable 'prog.qdr2_ram_0.q_ce_del' unused - deleted
+	static variable 'prog.qdr2_ram_0.q_inc_del' unused - deleted
+	static variable 'prog.qdr2_ram_0.q_rst_del' unused - deleted
+	static variable 'prog.qdr2_ram_0.cq_ce_del' unused - deleted
+	static variable 'prog.qdr2_ram_0.cq_inc_del' unused - deleted
+	static variable 'prog.qdr2_ram_0.cq_rst_del' unused - deleted
+	static variable 'prog.qdr2_ram_0._cq_ce_del' unused - deleted
+	static variable 'prog.qdr2_ram_0._cq_inc_del' unused - deleted
+	static variable 'prog.qdr2_ram_0._cq_rst_del' unused - deleted
+	queue variable 'prog.write_0.addrout' unused - deleted
+	queue variable 'prog.write_0.qdr2write__0.addrout' unused - deleted
+	static variable 'prog.read_queue_0.count' unused - deleted
+	queue variable 'prog.read_queue_0.out' unused - deleted
+	static variable 'prog.read_queue_0.access' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_2.create_bus_interfaces_0.if_916.forvar_313.for_381.read_value_gen_0.read_1.out' unused - deleted
+	queue variable 'FMOD9/zynq_axi.trailermodule_2.create_bus_interfaces_0.if_916.forvar_313.for_386.read_queue_gen_0.read_2.out' unused - deleted
+
+Queue variables with multiple sink modules
+------------------------------------------
+
+
+
+
+Clock variables driving clocked logic.
+-------------------------------------
+
+	glob:c100
+	prog:c200
+
+Clock variables not driving clocked logic.
+------------------------------------------
+
+	prog:c100_z_raw
+	prog:c100_z
+	prog:c100_90_raw
+	prog:c100_90
+	prog:c200_raw
+	clkmmcm_base/clkout0
+	clkmmcm_base/clkout4
+	clkmmcm_base/clkout5
+	clkmmcm_base/clkout6
+	clkmmcm_base/clkout0b
+	clkmmcm_base/clkout1b
+	clkmmcm_base/clkout2b
+	clkmmcm_base/clkout3b
+	clkmmcm_base/clkfbout
+	clkmmcm_base/clkfboutb
+	cq
+	_cq
+	cq_raw
+	_cq_raw
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+	_c
+
+
+Directives - final values.
+-------------------------
+
+	ALU                   = false
+	BOARD                 = avnet/microzed_7020
+	BUILD                 = build/fpga/icrozed_
+	FIFO                  = false
+	OS                    = mac os x
+	QUEUEREG              = false
+	arch                  = x86_64
+	compileOnly           = false
+	compilerMakeDate      = 2021-08-06 15:23:59 +1000
+	continuous            = false
+	currentDirectory      = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test
+	date                  = 2021-12-17 14:39:14 +1100
+	designName            = prog
+	family                = XC7
+	filePath              = false
+	forceExec             = true
+	gatesNotLuts          = false
+	idelayctrl_exists     = true
+	intTruncWarning       = false
+	intermediateOnly      = false
+	listNets              = true
+	listTDEs              = true
+	listTDEsSel           = 0
+	locations             = false
+	netFile               = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.net
+	netlistDisplay        = false
+	netlistFile           = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.edn
+	optimiseConnect       = true
+	outputDirectory       = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/
+	parentDirectory       = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/
+	part                  = xc7z020clg400-1
+	postProcessAppendFile = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.info
+	postProcessCompress   = true
+	postProcessTool       = vivado
+	reportFile            = /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.rpt
+	rptToFile             = true
+	sigList               = false
+	skipPostProc          = true
+	sourceFile            = prog.3pl
+	srlAddrWidth          = 5
+	unassOut              = fatal
+	version               = 11.5.1M (devel svn 9947M, dun202)
+
+
+Optimising intermediate code.
+-----------------------------
+
+	optimisation passes: 7
+	Platform-specific optimisation pass.
+	Intermediate code cleanup optimisation.
+	cleanup optimisation passes: 1
+
+	clock variables - 
+
+		clock variable 'prog.FMOD1/microzed_7020.FMOD9/zynq_axi.bus_clk' is linked to clock variable 'glob.c100'
+		clock variable 'prog.clkmmcm_base_0.clkin' is linked to clock variable 'glob.c100'
+		clock variable 'prog.clkmmcm_base_0.clkfb' is linked to clock variable 'prog.c100_z'
+		clock variable 'prog.clkmmcm_base_0.clkout0' not used
+		clock variable 'prog.clkmmcm_base_0.clkout1' is linked to clock variable 'prog.c100_z_raw'
+		clock variable 'prog.clkmmcm_base_0.clkout2' is linked to clock variable 'prog.c100_90_raw'
+		clock variable 'prog.clkmmcm_base_0.clkout3' is linked to clock variable 'prog.c200_raw'
+		clock variable 'prog.clkmmcm_base_0.clkout4' not used
+		clock variable 'prog.clkmmcm_base_0.clkout5' not used
+		clock variable 'prog.clkmmcm_base_0.clkout6' not used
+		clock variable 'prog.clkmmcm_base_0.clkout0b' not used
+		clock variable 'prog.clkmmcm_base_0.clkout1b' not used
+		clock variable 'prog.clkmmcm_base_0.clkout2b' not used
+		clock variable 'prog.clkmmcm_base_0.clkout3b' not used
+		clock variable 'prog.clkmmcm_base_0.clkfbout' not used
+		clock variable 'prog.clkmmcm_base_0.clkfboutb' not used
+		clock variable 'prog.clockbufg_0.in' is linked to clock variable 'prog.c100_90_raw'
+		clock variable 'prog.clockbufg_0.out' is linked to clock variable 'prog.c100_90'
+		clock variable 'prog.clockbufg_1.in' is linked to clock variable 'prog.c100_z_raw'
+		clock variable 'prog.clockbufg_1.out' is linked to clock variable 'prog.c100_z'
+		clock variable 'prog.clockbufg_2.in' is linked to clock variable 'prog.c200_raw'
+		clock variable 'prog.clockbufg_2.out' is linked to clock variable 'prog.c200'
+		clock variable 'prog.qdr2_ram_0.clk_0' is linked to clock variable 'glob.c100'
+		clock variable 'prog.qdr2_ram_0.clk_90' is linked to clock variable 'prog.c100_90'
+		clock variable 'prog.qdr2_ram_0.del_clk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD9/zynq_axi.trailermodule_0.zynq_ps_0.gp_aclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_0.zynq_ps_0.hp_aclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.idelay_0.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.idelay_0.if_473.idelayctrl_0.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.idelay_1.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.clockbufio_0.in' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq_raw'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.clockbufio_0.out' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.clockbufio_1.in' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq_raw'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.clockbufio_1.out' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_2.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_3.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_4.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_5.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_6.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_7.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_8.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_9.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_10.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_11.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_12.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_13.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_14.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_15.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_16.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_17.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_18.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_272.idelay_19.refclk' is linked to clock variable 'prog.c200'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.iserdes_0.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.iserdes_0.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.iserdes_0.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.iserdes_0.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_308.iserdes_0.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.iserdes_1.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.iserdes_1.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.iserdes_1.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.iserdes_1.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_309.iserdes_1.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.iserdes_2.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.iserdes_2.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.iserdes_2.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.iserdes_2.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_310.iserdes_2.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.iserdes_3.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.iserdes_3.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.iserdes_3.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.iserdes_3.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_311.iserdes_3.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.iserdes_4.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.iserdes_4.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.iserdes_4.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.iserdes_4.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_312.iserdes_4.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.iserdes_5.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.iserdes_5.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.iserdes_5.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.iserdes_5.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_313.iserdes_5.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.iserdes_6.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.iserdes_6.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.iserdes_6.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.iserdes_6.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_314.iserdes_6.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.iserdes_7.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.iserdes_7.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.iserdes_7.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.iserdes_7.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_315.iserdes_7.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.iserdes_8.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.iserdes_8.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.iserdes_8.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.iserdes_8.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_316.iserdes_8.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.iserdes_9.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.iserdes_9.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.iserdes_9.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.iserdes_9.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_317.iserdes_9.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.iserdes_10.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.iserdes_10.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.iserdes_10.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.iserdes_10.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_318.iserdes_10.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.iserdes_11.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.iserdes_11.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.iserdes_11.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.iserdes_11.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_319.iserdes_11.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.iserdes_12.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.iserdes_12.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.iserdes_12.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.iserdes_12.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_320.iserdes_12.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.iserdes_13.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.iserdes_13.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.iserdes_13.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.iserdes_13.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_321.iserdes_13.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.iserdes_14.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.iserdes_14.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.iserdes_14.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.iserdes_14.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_322.iserdes_14.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.iserdes_15.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.iserdes_15.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.iserdes_15.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.iserdes_15.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_323.iserdes_15.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.iserdes_16.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.iserdes_16.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.iserdes_16.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.iserdes_16.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_324.iserdes_16.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.c' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.iserdes_17.clk' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460._cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.iserdes_17.clkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.cq'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.iserdes_17.oclk' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.iserdes_17.oclkb' is linked to clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325._c'
+		clock variable 'FMOD11/qdr2_ram.trailermodule_1.if_460.forvar_273.for_325.iserdes_17.clkdiv' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_2.create_bus_interfaces_0.if_916.forvar_313.for_381.read_value_gen_0.arg_domain' is linked to clock variable 'glob.c100'
+		clock variable 'FMOD9/zynq_axi.trailermodule_2.create_bus_interfaces_0.if_916.forvar_313.for_382.write_static_gen_0.arg_domain' is linked to clock variable 'glob.c100'
+
+Printing TDE list to .icl file
+------------------------------
+
+Generating EDIF code.
+---------------------
+
+	generating netlist from intermediate code
+	intermediate list elements - 3722
+	convert intermediate list to netlist
+		converting logic
+		converting static and queue variables
+	Elements before optimisation - 4927
+	Net IDs before optimisation - 15924
+	Nets before optimisation - 7746
+	checking net and element validity before optimisation
+	optimising netlist gates
+		optimisation passes: 5
+	checking net and element validity after optimisation
+	Elements after optimisation - 4402
+	Net IDs after optimisation - 16183
+	Nets after optimisation - 7560
+	resolving net identifiers
+	writing netlist to .edn file
+	writing vivado constraints file /Users/dun202/src/mine/3PL/test/11.6.0/qdr_test/prog.xdc
+	writing list of equivalent nets
+
+	cell occurrences -
+
+		AND5                7
+		MULT_AND            8
+		OBUF               46
+		AND3               20
+		RAMB36              3
+		MUXCY             162
+		AND4               15
+		LUT2               94
+		AND2             1231
+		ODDR               43
+		LUT6               11
+		IBUF               20
+		LUT4               30
+		BUFG                3
+		XORCY             151
+		INV               576
+		SRLC32E            26
+		FDRE             1147
+		PS7                 1
+		ISERDESE2          18
+		OR2               519
+		IDELAYE2           20
+		RAM32X1D           88
+		FDSE               33
+		OR4                 1
+		BUFIO               2
+		OR3                81
+		OR5                 5
+		MMCM_BASE           1
+		VCC                 1
+		GND                 1
+		XOR2               37
+		IDELAYCTRL          1
+
+Parse time                                  0.748s
+Immediate execution time                    0.849s
+Intermediate code list optimisation time    0.132s
+Netlist generation time                     0.214s
+Netlist optimisation time                   0.088s
+Netlist output time                         0.157s
+Total elapsed time                          2.190s
+Memory usage: max 746061824 total 447741952 free 306679208
+-s option - skipping post-processing

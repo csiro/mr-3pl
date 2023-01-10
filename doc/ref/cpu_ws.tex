@@ -1,0 +1,53 @@
+            Parameter {\bf out} is the static-mode output variable. Its argument
+            may be omitted if the optional parameter {\bf access} is given an argument.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the output data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the output data type is not limited.
+
+            Output parameter {\bf out} is examined in order to determine its clock
+            domain. If it has no clock domain it is given the bus clock domain.
+
+            On running info2c on the .json file the following C function will
+            have been defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            function                   &               \\ \hline \hline
+            fpga\_{\em name}\_write()  & write a datum  \\ \hline
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class(cpu, cpu_api());
+               
+               static(s, "uint:16");
+               .
+               .
+               cpu.write_static(s <- "S2");
+               .
+               .
+            \end{lstlisting}
+            then for zynq the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog.h"
+                   .
+                   .
+                   int     d;
+                   .
+                   .
+                   fpga_open();
+                   .
+                   .
+                   fpga_S2_write(d);          // write
+                   .
+            \end{lstlisting}
+
+            This procedure creates no in-line target code so the current clock domain
+            when this procedure is called is not relevant. The clock domain is not
+            changed by this procedure,
+

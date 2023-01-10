@@ -1,0 +1,55 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{{\bf rmemory mode attributes}} \\
+        \hline
+        init       & 3PL       &                      & initial value                    \\
+        continuous & 3PL       & boolean              & continuous enable                \\   
+        writemode  & netlist   & string               & write behaviour                  \\   
+        writemodea & netlist   & string               & write behaviour for port A       \\   
+        writemodeb & netlist   & string               & write behaviour for port B       \\   
+        domain     & 3PL       & clock                & force clock domain for all ports \\     
+        domain0    & 3PL       & clock                & force clock domain port0         \\     
+        domain1    & 3PL       & clock                & force clock domain port1         \\     
+        \hline
+        \btabularxend
+        
+        {\bf These attributes are case-insensitive.}
+        
+        {\bf init} sets an initial value for the memory. Any previous initial
+        value will be overwritten. The initial value must be a compound type and
+        the nested type must be an immediate type equivalent to the memory data
+        type, i.e. same type but without a width field. The initial value is not
+        used until completion of immediate execution when variables are
+        processed into target code and hence it can be changed at any time
+        during immediate execution.
+        
+        {\bf continuous} true specifies that the block RAM enables are tied high
+        instead of being gated by the read enable ORed with the write enable.
+        This can gain speed and reduce routing resource usage but at the
+        cost of increased noise and power consumption (and hence also FPGA
+        temperature).
+        
+        {\bf write\_mode} allows the default write mode to be changed for
+        block RAMs on Xilinx XC3S (Spartan 3), XC2V (Virtex 2) and
+        XC2VP (Virtex 2 PRO) and XC4V (Virtex 4). The default is
+        "write\_first". Other write modes are "read\_first" and "no\_change".
+        {\bf write\_mode\_a} and {\bf write\_mode\_b} select the write mode on
+        separate ports of dual-port block RAM.
+
+        {\bf domain} forces the clock domain (both input and output) for all
+        ports to the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the variable already has a clock domain as
+        a result of having been assigned or evaluated then that clock domain is
+        compared with the intended domain. If the assigned clock domain agrees
+        with that already in place then there is no further action, otherwise a
+        fatal error occurs.
+
+        {\bf domain0} and {\bf domain1} force the clock domain (both input and
+        output) for port 0 or 1 of registered-output memory to the specified
+        clock domain. If assigned {\bf null} the current clock domain is
+        selected. If the variable already has a clock domain as a result of
+        having been assigned or evaluated then that clock domain is compared
+        with the intended domain. If the assigned clock domain agrees with that
+        already in place then there is no further action, otherwise a fatal
+        error occurs. These attributes cannot be set for combinatorial-output
+        memory.

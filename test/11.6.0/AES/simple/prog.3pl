@@ -1,0 +1,19 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+class(cpu, cpu_api());
+
+static(s1, "uint:16", 200);
+static(s2, "uint:32");
+static(l, "uint:4");
+queue(q, "uint:16", domain=null);
+
+s2 <- s1 * s1 - 3;
+
+cpu.write(s1 <- "S1W");
+cpu.read(s2, "S2R");
+cpu.write(l <- "LW");
+cpu.write(q <- "QW");
+cpu.read(q, "RQ");
+
+output(,, l, loc=led_pins);
+

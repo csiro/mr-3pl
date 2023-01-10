@@ -1,0 +1,28 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf priority mode attributes} \\
+        \hline
+        domain     & 3PL & clock   & force the clock domain \\     
+        readonly   & 3PL & boolean & set to read only       \\     
+        multiplein & 3PL & boolean & OR multiple inputs       \\     
+        \hline
+        \btabularxend
+
+        {\bf domain} forces the clock domain (both input and output) to
+        the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the variable already has a clock domain
+        as a result of having been assigned or evaluated then that clock domain
+        is compared with the intended domain. If the assigned clock domain
+        agrees with that already in place then there is no further action,
+        otherwise a fatal error occurs.
+               
+        {\bf readonly} true specifies that from now on this variable cannot
+        be assigned to. This attribute cannot be assigned false.
+        
+        Normally an assignment to a member of a priority variable array
+        overwrites any previous assignment, the final assignment prior to
+        completion of immediate execution prevailing. If attribute {\bf
+        multiplein} is set true then all assignments to a member of a priority
+        variable array are collected and on completion of immediate execution
+        these are ORed to form the input to that array member.
+

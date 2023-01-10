@@ -1,0 +1,63 @@
+            Parameter {\bf in} is the cmemory-mode or rmemory-mode input variable.
+            
+            If optional output parameter {\bf access} has an argument, the
+            static variable of type "log" is assigned true for one clock cycle
+            every time the port of {\bf in} is read. {\bf access} may have any
+            clock domain.
+            
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the input data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the input data type must not exceed 1016 bits (127 bytes).
+            
+            This interface can use any memory port and that port can also be
+            used by other application code, but no arbitration of shared access
+            via a port is provided. Coincident access will usually result in
+            data corruption. If it is not feasible to dedicate a port to CPU
+            access then the CPU application code must limit acccess to the
+            memory to times when it is known that the FPGA logic will not also
+            be accessing the memory port.
+            
+            On running info2c on the .json file the following C function will have been
+            defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            function                 &                                \\ \hline \hline
+            fpga\_{\em name}\_read() & read a datum from FPGA memory  \\ \hline
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class(cpu, cpu_api());
+               rmemory(m, 2, "uint:8", "uint:16");
+               .
+               .
+               cpu.read_memory("MEM1", m, 0);
+               .
+               .
+            \end{lstlisting}
+            then for zynq the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   int     d;
+                   .
+                   .
+                   fpga_open();
+                   .
+                   .
+                   d = fpga_MEM1_read(addr);
+                   .
+            \end{lstlisting}
+            where addr is the memory address. The returned data is assigned
+            to variable {\bf d}.
+
+            This procedure creates no in-line target code so the current clock domain
+            when this procedure is called is not relevant. The clock domain is not
+            changed by this procedure,

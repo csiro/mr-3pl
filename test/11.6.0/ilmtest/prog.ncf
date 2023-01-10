@@ -1,0 +1,50 @@
+# program 3PL version 11.5.1M (devel svn 9947, dun202)
+# timestamp 2022-02-11 16:38:37 +1100
+# 
+#         ALU = false
+#         FIFO = false
+#         OS = mac os x
+#         QUEUEREG = false
+#         arch = x86_64
+#         comms_baud_rate = 53475
+#         compileOnly = false
+#         compilerMakeDate = 2021-08-06 14:54:59 +1000
+#         continuous = false
+#         currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest
+#         date = 2022-02-11 16:38:37 +1100
+#         designName = prog
+#         excludeinfo = true
+#         family = XC3S
+#         filePath = false
+#         forceExec = true
+#         gatesNotLuts = false
+#         intTruncWarning = false
+#         intermediateOnly = false
+#         listNets = true
+#         listTDEs = true
+#         listTDEsSel = 0
+#         locations = false
+#         netFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.net
+#         netlistDisplay = false
+#         netlistFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.edn
+#         optimiseConnect = true
+#         outputDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+#         parentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/
+#         part = xc3s400aft256-4
+#         postProcessTool = ise
+#         reportFile = /Users/dun202/src/mine/3PL/test/11.6.0/ilmtest/prog.rpt
+#         rptToFile = true
+#         sigList = false
+#         skipPostProc = true
+#         sourceFile = prog.3pl
+#         srlAddrWidth = 4
+#         uart_cpu = true
+#         unassOut = fatal
+#         version = 11.5.1M (devel svn 9947, dun202)
+#     
+CONFIG VCCAUX="3.3";
+NET PORT_C10 IOSTANDARD=LVCMOS33;
+NET glob_c16 TNM=C16;
+TIMESPEC TS_C16=PERIOD C16 62.5;
+NET PORT_N1 IOSTANDARD=LVCMOS33;
+NET PORT_M1 IOSTANDARD=LVCMOS33;

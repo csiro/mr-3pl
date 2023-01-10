@@ -1,0 +1,29 @@
+#! /usr/bin/env python3
+
+import sys
+import os
+import math
+
+design = sys.argv[1:][0]
+infname = design + '.bit.gz'
+outfname = design + "_cinclude.h"
+first = True
+with open(outfname, 'w', encoding="utf-8") as of:
+
+    of.write("#include <sys/types.h>\n")
+    of.write("#include <inttypes.h>\n\n")
+
+    of.write("unsigned char " + design + "_fpga_config_data[] = {\n    ")
+    with open(infname, 'rb') as bfile:
+        count = 0
+        bytes = bfile.read()
+        for byte in bytes:
+            if not first:
+                of.write(', ')
+            first = False
+            if count != 0 and count % 8 == 0:
+                of.write("\n    ")
+            of.write('0x%.2x' % int(byte))
+            count = count + 1
+    of.write("\n};\n")
+    of.write("int "+ design + "_fpga_config_size = " + str(count) + ";")

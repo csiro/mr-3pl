@@ -1,0 +1,1590 @@
+// Include file for Xilinx Unified Library (XUL) elements
+nomodule
+
+global function
+xul_and (varargs) {
+    return(xul_gate("xul_xand", "AND", 2, 5, inargs));
+}
+
+global function
+xul_or (varargs) {
+    return(xul_gate("xul_or", "OR", 2, 5, inargs));
+}
+
+global function
+xul_xor (varargs) {
+    return(xul_gate("xul_xor", "XOR", 2, 5, inargs));
+}
+
+global function
+xul_nand (varargs) {
+    return(xul_gate("xul_xnand", "NAND", 2, 5, inargs));
+}
+
+global function
+xul_nor (varargs) {
+    return(xul_gate("xul_nor", "NOR", 2, 5, inargs));
+}
+
+global function
+xul_xnor (varargs) {
+    return(xul_gate("xul_xnor", "XNOR", 2, 5, inargs));
+}
+
+global function
+xul_inv (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_inv", "I");
+    value(out, "log");
+    element("INV");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("inv", CONSTR);
+    return(out);
+}
+
+
+global function
+xul_buf (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_buf", "I");
+    value(out, "log");
+    element("BUF");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("inv", CONSTR);
+    return(out);
+}
+
+global function
+xul_muxf5 (value({S, I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(S)) nullerr("xul_muxf5", "S");
+    if (!matched(I0)) nullerr("xul_muxf5", "I0");
+    if (!matched(I1)) nullerr("xul_muxf5", "I1");
+    return(xul_muxf(5, S, I0, I1, CONSTR));
+}
+
+global function
+xul_muxf6 (value({S, I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(S)) nullerr("xul_muxf6", "S");
+    if (!matched(I0)) nullerr("xul_muxf6", "I0");
+    if (!matched(I1)) nullerr("xul_muxf6", "I1");
+    return(xul_muxf(6, S, I0, I1, CONSTR));
+}
+
+global function
+xul_muxf7 (value({S, I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(S)) nullerr("xul_muxf7", "S");
+    if (!matched(I0)) nullerr("xul_muxf7", "I0");
+    if (!matched(I1)) nullerr("xul_muxf7", "I1");
+    return(xul_muxf(7, S, I0, I1, CONSTR));
+}
+
+global function
+xul_muxf8 (value({S, I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(S)) nullerr("xul_muxf8", "S");
+    if (!matched(I0)) nullerr("xul_muxf8", "I0");
+    if (!matched(I1)) nullerr("xul_muxf8", "I1");
+    return(xul_muxf(8, S, I0, I1, CONSTR));
+}
+
+global function
+xul_muxcy (value({S, DI, CI}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(S)) nullerr("xul_muxcy", "S");
+    if (!matched(DI)) nullerr("xul_muxcy", "DI");
+    if (!matched(CI)) nullerr("xul_muxcy", "CI");
+    value(out, "log");
+    element("MUXCY");
+    elementconnect("S", 0, S);
+    elementconnect("DI", 0, DI);
+    elementconnect("CI", 0, CI);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_muxcy", CONSTR);
+    return(out);
+}
+
+global function
+xul_xorcy (value({LI, CI}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(LI)) nullerr("xul_xorcy", "LI");
+    if (!matched(CI)) nullerr("xul_xorcy", "CI");
+    value(out, "log");
+    element("XORCY");
+    elementconnect("LI", 0, LI);
+    elementconnect("CI", 0, CI);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_xorcy", CONSTR);
+    return(out);
+}
+
+global function
+xul_orcy (value({I, CI}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_orcy", "I");
+    if (!matched(CI)) nullerr("xul_orcy", "CI");
+    value(out, "log");
+    element("ORCY");
+    elementconnect("I", 0, I);
+    elementconnect("CI", 0, CI);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_orcy", CONSTR);
+    return(out);
+}
+
+global function
+xul_multand (value({I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_multand", "I0");
+    if (!matched(I1)) nullerr("xul_multand", "I1");
+    value(out, "log");
+    element("MULT_AND");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_multand", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufe (value({I, E}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufe", "I");
+    if (!matched(E)) nullerr("xul_bufe", "E");
+    value(out, "log");
+    element("BUFE");
+    elementconnect("I", 0, I);
+    elementconnect("E", 0, E);
+    elementconnect("O", 2, out);
+    xul_constraints("xul_bufe", CONSTR);
+    return(out);
+}
+
+global function
+xul_buft (value({I, T}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_buft", "I");
+    if (!matched(T)) nullerr("xul_buft", "T");
+    value(out, "log");
+    element("BUFT");
+    elementconnect("I", 0, I);
+    elementconnect("T", 0, T);
+    elementconnect("O", 2, out);
+    xul_constraints("xul_buft", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufg (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufg", "I");
+    value(out, "log");
+    element("BUFG");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufg", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgce (value({I, CE}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufgce", "I");
+    if (!matched(CE)) nullerr("xul_bufgce", "CE");
+    value(out, "log");
+    element("BUFGCE");
+    elementconnect("I", 0, I);
+    elementconnect("CE", 0, CE);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgce", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgce_1 (value({I, CE}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufgce_1", "I");
+    if (!matched(CE)) nullerr("xul_bufgce_1", "CE");
+    value(out, "log");
+    element("BUFGCE_1");
+    elementconnect("I", 0, I);
+    elementconnect("CE", 0, CE);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgce_1", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgdll (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufgdll", "I");
+    value(out, "log");
+    element("BUFGDLL");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgdll", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgp (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_bufgp", "I");
+    value(out, "log");
+    element("BUFGP");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgp", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgmux (value({I0, I1, S}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_bufgmux", "I0");
+    if (!matched(I1)) nullerr("xul_bufgmux", "I1");
+    if (!matched(CE)) nullerr("xul_bufgmux", "CE");
+    value(out, "log");
+    element("BUFGMUX");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("CE", 0, CE);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgmux", CONSTR);
+    return(out);
+}
+
+global function
+xul_bufgmux_1 (value({I0, I1, S}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_bufgmux_1", "I0");
+    if (!matched(I1)) nullerr("xul_bufgmux_1", "I1");
+    if (!matched(S)) nullerr("xul_bufgmux_1", "S");
+    value(out, "log");
+    element("BUFGMUX_1");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("S", 0, S);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_bufgmux_1", CONSTR);
+    return(out);
+}
+
+global function
+xul_ibuf (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_ibuf", "I");
+    value(out, "log");
+    element("IBUF");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_ibuf", CONSTR);
+    return(out);
+}
+
+global function
+xul_ibufg (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_ibufg", "I");
+    value(out, "log");
+    element("IBUFG");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_ibufg", CONSTR);
+    return(out);
+}
+
+global function
+xul_ibufds (value({I, IB}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_ibufds", "I");
+    if (!matched(IB)) nullerr("xul_ibufds", "IB");
+    value(out, "log");
+    element("IBUFDS");
+    elementconnect("I", 0, I);
+    elementconnect("IB", 0, IB);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_ibufds", CONSTR);
+    return(out);
+}
+
+global function
+xul_ibufgds (value({I, IB}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_ibufgds", "I");
+    if (!matched(IB)) nullerr("xul_ibufgds", "IB");
+    value(out, "log");
+    element("IBUFGDS");
+    elementconnect("I", 0, I);
+    elementconnect("IB", 0, IB);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_ibufgds", CONSTR);
+    return(out);
+}
+
+global function
+xul_ipad (var(CONSTR, "[]str")) {
+    value(out, "log");
+    element("IPAD");
+    elementconnect("O", 1, out);
+    xul_constraints("xul_ipad", CONSTR);
+    return(out);
+}
+
+global function
+xul_obuf (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_obuf", "I");
+    value(out, "log");
+    element("OBUF");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_obuf", CONSTR);
+    return(out);
+}
+
+global procedure
+xul_obufds (value({O, OB}, "log") <- value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_obufds", "I");
+    element("OBUFDS");
+    elementconnect("I", 0, I);
+    elementconnect("O", 1, O);
+    elementconnect("OB", 1, OB);
+    xul_constraints("xul_obufds", CONSTR);
+}
+
+global function
+xul_obufe (value({I, E}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_obufe", "I");
+    if (!matched(E)) nullerr("xul_obufe", "E");
+    value(out, "log");
+    element("OBUFE");
+    elementconnect("I", 0, I);
+    elementconnect("E", 0, E);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_obufe", CONSTR);
+    return(out);
+}
+
+global function
+xul_obuft (value({I, T}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_obuft", "I");
+    if (!matched(T)) nullerr("xul_obuft", "T");
+    value(out, "log");
+    element("OBUFT");
+    elementconnect("I", 0, I);
+    elementconnect("T", 0, T);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_obuft", CONSTR);
+    return(out);
+}
+
+global procedure
+xul_obuftds (value({O, OB}, "log") <- value({I, T}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_obuftds", "I");
+    if (!matched(T)) nullerr("xul_obuftds", "T");
+    element("OBUFTDS");
+    elementconnect("I", 0, I);
+    elementconnect("T", 0, T);
+    elementconnect("O", 1, O);
+    elementconnect("OB", 1, OB);
+    xul_constraints("xul_obuftds", CONSTR);
+}
+
+global procedure
+opad (value(I, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_opad", "I");
+    element("OPAD");
+    elementconnect("I", 0, I);
+    xul_constraints("xul_opad", CONSTR);
+}
+
+global procedure
+iopad (value(IO, "log"), var(CONSTR, "[]str")) {
+    if (!matched(IO)) nullerr("xul_iopad", "IO");
+    element("IOPAD");
+    elementconnect("IO", 0, IO);
+    xul_constraints("xul_iopad", CONSTR);
+}
+
+global procedure
+xul_iobuf (value({IO, O}, "log") <- value({I, T}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_iobuf", "I");
+    if (!matched(T)) nullerr("xul_iobuf", "T");
+    element("IOBUF");
+    elementconnect("I", 0, I);
+    elementconnect("T", 0, T);
+    elementconnect("IO", 1, IO);
+    elementconnect("O", 1, O);
+    xul_constraints("xul_iobuf", CONSTR);
+}
+
+global procedure
+xul_iobufds (value({IO, IOB, O}, "log") <- value({I, T}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I)) nullerr("xul_iobufds", "I");
+    if (!matched(T)) nullerr("xul_iobufds", "T");
+    element("IOBUFDS");
+    elementconnect("I", 0, I);
+    elementconnect("T", 0, T);
+    elementconnect("IO", 1, IO);
+    elementconnect("IOB", 1, IOB);
+    elementconnect("O", 1, O);
+    xul_constraints("xul_iobufds", CONSTR);
+}
+
+global function
+PULLDOWN (var(CONSTR, "[]str")) {
+    value(out, "log");
+    element("PULLDOWN");
+    elementconnect("O", 2, out);
+    xul_constraints("xul_pulldown", CONSTR);
+    return(out);
+}
+
+global function
+PULLUP (var(CONSTR, "[]str")) {
+    value(out, "log");
+    element("PULLUP");
+    elementconnect("O", 2, out);
+    xul_constraints("xul_pullup", CONSTR);
+    return(out);
+}
+
+global function
+KEEPER (var(CONSTR, "[]str")) {
+    value(out, "log");
+    element("KEEPER");
+    elementconnect("O", 2, out);
+    xul_constraints("xul_keeper", CONSTR);
+    return(out);
+}
+
+global procedure
+xul_ifddrcpe (
+    value({Q0, Q1}, "log")
+    <-
+    value({C0, C1, CE, D, CLR, PRE}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ifddrcpe", "C0");
+    if (!matched(C1)) nullerr("xul_ifddrcpe", "C1");
+    if (!matched(CE)) nullerr("xul_ifddrcpe", "CE");
+    if (!matched(D)) nullerr("xul_ifddrcpe", "D");
+    if (!matched(CLR)) nullerr("xul_ifddrcpe", "CLR");
+    if (!matched(PRE)) nullerr("xul_ifddrcpe", "PRE");
+    element("IFDDRCPE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D", 0, D);
+    elementconnect("CLR", 0, CLR);
+    elementconnect("PRE", 0, PRE);
+    elementconnect("Q0", 1, Q0);
+    elementconnect("Q1", 1, Q1);
+    xul_constraints("xul_ifddrcpe", CONSTR);
+}
+
+global procedure
+xul_ifddrrse (
+    value({Q0, Q1}, "log")
+    <-
+    value({C0, C1, CE, D, R, S}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ifddrrse", "C0");
+    if (!matched(C1)) nullerr("xul_ifddrrse", "C1");
+    if (!matched(CE)) nullerr("xul_ifddrrse", "CE");
+    if (!matched(D)) nullerr("xul_ifddrrse", "D");
+    if (!matched(R)) nullerr("xul_ifddrrse", "R");
+    if (!matched(S)) nullerr("xul_ifddrrse", "S");
+    element("IFDDRRSE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D", 0, D);
+    elementconnect("R", 0, R);
+    elementconnect("S", 0, S);
+    elementconnect("Q0", 1, Q0);
+    elementconnect("Q1", 1, Q1);
+    xul_constraints("xul_ifddrrse", CONSTR);
+}
+
+global function
+xul_ofddrcpe (
+    value({C0, C1, CE, D0, D1, CLR, PRE}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ofddrcpe", "C0");
+    if (!matched(C1)) nullerr("xul_ofddrcpe", "C1");
+    if (!matched(CE)) nullerr("xul_ofddrcpe", "CE");
+    if (!matched(D0)) nullerr("xul_ofddrcpe", "D0");
+    if (!matched(D1)) nullerr("xul_ofddrcpe", "D1");
+    if (!matched(CLR)) nullerr("xul_ofddrcpe", "CLR");
+    if (!matched(PRE)) nullerr("xul_ofddrcpe", "PRE");
+    value(q, "log");
+    element("OFDDRCPE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D0", 0, D0);
+    elementconnect("D1", 0, D1);
+    elementconnect("CLR", 0, CLR);
+    elementconnect("PRE", 0, PRE);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_ofddrcpe", CONSTR);
+    return(q);
+}
+
+global function
+xul_ofddrrse (
+    value({C0, C1, CE, D0, D1, R, S}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ofddrrse", "C0");
+    if (!matched(C1)) nullerr("xul_ofddrrse", "C1");
+    if (!matched(CE)) nullerr("xul_ofddrrse", "CE");
+    if (!matched(D0)) nullerr("xul_ofddrrse", "D0");
+    if (!matched(D1)) nullerr("xul_ofddrrse", "D1");
+    if (!matched(R)) nullerr("xul_ofddrrse", "R");
+    if (!matched(S)) nullerr("xul_ofddrrse", "S");
+    value(q, "log");
+    element("OFDDRRSE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D0", 0, D0);
+    elementconnect("D1", 0, D1);
+    elementconnect("R", 0, R);
+    elementconnect("S", 0, S);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_ofddrrse", CONSTR);
+    return(q);
+}
+
+global function
+xul_ofddrtcpe (
+    value({C0, C1, CE, D0, D1, CLR, PRE, T}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ofddrtcpe", "C0");
+    if (!matched(C1)) nullerr("xul_ofddrtcpe", "C1");
+    if (!matched(CE)) nullerr("xul_ofddrtcpe", "CE");
+    if (!matched(D0)) nullerr("xul_ofddrtcpe", "D0");
+    if (!matched(D1)) nullerr("xul_ofddrtcpe", "D1");
+    if (!matched(CLR)) nullerr("xul_ofddrtcpe", "CLR");
+    if (!matched(PRE)) nullerr("xul_ofddrtcpe", "PRE");
+    if (!matched(T)) nullerr("xul_ofddrtcpe", "T");
+    value(q, "log");
+    element("OFDDRTCPE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D0", 0, D0);
+    elementconnect("D1", 0, D1);
+    elementconnect("CLR", 0, CLR);
+    elementconnect("PRE", 0, PRE);
+    elementconnect("T", 0, T);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_ofddrtcpe", CONSTR);
+    return(q);
+}
+
+global function
+xul_ofddrtrse (
+    value({C0, C1, CE, D0, D1, R, S, T}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(C0)) nullerr("xul_ofddrtrse", "C0");
+    if (!matched(C1)) nullerr("xul_ofddrtrse", "C1");
+    if (!matched(CE)) nullerr("xul_ofddrtrse", "CE");
+    if (!matched(D0)) nullerr("xul_ofddrtrse", "D0");
+    if (!matched(D1)) nullerr("xul_ofddrtrse", "D1");
+    if (!matched(R)) nullerr("xul_ofddrtrse", "R");
+    if (!matched(S)) nullerr("xul_ofddrtrse", "S");
+    if (!matched(T)) nullerr("xul_ofddrtrse", "T");
+    value(q, "log");
+    element("OFDDRTRSE");
+    elementconnect("C0", 0, C0);
+    elementconnect("C1", 0, C1);
+    elementconnect("CE", 0, CE);
+    elementconnect("D0", 0, D0);
+    elementconnect("D1", 0, D1);
+    elementconnect("R", 0, R);
+    elementconnect("S", 0, S);
+    elementconnect("T", 0, T);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_ofddrtrse", CONSTR);
+    return(q);
+}
+
+global function
+xul_fdrse (value(D), clock(C), value({CE, R, S}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(C)) nullerr("xul_fd", "C");
+    value(q, "log"); attributes(q, domain=C);
+    element("FDRSE");
+    elementconnect("C", 3, C);
+    if (matched(D))
+        elementconnect("D", 0, D);
+    if (matched(CE))
+        elementconnect("CE", 0, CE);
+    if (matched(R))
+        elementconnect("R", 0, R);
+    if (matched(S))
+        elementconnect("S", 0, S);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_fd", CONSTR);
+    return(q);
+}
+
+global function
+xul_fdcpe (value(D), clock(C), value({CE, CLR, PRE}, "log"), var(CONSTR, "[]str")) {
+    value(q, "log"); attributes(q, domain=C);
+    element("FDCPE");
+    if (matched(C))
+        elementconnect("C", 3, C);
+    if (matched(D))
+        elementconnect("D", 0, D);
+    if (matched(CE))
+        elementconnect("CE", 0, CE);
+    if (matched(CLR))
+        elementconnect("CLR", 0, CLR);
+    if (matched(PRE))
+        elementconnect("PRE", 0, PRE);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_fd", CONSTR);
+    return(q);
+}
+
+global function
+xul_ldcpe (value(D), clock(G), value({GE, CLR, PRE}, "log"), var(CONSTR, "[]str")) {
+    value(q, "log"); attributes(q, domain=G);
+    element("LD");
+    if (matched(G))
+        elementconnect("G", 0, G);
+    if (matched(D))
+        elementconnect("D", 0, D);
+    if (matched(GE))
+        elementconnect("GE", 0, GE);
+    if (matched(CLR))
+        elementconnect("CLR", 0, CLR);
+    if (matched(PRE))
+        elementconnect("PRE", 0, PRE);
+    elementconnect("Q", 1, q);
+    xul_constraints("xul_ld", CONSTR);
+    return(q);
+}
+
+global function
+xul_lut1 (value(I0, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut1", "I0");
+    value(out, "log");
+    element("LUT3");
+    elementconnect("I0", 0, I0);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut1", CONSTR);
+    return(out);
+}
+
+global function
+xul_lut2 (value({I0, I1}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut2", "I0");
+    if (!matched(I1)) nullerr("xul_lut2", "I1");
+    value(out, "log");
+    element("LUT3");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut2", CONSTR);
+    return(out);
+}
+
+global function
+xul_lut3 (value({I0, I1, I2}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut3", "I0");
+    if (!matched(I1)) nullerr("xul_lut3", "I1");
+    if (!matched(I2)) nullerr("xul_lut3", "I2");
+    value(out, "log");
+    element("LUT3");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("I2", 0, I2);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut3", CONSTR);
+    return(out);
+}
+
+global function
+xul_lut4 (value({I0, I1, I2, I3}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut4", "I0");
+    if (!matched(I1)) nullerr("xul_lut4", "I1");
+    if (!matched(I2)) nullerr("xul_lut4", "I2");
+    if (!matched(I3)) nullerr("xul_lut4", "I3");
+    value(out, "log");
+    element("LUT4");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("I2", 0, I2);
+    elementconnect("I3", 0, I3);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut4", CONSTR);
+    return(out);
+}
+
+global function
+xul_lut5 (value({I0, I1, I2, I3, I4}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut5", "I0");
+    if (!matched(I1)) nullerr("xul_lut5", "I1");
+    if (!matched(I2)) nullerr("xul_lut5", "I2");
+    if (!matched(I3)) nullerr("xul_lut5", "I3");
+    if (!matched(I4)) nullerr("xul_lut5", "I4");
+    value(out, "log");
+    element("LUT5");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("I2", 0, I2);
+    elementconnect("I3", 0, I3);
+    elementconnect("I4", 0, I4);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut5", CONSTR);
+    return(out);
+}
+
+global function
+xul_lut6 (value({I0, I1, I2, I3, I4, I5}, "log"), var(CONSTR, "[]str")) {
+    if (!matched(I0)) nullerr("xul_lut6", "I0");
+    if (!matched(I1)) nullerr("xul_lut6", "I1");
+    if (!matched(I2)) nullerr("xul_lut6", "I2");
+    if (!matched(I3)) nullerr("xul_lut6", "I3");
+    if (!matched(I4)) nullerr("xul_lut6", "I4");
+    if (!matched(I5)) nullerr("xul_lut6", "I5");
+    value(out, "log");
+    element("LUT6");
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("I2", 0, I2);
+    elementconnect("I3", 0, I3);
+    elementconnect("I4", 0, I4);
+    elementconnect("I5", 0, I5);
+    elementconnect("O", 1, out);
+    xul_constraints("xul_lut6", CONSTR);
+    return(out);
+}
+
+global function
+xul_mult18x18 (
+    value({A, B}, "[18]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_mult18x18", "A");
+    if (!matched(B)) nullerr("xul_mult18x18", "B");
+    value(p, "[36]log");
+    element("MULT18X18");
+    for (int(i) ; i<18 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<18 ; i++)
+        elementconnect("B"+i, 0, B[i]);
+    for (int(i) ; i<36 ; i++)
+        elementconnect("P"+i, 1, p[i]);
+    xul_constraints("xul_mult18x18", CONSTR);
+    return(p);
+}
+
+global function
+xul_mult18x18s (
+    value({A, B}, "[18]log"),
+    value({C, CE, R}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_mult18x18s", "A");
+    if (!matched(B)) nullerr("xul_mult18x18s", "B");
+    if (!matched(C)) nullerr("xul_mult18x18s", "C");
+    if (!matched(CE)) nullerr("xul_mult18x18s", "CE");
+    if (!matched(R)) nullerr("xul_mult18x18s", "R");
+    value(p, "[36]log");
+    element("MULT18X18S");
+    for (int(i) ; i<18 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<18 ; i++)
+        elementconnect("B"+i, 0, B[i]);
+    elementconnect("C", 3, C);
+    elementconnect("CE", 0, CE);
+    elementconnect("R", 0, R);
+    for (int(i) ; i<36 ; i++)
+        elementconnect("P"+i, 1, p[i]);
+    xul_constraints("xul_mult18x18s", CONSTR);
+    return(p);
+}
+
+global function
+xul_srl16ce (
+    value(D, "log"),
+    value(A, "[4]log"),
+    value({CLK, CE}, "log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_srl16ce", "D");
+    if (!matched(A)) nullerr("xul_srl16ce", "A");
+    if (!matched(CLK)) nullerr("xul_srl16ce", "CLK");
+    if (!matched(CE)) nullerr("xul_srl16ce", "CE");
+    value(o, "log");
+    element("SRL16CE");
+    elementconnect("D", 0, D);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("CLK", 3, CLK);
+    elementconnect("CE", 0, CE);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_srl16ce", CONSTR);
+    return(o);
+}
+
+global procedure
+xul_ram16x1d (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[4]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram16x1d", "D");
+    if (!matched(WCLK)) nullerr("xul_ram16x1d", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram16x1d", "WE");
+    if (!matched(A)) nullerr("xul_ram16x1d", "A");
+    if (!matched(DPRA)) nullerr("xul_ram16x1d", "DPRA");
+    element("RAM16X1D");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram16x1d", CONSTR);
+}
+
+global procedure
+xul_ram16x1d_1 (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[4]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram16x1d_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram16x1d_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram16x1d_1", "WE");
+    if (!matched(A)) nullerr("xul_ram16x1d_1", "A");
+    if (!matched(DPRA)) nullerr("xul_ram16x1d_1", "DPRA");
+    element("RAM16X1D_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram16x1d_1", CONSTR);
+}
+
+global procedure
+xul_ram32x1d (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[5]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram32x1d", "D");
+    if (!matched(WCLK)) nullerr("xul_ram32x1d", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram32x1d", "WE");
+    if (!matched(A)) nullerr("xul_ram32x1d", "A");
+    if (!matched(DPRA)) nullerr("xul_ram32x1d", "DPRA");
+    element("RAM32X1D");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram32x1d", CONSTR);
+}
+
+global procedure
+xul_ram32x1d_1 (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[5]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram32x1d_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram32x1d_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram32x1d_1", "WE");
+    if (!matched(A)) nullerr("xul_ram32x1d_1", "A");
+    if (!matched(DPRA)) nullerr("xul_ram32x1d_1", "DPRA");
+    element("RAM32X1D_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram32x1d_1", CONSTR);
+}
+
+global procedure
+xul_ram64x1d (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[6]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram64x1d", "D");
+    if (!matched(WCLK)) nullerr("xul_ram64x1d", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram64x1d", "WE");
+    if (!matched(A)) nullerr("xul_ram64x1d", "A");
+    if (!matched(DPRA)) nullerr("xul_ram64x1d", "DPRA");
+    element("RAM64X1D");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram64x1d", CONSTR);
+}
+
+global procedure
+xul_ram64x1d_1 (
+    value({SPO, DPO}, "log")
+    <-
+    value({D, WCLK, WE}, "log"),
+    value({A, DPRA}, "[6]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram64x1d_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram64x1d_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram64x1d_1", "WE");
+    if (!matched(A)) nullerr("xul_ram64x1d_1", "A");
+    if (!matched(DPRA)) nullerr("xul_ram64x1d_1", "DPRA");
+    element("RAM64X1D_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("DPRA"+i, 0, DPRA[i]);
+    elementconnect("SPO", 1, SPO);
+    elementconnect("DPO", 1, DPO);
+    xul_constraints("xul_ram64x1d_1", CONSTR);
+}
+
+global function
+xul_ram16x1s (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[4]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram16x1s", "D");
+    if (!matched(WCLK)) nullerr("xul_ram16x1s", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram16x1s", "WE");
+    if (!matched(A)) nullerr("xul_ram16x1s", "A");
+    value(o, "log");
+    element("RAM16X1S");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram16x1s", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram16x1s_1 (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[4]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram16x1s_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram16x1s_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram16x1s_1", "WE");
+    if (!matched(A)) nullerr("xul_ram16x1s_1", "A");
+    value(o, "log");
+    element("RAM16X1S_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram16x1s_1", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram32x1s (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[5]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram32x1s", "D");
+    if (!matched(WCLK)) nullerr("xul_ram32x1s", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram32x1s", "WE");
+    if (!matched(A)) nullerr("xul_ram32x1s", "A");
+    value(o, "log");
+    element("RAM32X1S");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram32x1s", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram32x1s_1 (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[5]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram32x1s_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram32x1s_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram32x1s_1", "WE");
+    if (!matched(A)) nullerr("xul_ram32x1s_1", "A");
+    value(o, "log");
+    element("RAM32X1S_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<5 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram32x1s_1", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram64x1s (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[6]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram64x1s", "D");
+    if (!matched(WCLK)) nullerr("xul_ram64x1s", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram64x1s", "WE");
+    if (!matched(A)) nullerr("xul_ram64x1s", "A");
+    value(o, "log");
+    element("RAM64X1S");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram64x1s", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram64x1s_1 (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[6]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram64x1s_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram64x1s_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram64x1s_1", "WE");
+    if (!matched(A)) nullerr("xul_ram64x1s_1", "A");
+    value(o, "log");
+    element("RAM64X1S_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<6 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram64x1s_1", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram128x1s (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[7]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram128x1s", "D");
+    if (!matched(WCLK)) nullerr("xul_ram128x1s", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram128x1s", "WE");
+    if (!matched(A)) nullerr("xul_ram128x1s", "A");
+    value(o, "log");
+    element("RAM128X1S");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<7 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram128x1s", CONSTR);
+    return(o);
+}
+
+global function
+xul_ram128x1s_1 (
+    value({D, WCLK, WE}, "log"),
+    value(A, "[7]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(D)) nullerr("xul_ram128x1s_1", "D");
+    if (!matched(WCLK)) nullerr("xul_ram128x1s_1", "WCLK");
+    if (!matched(WE)) nullerr("xul_ram128x1s_1", "WE");
+    if (!matched(A)) nullerr("xul_ram128x1s_1", "A");
+    value(o, "log");
+    element("RAM128X1S_1");
+    elementconnect("D", 0, D);
+    elementconnect("WCLK", 0, WCLK);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<7 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_ram128x1s_1", CONSTR);
+    return(o);
+}
+
+global function
+xul_rom16x1 (
+    value(A, "[4]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_rom16x1", "A");
+    value(o, "log");
+    element("ROM16X1");
+    for (int(i) ; i<4 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_rom16x1", CONSTR);
+    return(o);
+}
+
+global function
+xul_rom32x1 (
+    value(A, "[5]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_rom32x1", "A");
+    value(o, "log");
+    element("ROM32X1");
+    for (int(i) ; i<5 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_rom32x1", CONSTR);
+    return(o);
+}
+
+global function
+xul_rom64x1 (
+    value(A, "[6]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_rom64x1", "A");
+    value(o, "log");
+    element("ROM64X1");
+    for (int(i) ; i<6 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_rom64x1", CONSTR);
+    return(o);
+}
+
+global function
+xul_rom128x1 (
+    value(A, "[7]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_rom128x1", "A");
+    value(o, "log");
+    element("ROM128X1");
+    for (int(i) ; i<7 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_rom128x1", CONSTR);
+    return(o);
+}
+
+global function
+xul_rom256x1 (
+    value(A, "[8]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(A)) nullerr("xul_rom256x1", "A");
+    value(o, "log");
+    element("ROM256X1");
+    for (int(i) ; i<8 ; i++)
+        elementconnect("A"+i, 0, A[i]);
+    elementconnect("O", 1, o);
+    xul_constraints("xul_rom256x1", CONSTR);
+    return(o);
+}
+
+global function
+xul_ramb4_sn (
+    value({CLK, EN, WE}, "log"),
+    value(ADDR, "[]log"),
+    value(DI, "[]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(CLK)) nullerr("xul_ramb4_sn", "CLK");
+    if (!matched(EN)) nullerr("xul_ramb4_sn", "EN");
+    if (!matched(WE)) nullerr("xul_ramb4_sn", "WE");
+    if (!matched(ADDR)) nullerr("xul_ramb4_sn", "ADDR");
+    if (!matched(DI)) nullerr("xul_ramb4_sn", "DI");
+    value(dout, "["+dwidth+"]log");
+    int(awidth, width(ADDR));
+    int(dwidth, width(D));
+    element("RAMB4_S"+dwidth);
+    elementconnect("CLK", 3, CLK);
+    elementconnect("EN", 0, EN);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<awidth ; i++)
+        elementconnect("ADDR"+i, 0, ADDR[i]);
+    for (int(i) ; i<dwidth ; i++)
+        elementconnect("DI"+i, 0, DI[i]);
+    for (int(i) ; i<dwidth ; i++)
+        elementconnect("DO"+i, 1, dout[i]);
+    xul_constraints("xul_ramb4_sn", CONSTR);
+    return(dout);
+}
+
+global procedure
+xul_ramb4_Sm_Sn (
+    value({DOA< DOB}, "[]log")
+    <-
+    value({CLKA, ENA, WEA}, "log"),
+    value(ADDRA, "[]log"),
+    value(DIA, "[]log"),
+    value({CLKB, ENB, WEB}, "log"),
+    value(ADDRB, "[]log"),
+    value(DIB, "[]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(CLK)) nullerr("xul_ramb4_sm_sn", "CLK");
+    if (!matched(EN)) nullerr("xul_ramb4_sm_sn", "EN");
+    if (!matched(WE)) nullerr("xul_ramb4_sm_sn", "WE");
+    if (!matched(ADDR)) nullerr("xul_ramb4_sm_sn", "ADDR");
+    if (!matched(DI)) nullerr("xul_ramb4_sm_sn", "DI");
+    int(awidtha, width(ADDRA));
+    int(dwidtha, width(DA));
+    int(awidthb, width(ADDRB));
+    int(dwidthb, width(DB));
+    element("RAMB4_S"+dwidtha+"_S"+dwidthb);
+    elementconnect("CLKA", 3, CLKA);
+    elementconnect("ENA", 0, ENA);
+    elementconnect("WEA", 0, WEA);
+    for (int(i) ; i<awidtha ; i++)
+        elementconnect("ADDRA"+i, 0, ADDRA[i]);
+    for (int(i) ; i<dwidtha ; i++)
+        elementconnect("DIA"+i, 0, DIA[i]);
+    for (int(i) ; i<dwidtha ; i++)
+        elementconnect("DOA"+i, 1, DOA[i]);
+    elementconnect("CLKB", 3, CLKB);
+    elementconnect("ENB", 0, ENB);
+    elementconnect("WEB", 0, WEB);
+    for (int(i) ; i<awidthb ; i++)
+        elementconnect("ADDRB"+i, 0, ADDRB[i]);
+    for (int(i) ; i<dwidthb ; i++)
+        elementconnect("DIB"+i, 0, DIB[i]);
+    for (int(i) ; i<dwidthb ; i++)
+        elementconnect("DOB"+i, 1, DOB[i]);
+    xul_constraints("xul_ramb4_sm_sn", CONSTR);
+}
+
+global procedure
+xul_ramb16_sn (
+    value(DO, "[]log"),
+    value(DOP, "[]log")
+    <-
+    value({CLK, EN, WE}, "log"),
+    value(ADDR, "[]log"),
+    value(DI, "[]log"),
+    value(DIP, "[]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(CLK)) nullerr("xul_ramb16_sn", "CLK");
+    if (!matched(EN)) nullerr("xul_ramb16_sn", "EN");
+    if (!matched(WE)) nullerr("xul_ramb16_sn", "WE");
+    if (!matched(ADDR)) nullerr("xul_ramb16_sn", "ADDR");
+    if (!matched(DI)) nullerr("xul_ramb16_sn", "DI");
+    int(awidth, width(ADDR));
+    int(dwidth, width(D));
+    element("RAMB16_S"+dwidth);
+    elementconnect("CLK", 3, CLK);
+    elementconnect("EN", 0, EN);
+    elementconnect("WE", 0, WE);
+    for (int(i) ; i<awidth ; i++)
+        elementconnect("ADDR"+i, 0, ADDR[i]);
+    for (int(i) ; i<dwidth ; i++)
+        elementconnect("DI"+i, 0, DI[i]);
+    if (matched(DIP)) {
+        int(w, width(DIP));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DIP"+i, 1, DIP[i]);
+    }
+    for (int(i) ; i<dwidth ; i++)
+        elementconnect("DO"+i, 1, DO[i]);
+    if (matched(DOP)) {
+        int(w, width(DOP));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DOP"+i, 1, DOP[i]);
+    }
+    xul_constraints("xul_ramb16_sn", CONSTR);
+}
+
+global procedure
+xul_ramb16_Sm_Sn (
+    value({DOA, DOB}, "[]log"),
+    value({DOPA, DOPB}, "[]log")
+    <-
+    value({CLKA, ENA, WEA}, "log"),
+    value(ADDRA, "[]log"),
+    value(DIA, "[]log"),
+    value(DIPA, "[]log"),
+    value({CLKB, ENB, WEB}, "log"),
+    value(ADDRB, "[]log"),
+    value(DIB, "[]log"),
+    value(DIPB, "[]log"),
+    var(CONSTR, "[]str")
+) {
+    if (!matched(CLKA)) nullerr("xul_ramb16_sm_sn", "CLKA");
+    if (!matched(ENA)) nullerr("xul_ramb16_sm_sn", "ENA");
+    if (!matched(WEA)) nullerr("xul_ramb16_sm_sn", "WEA");
+    if (!matched(ADDRA)) nullerr("xul_ramb16_sm_sn", "ADDRA");
+    if (!matched(DIA)) nullerr("xul_ramb16_sm_sn", "DIA");
+    if (!matched(CLKB)) nullerr("xul_ramb16_sm_sn", "CLKB");
+    if (!matched(ENB)) nullerr("xul_ramb16_sm_sn", "ENB");
+    if (!matched(WEB)) nullerr("xul_ramb16_sm_sn", "WEB");
+    if (!matched(ADDRB)) nullerr("xul_ramb16_sm_sn", "ADDRB");
+    if (!matched(DIB)) nullerr("xul_ramb16_sm_sn", "DIB");
+    int(awidtha, width(ADDRA));
+    int(dwidtha, width(DA));
+    int(awidthb, width(ADDRB));
+    int(dwidthb, width(DB));
+    element("RAMB16_S"+dwidtha+"_S"+dwidthb);
+    elementconnect("CLKA", 3, CLKA);
+    elementconnect("ENA", 0, ENA);
+    elementconnect("WEA", 0, WEA);
+    for (int(i) ; i<awidtha ; i++)
+        elementconnect("ADDRA"+i, 0, ADDRA[i]);
+    for (int(i) ; i<dwidtha ; i++)
+        elementconnect("DIA"+i, 0, DIA[i]);
+    if (matched(DIPA)) {
+        int(w, width(DIPA));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DIPA"+i, 0, DIPA[i]);
+    }
+    for (int(i) ; i<dwidtha ; i++)
+        elementconnect("DOA"+i, 1, DOA[i]);
+    if (matched(DOPA)) {
+        int(w, width(DOPA));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DOPA"+i, 1, DOPA[i]);
+    }
+    elementconnect("CLKB", 3, CLKB);
+    elementconnect("ENB", 0, ENB);
+    elementconnect("WEB", 0, WEB);
+    for (int(i) ; i<awidthb ; i++)
+        elementconnect("ADDRB"+i, 0, ADDRB[i]);
+    for (int(i) ; i<dwidthb ; i++)
+        elementconnect("DIB"+i, 0, DIB[i]);
+    if (matched(DIPB)) {
+        int(w, width(DIPB));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DIPB"+i, 0, DIPB[i]);
+    }
+    for (int(i) ; i<dwidthb ; i++)
+        elementconnect("DOB"+i, 1, DOB[i]);
+    if (matched(DOPB)) {
+        int(w, width(DOPB));
+        for (int(i) ; i<w ; i++)
+            elementconnect("DOPB"+i, 1, DOPB[i]);
+    }
+    xul_constraints("xul_ramb16_sm_sn", CONSTR);
+}
+
+global procedure
+xul_startup (value({GSR, GTS, CLK}, "log")) {
+    if (!matched(GSR)) nullerr("xul_startup", "GSR");
+    if (!matched(GTS)) nullerr("xul_startup", "GTS");
+    if (!matched(CLK)) nullerr("xul_startup", "CLK");
+    str(directive("family"));
+    switch (family) {
+    case "xcv":
+        family_name = "VIRTEX";
+    case "xc2vp":
+        family_name = "VIRTEX2";
+    case "xc2v":
+        family_name = "VIRTEX2";
+    case "xc2s":
+        family_name = "SPARTAN2";
+    case "xc3s":
+        family_name = "SPARTAN3";
+    }
+    element("STARTUP_"+family_name);
+    elementconnect("GSR", 0, GSR);
+    elementconnect("GTS", 0, GTS);
+    elementconnect("CLK", 3, CLK);
+}
+
+global procedure
+xul_bscan (
+    value({UPDATE, SHIFT, RESET, TDI, SEL1, DRCK1, SEL2, DRCK2, CAPTURE}, "log")
+    <-
+    value({TDO1, TDO2}, "log")
+) {
+    if (!matched(UPDATE)) nullerr("xul_bscan", "UPDATE");
+    if (!matched(SHIFT)) nullerr("xul_bscan", "SHIFT");
+    if (!matched(RESET)) nullerr("xul_bscan", "RESET");
+    if (!matched(TDI)) nullerr("xul_bscan", "TDI");
+    if (!matched(SEL1)) nullerr("xul_bscan", "SEL1");
+    if (!matched(DRCK1)) nullerr("xul_bscan", "DRCK1");
+    if (!matched(SEL2)) nullerr("xul_bscan", "SEL2");
+    if (!matched(DRCK2)) nullerr("xul_bscan", "DRCK2");
+    if ((directive("family") == "XC3S") || (directive("family") == "XC2V") || (directive("family") == "XC2VP"))
+        if (!matched(CAPTURE)) nullerr("xul_bscan", "CAPTURE");
+    str(family_name);
+    switch (directive("family")) {
+    case "xcv":
+        family_name = "VIRTEX";
+    case "xc2vp":
+        family_name = "VIRTEX2";
+    case "xc2v":
+        family_name = "VIRTEX2";
+    case "xc2s":
+        family_name = "SPARTAN2";
+    case "xc3s":
+        family_name = "SPARTAN3";
+    }
+    element("BSCAN_"+family_name);
+    elementconnect("TDO1", 0, SEL2);
+    elementconnect("TDO2", 0, DRCK2);
+    elementconnect("UPDATE", 1, UPDATE);
+    elementconnect("SHIFT", 1, SHIFT);
+    elementconnect("RESET", 1, RESET);
+    elementconnect("TDI", 1, TDI);
+    elementconnect("SEL1", 1, SEL1);
+    elementconnect("DRCK1", 1, DRCK1);
+    elementconnect("SEL2", 1, SEL2);
+    elementconnect("DRCK2", 1, DRCK2);
+    if ((family == "XC3S") || (family == "XC2V") || (family == "XC2VP"))
+        elementconnect("CAPTURE", CAPTURE);
+}
+
+global procedure
+xul_capture (value({CAP, CLK}, "log")) {
+    if (!matched(CAP)) nullerr("xul_capture", "CAP");
+    if (!matched(CLK)) nullerr("xul_capture", "CLK");
+    str(family_name);
+    switch (directive("family")) {
+    case "xcv":
+        family_name = "VIRTEX";
+    case "xc2vp":
+        family_name = "VIRTEX2";
+    case "xc2v":
+        family_name = "VIRTEX2";
+    case "xc2s":
+        family_name = "SPARTAN2";
+    case "xc3s":
+        family_name = "SPARTAN3";
+    }
+    element("CAPTURE_"+family_name);
+    elementconnect("CAP", 0, CAP);
+    elementconnect("CLK", 3, CLK);
+}
+
+
+/*
+ * Not included -
+ *
+ *  GT_AURORA_n
+ *  GT_CUSTOM
+ *  GT_ETHERNET_n
+ *  GT_FIBRE_CHAN_n
+ *  GT_INFINIBAND_n
+ *  GT_XAUI_n
+ *
+ *  FMAP
+ *
+ *  ICAP_VIRTEX2
+ *
+ *  PPC405
+ *
+ *  JTAGPPC
+ */
+
+
+
+
+function
+xul_gate (str({name, NAME}), int({min, max}), var(in, "[]->")) {
+    int(n, dimension(in));
+    int(k, xul_ninputs(in, min, max, name));
+    value(out, "log");
+    element(NAME + (n != 1 ? k : ""));
+    xul_connectinputs(in, k);
+    elementconnect("O", 1, out);
+    for (int(i, k) ; i<n ; i++) {
+        if (in[i] == null)
+            texit(name + " null constraint argument");
+        if (typestring(in[i]->) != "str")
+            texit(name + " constraint not string");
+        if (strlen(in[i]->) != 0)
+            elementaddncf(, in[i]->, null);
+    }
+    return(out);
+}
+
+function
+xul_muxf (int(l), value({S, I0, I1}, "log"), var(CONSTR, "[]str")) {
+    str(name, "xul_muxf" + l);
+    value(out, "log");
+    element("MUXF" + l);
+    elementconnect("S", 0, S);
+    elementconnect("I0", 0, I0);
+    elementconnect("I1", 0, I1);
+    elementconnect("O", 1, out);
+    xul_constraints(name, CONSTR);
+    return(out);
+}
+
+procedure
+xul_constraints (str(name), var(constraints, "[]str")) {
+    int(n, dimension(constraints));
+    for (int(i, 0) ; i<n && strlen(constraints[i]) != 0 ; i++)
+        elementaddncf(, constraints[i], null);
+}
+
+function
+xul_ninputs (var(in, "[]->"), int({min, max}), str(name)) {
+    int(n, dimension(in));
+    int(i);
+    while ((i < n) && (mode(in[i]->) != "immediate"))
+        i++;
+    if (i < min)
+        texit(name + "() fewer than " + min + " signal inputs");
+    if (i > max)
+        texit(name + "() more than " + max + " signal inputs");
+    return(i);
+}
+
+procedure
+xul_connectinputs(var(in, "[]->"), int(n)) {
+    if (n == 1)
+        elementconnect("I", 0, in[0]->);
+    else 
+        for (int(i) ; i<n ; i++)
+            elementconnect("I" + i, 0, in[i]->);
+       
+}
+
+procedure
+nullerr (str(name), str(port)) {
+    texit(name + " has null input for pin " + port);
+}

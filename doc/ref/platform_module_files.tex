@@ -1,0 +1,77 @@
+\pagebreak
+
+\heading{Platform-specific module files}
+
+    There is a module file for each Xilinx platform device that should
+    be included in source code.
+
+    These files must be incorporated by using a {\bf module} statement,
+    e.g. -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/xc2s.3pl"
+    \end{lstlisting}
+    
+    Each of these module files includes other module files appropriate
+    to the platform device. This avoids the necessity to include these
+    files in the source code.
+    
+    Note that libraries exist for MGT and GTP serial channels, but not yet
+    for GTX, GTH or GTZ. Also the GT11 element for Virtex4 has not been
+    implemented.
+
+    \begin{tabular}{| l | l | l |}
+    \hline
+    module file      & device                          & includes module files  \\
+    \hline \hline
+    xilinx/xc2s.3pl  & Spartan2                        & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\ \hline
+    xilinx/xc3s.3p   & Spartan3                        & stdlib.3pll \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\ \hline
+    xilinx/xc6s.3pl  & Spartan6                        & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\ \hline
+    xilinx/xcv.3p    & Virtex and Virtex-E             & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\ \hline
+    xilinx/xcv2.3pl  & Virtex2                         & stdlib.3pll \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\ \hline
+    xilinx/xcv2p.3pl & Virtex2 Pro                     & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/ppclib.3pl \\
+                     &                                 & xilinx/mgt.3pl \\ \hline
+    xilinx/xcv4.3pl  & Virtex4                         & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\
+                     &                                 & xilinx/dsp48.3pl \\
+                     &                                 & xilinx/ppclib.3pl \\ \hline
+    xilinx/xcv5.3pl  & Virtex5                         & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\
+                     &                                 & xilinx/dsp48.3pl \\
+                     &                                 & xilinx/ppclib.3pl \\
+                     &                                 & xilinx/gtp\_dual.3pl \\ \hline
+    xilinx/xcv6.3pl  & Virtex6                         & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\
+                     &                                 & xilinx/dsp48.3pl \\
+                     &                                 & xilinx/ppclib.3pl \\
+                     &                                 & xilinx/gtp\_dual.3pl \\ \hline
+    xilinx/xc7.3pl   & Artix7 Kintex7 Virtex7 Zynq7000 & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\
+                     &                                 & xilinx/dsp48.3pl \\
+                     &                                 & xilinx/gtp\_dual.3pl \\ \hline
+    xilinx/zynq\_axi.3pl & Zynq7000 & \\ \hline
+    
+    \end{tabular}
+    
+

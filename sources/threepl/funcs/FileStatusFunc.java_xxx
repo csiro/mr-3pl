@@ -1,0 +1,115 @@
+package threepl.funcs;
+
+import threepl.exceptions.ExEx;
+import threepl.exec.OpenFile;
+import threepl.exec.Val;
+import threepl.nodes.NodeList;
+import threepl.parser.Constant;
+import threepl.parser.Functions;
+import threepl.parser.SrcLoc;
+
+/**
+ * An inbuilt function to get information about a file.
+ * This has one argument which is the file path string or a file.
+ * The function returns the length.
+ */
+public class FileStatusFunc extends InbuiltFunc implements Constant {
+
+    /**
+     * Calling interface for the function.
+     * @param   args is a list of argument tree nodes
+     * @return  the file
+     */
+    public Val getVal (NodeList args) {
+        SrcLoc  loc = args.getCallLoc();
+        if (args.size() != 1)
+            throw new ExEx("filestatus() must have 1 argument", loc);
+        Val     val = args.getVal(0);
+        if (val.getMode() != Mode.IMMEDIATE)
+            throw new ExEx("filestatus() argument not immediate mode", loc);
+        File        file = null;
+        boolean     canread = false;
+        boolean     canwrite = false;
+        boolean     exists = false;
+        boolean     isdirectory = false;
+        boolean     isfile = false;
+        long        lastmod = 0;
+        long        length = 0;
+        String      parent = null;
+        String[]    list = null;
+        FDile[]     files = null;
+        String[]    listfiles = null;
+        
+        switch (val.getPrimType()) {
+        case STR:
+            String  path = val.getSingleSval(loc);
+            file = new File(path);
+            break;
+        case FILE:
+            file = val.getSingleFileVal(loc);
+            break;
+        default:
+            throw new ExEx("filestatus() argument not a file or a string", loc);
+        }
+        try {
+            canread = file.canREad();
+            canwrite = file.canWrite();
+            exists = file.exists();
+            isdirectory = file.isDirectory();
+            isfile = file.isFile();
+            lastmod = file.lastModified();
+            length = file.length();
+            parent = file.getParent();
+            list = file.list();
+            files = file.listFiles();
+            listfiles = new String[files.length];
+            for (int i=0 ; i<files.length ; i++)
+                listfiles[i] = files[i].getName();            
+        } catch (SecurityException e) {
+            throw new ExEx("filestatus() - access problem", loc);
+        }
+        
+        Type    rettype = new Type("(canread, log," + 
+                                    "canwrite, log, " + 
+                                    "exists, log, " + 
+                                    "isdirectory, log, " + 
+                                    "isfile, log, " + 
+                                    "lastmod, uint, " + 
+                                    "length, uint, " + 
+                                    "parent, str" + 
+                                    "list, [" + list.size + "]str," + 
+                                    "listfiles, [" + files.size + "]str)");
+
+        Type        lt = new Type("log", loc);
+        Type        ut = new Type("uint", loc);
+        Type        st = new Type("str", loc);
+        Type        sat1 = new Type("[" + list.size + "]str", loc);
+        Type        sat2 = new Type("[" + files.size + "]str", loc);
+        WordSpec    ws = rettype.getWordSpec(null, loc);
+        Object[]    va = new Object[10];
+        Type[]      ta = new Type[10];
+        
+        va[0] = canread;
+        ta[0] = lt;
+        va[1] = canwrite;
+        ta[1] = lt;
+        va[2] = exists;
+        ta[2] = lt;
+        va[3] = isdirectory;
+        ta[3] = lt;
+        va[4] = isfile;
+        ta[4] = lt;
+        va[5] = lastmod;
+        ta[5] = ut;
+        va[6] = length;
+        ta[6] = ut;
+        va[7] = parent;
+        ta[7] = st;
+        va[8] = list;
+        ta[8] = sat1;
+        va[9] = listfiles;
+        ta[9] = sat2;
+
+        return(new Val(va, ta, ws, null, null, loc));
+    }
+}

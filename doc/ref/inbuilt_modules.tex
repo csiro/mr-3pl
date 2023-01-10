@@ -1,0 +1,269 @@
+\pagebreak
+
+\chapter{Inbuilt Modules}
+
+    \index{module!inbuilt}
+    The following called modules are built into the compiler. User
+    called modules or procedures must not use identifiers that conflict
+    with these.
+    
+    The following abbreviations are used to denote modes -
+
+    \begin{tabular}{| l | l |}
+    \hline
+    I  & immediate      \\ \hline
+    IN & input          \\ \hline
+    V  & value          \\ \hline
+    SV & selectvalue    \\ \hline
+    S  & static         \\ \hline
+    Q  & queue          \\ \hline
+    M  & memory         \\ \hline
+    PR & priority       \\ \hline
+    C  & clock          \\ \hline
+    \end{tabular}
+    
+    The following abbreviations are used to denote types -
+
+    \begin{tabular}{| l | l |}
+    \hline
+    bits & bits                                                 \\ \hline
+    uint & unsigned integer                                     \\ \hline
+    int & integer or unsigned integer                           \\ \hline
+    fixed & fixed point                                         \\ \hline
+    float & floating point                                      \\ \hline
+    log & logical (boolean)                                     \\ \hline
+    str & string                                                \\ \hline
+    type & type                                                 \\ \hline
+    any & any type                                              \\ \hline
+    prim & a primitive type                                     \\ \hline
+    comp & a compound type (arrays, structs or any combination) \\ \hline
+    [] & array of type                                          \\ \hline
+    \end{tabular}
+
+
+    Modules with 'yes' to 'Parameter=argument allowed' can have arguments
+    matched to parameters by position in the argument list or by
+    parameter=argument (keymatch) or a mixture as long as positional arguments
+    do not follow keymatch arguments. Otherwise these keymatch arguments are
+    not allowed. This may be because - \\
+    \blist
+    \item   the module has a single input or output argument in which case
+    no positional or keymatch parameter association is needed
+    \item   the module has an indefinite number of arguments and hence there
+    are no 'named' parameters with which to associate arguments
+    \blend
+    The keymatching may be restricted to just input or just output.
+
+
+    \section{del - variable length delay line}\label{sec:imdel}
+        
+        {\bf Call:} \\
+        del(out \verb'<-' in, len, init, step, varlen, reset);
+        
+        {\bf Output parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param  & mode & type  & \\
+        \hline \hline
+        out  & V & any & output \\ \hline
+        \end{tabular}
+        
+        {\bf Input parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param  & mode & type  & \\
+        \hline \hline
+        in     & V & any  & input          \\ \hline
+        len    & I & int  & optional line fixed delay \\ \hline
+        init   & I & any  & optional initialisation \\ \hline
+        step   & V & log  & optional line step \\ \hline
+        varlen & V & uint & optional line variable delay \\ \hline
+        reset  & V & log  & optional line reset \\ \hline
+        \end{tabular}
+        
+        {\bf Parameter=argument allowed:} \\
+        Input arguments only.
+        
+        {\bf Description:} \\
+        This module is a delay line implemented using CLB shift registers or
+        flip-flops. On each clock cycle the input is written to the line and the
+        contents move one item right. The rightmost item appears as the out
+        value. This module can function as a sequence generator if the output
+        is connected back to the input.
+        
+        This module is used extensively internally by 3PL to generate single
+        cycle delays in execution threads in which context it is implemented as
+        a single flip-flop.
+        
+        For large delays this uses a lot of CLBs and the alternative library
+        function {\bf delay()} \autorefph{sec:lfdelay} in library stdlib.3pl
+        might be preferable. That library function will call {\bf del()}
+        in any case if the delay value is small enough.
+
+        This has 1 to 6 input arguments and 1 output argument. Input arguments
+        {\bf len} and {\bf init} are immediate mode. {\bf step} may be
+        immediate or target mode as described below. The other input arguments
+        must not be modes {\bf immediate}, {\bf queue}, {\bf memory} or {\bf
+        clock} and value mode arguments must not contain queue reads.
+        
+        None of the arguments to this module can contain queue reads. This
+        limitation could be easily removed but it is felt that the resulting
+        behaviour of this module could become unduly complex. In limited
+        circumtances this limitation can be worked around and there are examples
+        below to illustrate this.
+
+        The 1st input argument, {\bf in}, is the delay line data input. It can
+        be any target type.
+
+        The optional input argument, {\bf len}, specifies a fixed delay.
+        This must be an immediate int. If this argument is 0 or omitted and the
+        5th argument {\bf varlen} is also omitted, the output will simply be
+        connected to the input to give zero delay.
+
+        The optional input argument, {\bf init}, is an initialisation array.
+        This  must be immediate mode and an array of the same type as {\bf in}.
+        It may be smaller than the delay line length in which case the input end
+        of the delay line will be zero initialised. The low order entries in
+        the initialisation array are loaded in the output end of the delay line.
+        Thus for example a delay of 5 initialised to \{1, 2, 3\} will output
+        1 2 3 0 0.
+        If initialisation values are too large their high-order bits will be
+        truncated.
+
+        The optional input argument, {\bf step}, is a line step enable.
+        This  must be type log. If this argument is used the line will only
+        advance when {\bf step} is true, otherwise the line will advance on
+        every clock cycle.
+
+        The optional input argument, {\bf varlen}, is a variable line
+        length. This must be type uint. This argument may be limited or
+        unavailable depending on the type of FPGA. For Xilinx the variable
+        length is limited to values between 0 and 15 giving delays of 1 to 16
+        respectively. A wider argument will be truncated and a narrower one
+        zero padded. Note that when the line length is changed data may be
+        skipped or repeated. If the line length is changed while stepping is
+        inhibited, the line length argument is an address with which the
+        contents of the line can be non-destructively examined.
+
+        The optiona input argument, {\bf reset}, returns the
+        line to its initial state when true.
+
+        The output argument, {\bf out}, is the delay line data output. This
+        argument must be value mode and must be the same type as the data
+        input {\bf in}.
+        
+        If the delay line is initialised, these initial values appear at the
+        output during the initial {\em n} line steps, where {\em n} is the
+        fixed delay (or the initial delay selected by {\bf varlen}
+        if used).
+        
+        For Xilinx the following apply -
+        \blist
+        \item   For FPGAs prior to Virtex5 the variable length argument is limited to values
+                between 0 and 15 inclusive, giving line lengths of 1 to
+                16 respectively. From Virtex5 onwards the lengths are 1 to 32.
+        \item   If the reset is used, the variable length argument cannot be
+                used.
+        \item   If the reset is used or the variable length parameter is not
+                used and the delay is 3 or less, the delay line will be
+                implemented using flip-flops, otherwise it will be implemented
+                using CLB LUT shift registers.
+        \blend
+        Implementation using CLB LUT shift registers minimises resources,
+        requiring only one CLB LUT for every 16-bit delay line.
+        
+        {\bf Note: the fixed delay parameter {\em len} gives the number of cycles
+        to be delayed but the variable delay parameter {\em varlen} is the
+        number of cycles delay minus one!}      
+            
+        In Xilinx devices there is a substantial delay between the clock edge
+        and the arrival of the shift register signal at the output of the logic
+        block (2.8nS to 3.5nS for a -6 speed XC2VP and about 1.15 to 1.43nS
+        for  a -2 speed XC5V). The delay for a flip-flop is very much smaller.
+        For this reason a delay line with fixed length is implemented using a
+        flip-flop for the last delay stage. If a variable length delay line is
+        required, this flip-flop is not inserted and hence the significant
+        output delay must be considered. It is preferable in that case to
+        assign the delay line output directly to a variable, i.e. with no
+        intervening combinatorial logic, to avoid introducing any extra path
+        delay.
+        
+        The limitation stated above that inputs cannot contain queue reads
+        can be overcome in some cases. For example to use a queue as data input
+        we can use the examine operator as long as a queue wait controls the
+        delay step. For example to form a running average of length 8 -
+
+        \begin{lstlisting}[gobble=12, language=threepl]
+            queue(q, "uint:8");
+            static(rsum, "uint:11");
+            queue(rav, "uint:8");
+            value(out, "uint:8");
+            
+            del(out <- ?q, 8,, <q);     // there is no queue read here!
+            
+            seq {
+                rsum <- rsum + q - out; // there is a queue read here
+                rav <<- rsum / 8;
+            }
+        \end{lstlisting}
+        Here a data stream is written to queue {\bf q} and a running average
+        appears as a stream through queue {\bf rav}. The data input does not
+        contain a queue read as the examine operator simply looks at the queue
+        output, valid or not, and does not pop a datum. It is important to note
+        that the read availability of {\bf q} is tested in two places, the
+        reading of {\bf q} and the expression {\bf \verb'<q'}. Although {\bf
+        del()} is a distinct module {\bf \verb'<q'} is evaluated as an argument
+        to {\bf del()} in the current scope, not the scope of {\bf del()}, so
+        there is only a single destination to {\bf q}, or rather both
+        availability tests are in the same destination module.
+        
+        Another approach is used in library function {\bf del()} in
+        xilinx/common.3pl \autorefph{sec:lfdel} which calls inbuilt module
+        {\bf del()}.
+        
+
+
+       
+
+
+    \section{resync - resynchronise a level}\label{sec:imresync}
+        
+        {\bf Call:} \\
+        resync(out \verb'<-' in);
+        
+        {\bf Output parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param & mode & type & \\
+        \hline \hline
+        out & V & log & output pulse \\ \hline
+        \end{tabular}
+        
+        {\bf Input parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param & mode & type & \\
+        \hline \hline
+        in    & V SV S PR & log & target value pulse or level \\ \hline
+        \end{tabular}
+        
+        {\bf Parameter=argument allowed:} \\
+        No
+        
+        {\bf Description:} \\
+        {\bf in} is an expression or a value, selectvalue, static, input or
+        priority variable of type log.
+        
+        {\bf out} is a value of type log.
+
+        When the input rises and is sampled by the clock associated
+        with that variable, the output will produce a single cycle pulse
+        synchronised with the current clock domain.
+
+        If the input is an input, selectvalue, static or priority mode variable
+        and it has not yet been referenced or assigned then it will be
+        given the current clock domain. An unassigned value variable
+        will also be given the current clock domain. A value variable that
+        has been assigned but has a null clock domain will result in error
+        termination.
+

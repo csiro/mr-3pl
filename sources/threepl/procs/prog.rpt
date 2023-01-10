@@ -1,0 +1,21 @@
+Memory requested 746061824 bytes
+3PL version 11.1.
+3PL source version 8337
+Source file /Users/dun202/src/mine/3PL/sources/threepl/procs/prog.3pl
+command line options - rnt
+Thursday, 20 December 2018 4:19:09 PM AEDT
+Parsing source.
+Immediate execution.
+directives:
+	3PL compiler make date	= Thu December 20 12:10:00 AEDT 2018
+	3PL language version	= 11.1
+	3PL source version	= 8337
+	OS	= mac os x
+	date	= Thursday, 20 December 2018 4:19:09 PM AEDT
+	design name	= prog
+	output directory	= /Users/dun202/src/mine/3PL/sources/threepl/procs/
+	parent directory	= /Users/dun202/src/mine/3PL/sources/threepl/procs/
+	report to file	= true
+	source file	= prog.3pl
+	verbose	= true
+	warning	= false

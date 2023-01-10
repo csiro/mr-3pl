@@ -1,0 +1,40 @@
+#! /usr/bin/env python3
+
+import string
+#import argparse
+import json
+import sys
+import os
+sys.path.append(os.environ['HOME'] + "/install/3pl/lib")
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage info2c file")
+        exit(1)
+    ifile = sys.argv[1]
+    if ifile.endswith('.info'):
+        ofile = ifile[0:-5] + "_fpga.h"
+    else:
+        ofile = ifile + "_fpga.h"
+        ifile = ifile + '.info'
+    
+    try:
+        # read JSON .info file
+        with open(ifile, 'r') as infile:
+            info = json.load(infile)
+    except json.JSONDecodeError as ex:
+        print(args.input + ', line ' + str(ex.lineno) + ': ' + ex.msg)
+        exit(1)
+
+    d = info['directives']
+    if "ZYNQ" in d and d['ZYNQ']:
+        import info2c_z as i2c
+    else:
+        import info2c_s as i2c
+    
+    i2c.emit(info, ofile)
+
+
+if __name__ == "__main__":
+    main()
+    exit(0)

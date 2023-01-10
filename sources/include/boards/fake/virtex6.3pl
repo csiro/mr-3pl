@@ -1,0 +1,20 @@
+nosource
+
+// 3pl board support for a theoretical Virtex 6 board
+
+part("XC6VLX75TFF484-2");
+module "xilinx/xc6v.3pl"
+
+// default IO is 2.5V
+str(stdio, "LVCMOS25");
+
+// clock oscillator
+iopins(c32_pin, "str", "V12", frequency=32.0e6, ibufg=true, iostandard=stdio);
+
+// a LED pin
+iopins(global.led_pin, "str", "R9", iostandard=stdio);
+
+// create 32MHz clock
+clock(c32_in, loc=c32_pin);
+simpleclock(global.c32, c32_in);
+useclock(c32);

@@ -1,0 +1,210 @@
+{
+    "version": {
+        "major": 1,
+        "minor": 0
+    },
+    "directives": {
+        "ALU": "false",
+        "FIFO": "false",
+        "OS": "mac os x",
+        "QUEUEREG": "false",
+        "ZYNQ": "true",
+        "arch": "x86_64",
+        "compileOnly": "false",
+        "compilerMakeDate": "2022-08-24 14:24:48 +1000",
+        "continuous": "false",
+        "currentDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed",
+        "date": "2022-10-05 11:22:23 +1100",
+        "designName": "prog",
+        "family": "XC7",
+        "filePath": "false",
+        "forceExec": "true",
+        "gatesNotLuts": "false",
+        "intTruncWarning": "false",
+        "intermediateOnly": "false",
+        "listNets": "true",
+        "listTDEs": "true",
+        "listTDEsSel": "0",
+        "locations": "false",
+        "netFile": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed/prog.net",
+        "netlistDisplay": "false",
+        "netlistFile": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed/prog.edn",
+        "optimiseConnect": "true",
+        "outputDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed/",
+        "parentDirectory": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed/",
+        "part": "xc7z010clg400-1",
+        "postProcessCompress": "true",
+        "postProcessTool": "vivado",
+        "reportFile": "/Users/dun202/src/mine/3PL/test/11.6.0/uzed/prog.rpt",
+        "rptToFile": "true",
+        "sigList": "false",
+        "skipPostProc": "true",
+        "sourceFile": "prog.3pl",
+        "srlAddrWidth": "5",
+        "tlimit": "256",
+        "unassOut": "fatal",
+        "version": "11.7.0M (devel svn 10083:10129M, dun202)"
+    },
+    "spaces": {
+        "reg": {
+            "bus": "axi_mgp0",
+            "read_addr_bits": 3,
+            "write_addr_bits": 4,
+            "interfaces": {
+                "infoword": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 1,
+                    "data_bits": 32,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 32
+                    }
+                },
+                "inforeset": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 2,
+                    "data_bits": 0
+                },
+                "W": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 4,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "R": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 2,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "WW": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 6,
+                    "data_bits": 35,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 35
+                    }
+                },
+                "RR": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 3,
+                    "data_bits": 35,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 35
+                    }
+                },
+                "WWW": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 8,
+                    "data_bits": 6,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 6
+                    }
+                },
+                "RRR": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 4,
+                    "data_bits": 6,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 6
+                    }
+                },
+                "WQ": {
+                    "interface": "write_queue",
+                    "write": true,
+                    "data_depth": 16,
+                    "data_addr": 10,
+                    "avail_addr": 5,
+                    "avail_thresh_addr": 12,
+                    "avail_thresh_intr": 1,
+                    "check": false,
+                    "data_bits": 14,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 14
+                    }
+                },
+                "RQ": {
+                    "interface": "read_queue",
+                    "write": false,
+                    "data_depth": 16,
+                    "data_addr": 6,
+                    "avail_addr": 7,
+                    "avail_thresh_addr": 14,
+                    "avail_thresh_intr": 2,
+                    "check": false,
+                    "data_bits": 14,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 14
+                    }
+                }
+            }
+        },
+        "mem": {
+            "bus": "axi_mgp1",
+            "read_addr_bits": 9,
+            "read_addr_loc_bits": 8,
+            "write_addr_bits": 10,
+            "write_addr_loc_bits": 8,
+            "interfaces": {
+                "MW": {
+                    "interface": "write_memory",
+                    "write": true,
+                    "port": 0,
+                    "data_addr": 512,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "MR": {
+                    "interface": "read_memory",
+                    "write": false,
+                    "port": 0,
+                    "data_addr": 256,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                }
+            }
+        }
+    },
+    "events": {
+        "EVQ": {
+            "intr": 3
+        },
+        "EVR": {
+            "intr": 0
+        },
+        "RQ": {
+            "intr": 2
+        },
+        "WQ": {
+            "intr": 1
+        }
+    },
+    "length":     6706
+}
+

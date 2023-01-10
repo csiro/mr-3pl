@@ -1,0 +1,23 @@
+// Class instances and calls nested.
+// Class definitions not nested.
+
+class(c1, s1());
+
+c1.c2.c3.p();
+var(ppp, "->");
+ppp = procptr(c1.c2.c3.p);
+ppp->();
+
+class s1 () {
+    var(c2, "class", s2());
+}
+
+class s2 () {
+    var(c3, "class", s3());
+}
+
+class s3 () {
+    procedure p() {
+        println("OK");
+    }
+}

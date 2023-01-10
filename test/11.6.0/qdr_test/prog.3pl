@@ -1,0 +1,121 @@
+module "boards/avnet/microzed_7020.3pl"
+
+module "/Users/dun202/lib/3PL/qdr2_ram.3pl"
+
+
+
+/* spares
+"T11", "T10"
+"T12", "U12"
+"U13", "V13"
+"V12", "W13"
+"T14", "T15"
+"P14", "R14"
+"Y16", "Y17"
+"W14", "Y14"
+"T16", "U17"
+"V15", "W15"
+"U14", "U15"
+"U18", "U19"
+"N18", "P19"
+"N20", "P20"
+"T20", "U20"
+"V20", "W20"
+"Y18", "Y19"
+"V16", "W16"
+"R16", "R17"
+*/
+
+var(qdr_addr_pins, "[21]str",
+    { "G20", "J20", "H20", "K14", "J14", "H15", "G15", "N15",
+      "N16", "L14", "L15", "M14", "M15", "K16", "J16", "Y12",
+      "Y13", "V11", "V10",  "V6",  "W6"  }
+);
+var(qdr_data_pins, "[18]str",
+    { "J19", "L16", "L17", "K17", "K18", "H16", "H17", "J18",
+      "H18", "G17", "G18", "F19", "F20", "G19", "M20", "M17",
+      "M18", "K19"  }
+);
+var(qdr_q_pins, "[18]str",
+    {  "W8",  "T5",  "U5", "C20", "B20", "B19", "A20", "E17",
+      "D18", "D19", "D20", "E18", "E19", "F16", "F17", "L19",
+      "L20", "M19"   }
+);
+str(_we_pin,   "V8");
+str(_bw0_pin,  "U10");
+str(_bw1_pin,  "T9");
+str(_wea_pin,  "V7");
+str(_web_pin,  "U7");
+str(_wec_pin,  "P16");
+str(_wed_pin,  "P15");
+str(_clke_pin, "P18");
+str(_doff_pin, "N17");
+str(cq_pin,    "W19");
+str(_cq_pin,   "W18");
+str(k_pin,     "V18");
+str(_k_pin,    "V17");
+str(_r_pin,    "R18");
+str(_w_pin,    "T17");
+
+
+clock({c100_z_raw, c100_z});
+clock({c100_90_raw, c100_90});
+clock({c200_raw, c200}, frequency=200e6);
+
+    clkmmcm_base(
+        clkout1=c100_z_raw,
+        clkout2=c100_90_raw,
+        clkout3=c200_raw
+        <-
+        clkin=c100,
+        clkfb=c100_z,
+        clkout1_phase=90.0,
+        clkfbout_mult_f=4.0,
+        clkout1_divide=4,
+        clkout2_divide=4,
+        clkout3_divide=2
+
+    );
+clockbufg(c100_90 <- c100_90_raw);
+clockbufg(c100_z <- c100_z_raw);
+clockbufg(c200 <- c200_raw);
+
+
+class(cpu, cpu_api());
+class(qdr);
+queue({qi, qo}, "bits:12", domain=null);
+queue({qar, qaw}, "uint:19", domain=null);
+
+qdr =   qdr2_ram(
+            qdr_addr_pins,
+            qdr_data_pins,
+            qdr_q_pins,
+            _r_pin,
+            _w_pin,
+            _bw0_pin,
+            _bw1_pin,
+            _we_pin,
+            _wea_pin,
+            _web_pin,
+            _wec_pin,
+            _wed_pin,
+            _clke_pin,
+            _doff_pin,
+            cq_pin,
+            _cq_pin,
+            k_pin,
+            _k_pin,
+            c100,
+            c100_90,
+            c200
+        );
+
+qdr.read(qo <- qar);
+
+qdr.write(qaw, qi);
+
+cpu.write_queue(qar <- "QAR");
+cpu.write_queue(qaw <- "QAW");
+cpu.write_queue(qi <- "QI");
+cpu.read_queue(q0, "QO");
+

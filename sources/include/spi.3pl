@@ -1,0 +1,250 @@
+nosource
+
+// Motorola SPI (Serial Peripheral Interface)
+// Robin Kirkham, March 2005
+// $Id: spi.3pl 1797 2007-04-11 14:33:38Z kir092 $
+//
+// SPI is a simple, synchronous serial protocol used to control peripheral
+// chips through a four-wire bus, at typical speeds of 1Mbit/s. SPI is more
+// or less defined in Section 8 of the Motorola MC68HC11 Reference Manual.
+// A subset of SPI is known as Microwire.
+//
+// This implementation provides separate modules for SPI master and slave. Each
+// module can receive and transmit, although in many cases it will only do one
+// or the other. The SPI master is the initiator of all transfers. It generates
+// the synchronous clock (SCK) and chip select (_nSS) signals, and drives the
+// master-out-slave-in (MOSI) data line. The slave drives the
+// master-in-slave-out (MISO) data line. 
+//
+// Often there will be one master and one slave. However, single-master,
+// multi-slave situations are common. In this case, the master drives multiple
+// chip-select signals (_nSS), one per slave, and SCK, MOSI and MISO are common.
+// Slaves must in these cases use tri-state or open-collector logic to drive
+// MISO. Multi-master operation is possible, but requires separate arbitration
+// arrangements between masters, usually performed at a software level.
+//
+// Peripheral chip manufacturers often alter aspects of the interface, for
+// example, inverting signals, using wired-or or tri-state logic, omitting
+// _nSS, using a common wire for MOSI/MISO, and so on. This implementation
+// should still be useful in these cases, using some additional glue logic 
+// to account for the differences.
+
+
+global module spi_master(
+    static(SCK, "log"),
+    static(MOSI, "log"),
+    static(_NSS, "log"),
+    queue(rx)
+<-
+    queue(tx),
+    value(MISO, "log", false),
+    value(timebase, "log", true),
+    log(chpa, false)
+) {
+    // SPI master transmitter/receiver. Data written to the tx queue is
+    // serialised and clocked out to the MOSI (master-out slave-in) output
+    // in synchronism with the generated SCK output. Simultaneously, input
+    // data on MISO is sampled, deserialised and written to the rx queue.
+    // _NSS goes low for the duration of the transmission. SCK, MOSI, MISO
+    // and _NSS are normally routed to FPGA pins for connection to SPI
+    // peripherals.
+    //
+    // The data word size is the larger of that of the rx and tx queues.
+    // Generally these will be the same. Where the receive size is larger, 
+    // transmit words will be zero-padded at trailing end. Where the transmit
+    // size is larger, the only the trailing receive bits will be returned.
+    //
+    // Timing is regulated by the timebase signal. Normally this is a stream
+    // of single-clock pulses at twice the SPI baud rate; SPI peripheral
+    // chips normally run at 1Mbaud or lower. If the timebase signal is tied
+    // true, the baud rate will be one quarter the prevailing clock rate, and
+    // if the timebase parameter is omitted, it will be one half. Note that
+    // SPI slaves may not work reliably at high speeds.
+    //
+    // Input chpa is an immediate input which controls the phase of SCK. When
+    // false (the default), data will be sampled on the rising edge of of SCK.
+    // When true, the falling edge is used. (Note this is not the same as
+    // inverting SCK).
+    //
+    // The master may be configured transmitter-only by omitting the
+    // rx queue and MISO input. This is a common situation. Similarly, the 
+    // master may be configured receiver-only by making the type of
+    // the tx queue null. In this case (empty) writes to the tx queue
+    // initiate receives.
+    //
+    // If, following a receive, the rx queue is not available, the received
+    // data word is silently discarded.
+
+    // transmit, receive and bit counter registers
+    log(txused, matched(tx));
+    log(rxused, matched(rx));
+    int(nbits, max(size(tx),  size(rx)));
+
+    static(count, "uint:" + bitsfor(nbits), nbits);
+    if (txused)
+	static(txdata, "bits:" + size(tx), 0);
+    if (rxused)
+	static(rxdata, "bits:" + size(rx), 0);
+
+    seq {
+
+        // wait for transmit data and a timebase pulse, then
+	// read transmit data and drop _NSS
+	//
+        if (matched(timebase))
+	    wait_until(timebase && <tx);
+        sync {
+	    if (txused)
+		txdata <- cast(tx, type(txdata));
+	    else
+		null <<- tx;
+	    _NSS <- false;
+	    reset(count);
+	}
+
+	// now do nbits SCK pulses (phase depending on chpa)
+	// clocking in and out receive and transmit data
+	// 
+	seq while (count != 0) {
+
+	    if (matched(timebase))
+		wait_until(timebase);
+	    par {
+		SCK <- chpa;
+		if (txused) {
+		    MOSI <- cast((txdata >> (size(tx) - 1)), "log");
+		    txdata <- txdata << 1;
+		}
+		--count;
+	    }
+
+	    if (matched(timebase))
+		wait_until(timebase);
+	    par {
+		SCK <- !chpa;
+		if (rxused)
+		    rxdata <- (rxdata << 1) | (MISO ? 1 : 0);
+	    }
+	}
+
+	// at the end, make sure SCK and MOSI are clear, and write
+	// received data to receive queue, if it is available
+	//
+	if (matched(timebase))
+	    wait_until(timebase);
+	par {
+	    reset(SCK);
+	    if (txused)
+		reset(MOSI);
+	    if (rxused)
+		when (>rx)
+		    rx <<- cast(rxdata, type(rx));
+	}
+
+	// release _NSS to inactive (high), then wait for at least
+	// one full SCK cycle
+	//
+	if (matched(timebase))
+	    wait_until(timebase);
+	par {
+	    _NSS <- true;
+	}
+
+	if (matched(timebase))
+	    wait_until(timebase);
+	else
+	    nop();
+
+	if (matched(timebase))
+	    wait_until(timebase);
+    }
+}
+
+
+global module spi_slave(
+    value(MISO, "log"),
+    queue(rx),
+    static(SOSI, "log")
+<-
+    value(tx),
+    value(SCK, "log", false),
+    value(MOSI, "log", false),
+    value(_NSS, "log", true),
+    log(chpa, false)
+) {
+    // SPI slave transmitter/receiver. When the connected SPI master initiates
+    // a transfer, the value of input tx is sampled, serialised and clocked
+    // out to the MISO (master-out slave-in) output in synchronism with the
+    // received SCK input. Simultaneously, input data on MOSI is sampled,
+    // deserialised and written to the rx queue. _NSS must be low throughout
+    // the operation.
+    //
+    // Input chpa controls the phase of the expected SCK. The meaning is as
+    // described in module spi_master(). [NOT IMPLEMENTED YET]
+    //
+    // The data word length is determined by the connected SPI master,
+    // although generally the slave will match. The word length may however
+    // be dynamic, especially in a multi-master system.
+    //
+    // The slave may be configured as a transmitter only by omitting the
+    // rx queue and MOSI input. Similarly, the slave may be configured as a
+    // receiver only by omitting the the tx parameter.
+    //
+    // If, during a receive, the rx queue is not available (i.e., full), the
+    // received data word is silently discarded.
+    //
+    // In the unlikely event slave daisy-chaining is desired, the SOSI output
+    // can be connected to the MOSI input of subsequent slaves. SOSI is the 
+    // output of the recieve shift-register, and so is the same as the slave's
+    // MOSI input but delayed by the bit-width of the receiver.
+    // [THIS FEATURE IS UNTESTED]
+
+
+    // transmit and receive registers
+    log(txused, matched(tx));
+    log(rxused, matched(rx));
+    if (txused)
+	static(txdata, "bits:" + size(tx), 0);
+    if (rxused)
+	static(rxdata, "bits:" + size(rx), 0);
+
+    // sampled versions of input signals
+    static(sck,  "log", false); sck  <- SCK;
+    static(mosi, "log", false); mosi <- MOSI;
+    static(_nSS, "log",  true); _nSS <- _NSS;
+
+    // MISO is always the top transmit bit
+    if (txused)
+	MISO := cast((txdata >> (size(txdata) - 1)), "log");
+
+
+    // FIXME
+    // This is potentially subject to execution errors if
+    // the inputs signals do not behave themselves!
+    //
+    // FIXME 
+    // It also "receives" a zero-data frame on startup...
+
+    // sample transmit data on falling _nSS
+    if (txused)
+	when (to_pulse(!_nSS))
+	    txdata <- cast(tx, type(txdata));
+
+    // sample receive data on rising SCK
+    if (rxused)
+	when (to_pulse(sck) && !_nSS) par {
+	    SOSI <- cast((rxdata >> (size(rxdata) - 1)), "log");
+	    rxdata <- (rxdata << 1) | (mosi ? 1 : 0);        
+	}
+
+    // shuffle data on falling SCK
+    if (txused)
+	when (to_pulse(!sck) && !_nSS) 
+	    txdata <- txdata << 1;
+
+    // send data on rising _nSS
+    if (rxused)
+	when (to_pulse(_nSS) && >rx) 
+	    rx <<- cast(rxdata, type(rx));
+
+}

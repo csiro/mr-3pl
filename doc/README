@@ -1,0 +1,25 @@
+
+api/
+----
+    Javadoc directory. Created by 'make api'.
+
+images/
+-------
+    GIFs for javadoc.
+
+impl/
+-----
+    3PL compiler implementation description.
+
+install/
+--------
+    Document stub presumably eventally intended as an installation guide.
+
+ref/
+----
+    3PL reference manual.
+
+
+tut/
+----
+    A fairly detailed 3PL tutorial.

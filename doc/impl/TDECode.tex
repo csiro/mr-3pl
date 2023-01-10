@@ -1,0 +1,262 @@
+The TDECode class has the following class variables -
+
+{\bf static TDEVPtype[] ptypes = {TDEVPtype.INPUT, TDEVPtype.OUTPUT, TDEVPtype.INOUT}} -
+an array to convert a numeric port type of 0, 1 or 2 from a TDEPORT TDE
+into a TDEVPtype enum used for entries in {\bf ext\_port\_dirs}
+(described below).
+
+{\bf static ArrayList\verb'<'Object\verb'>' ext\_ports} - a list of external
+ports, each member is a Net or else a port identifier string.
+
+{\bf static ArrayList\verb'<'TDEVPtype\verb'>' ext\_port\_dirs} - a list of
+port types, i.e. input, output or 3-state output.
+
+{\bf static ArrayList\verb'<'String\verb'>' ext\_port\_pins} - a list of port
+pins where these are FPGA pads.
+
+{\bf static TreeMap\verb'<'String,Object\verb'>' portmap} is a map of ports where
+the key is either the port identifier of else the port Net.
+
+The following member variables contain information about the target FPGA.
+
+\blist
+\item   {\bf String} fname - name of the FPGA family
+
+\item   {\bf int} lutwidth - number of inputs to CLB LUT
+
+\item   {\bf int} dspregwidth - effective width of multiplier/DSP
+                                         block when used as a register
+
+\item   {\bf int} srladdrwidth - shift register address width
+
+\item   {\bf int} addsubinputwidth - maximum adder/subtracter input width
+
+\item   {\bf int} multinputwidth - maximum multiplier input width
+
+\item   {\bf int} divinputwidth - maximum divider input width
+
+\item   {\bf int} ramb\_ports - maximum number of block RAM ports
+
+\item   {\bf boolean[]} ramb\_readable - which block RAM ports are readable
+
+\item   {\bf boolean[]} ramb\_writable - which block RAM ports are writable
+
+\item   {\bf int[]} ramb\_dwidths = new int[20] - block RAM data widths for address widths
+
+\item   {\bf int} ramb\_addrmin[] - block RAM smallest address width for \verb'#' of ports
+
+\item   {\bf int} ramb\_addrmax[] - block RAM largest address width for \verb'#' of ports
+
+\item   {\bf int} ramc\_ports - maximum number of CLB RAM ports
+
+\item   {\bf boolean[]} ramc\_readable - which CLB RAM ports are readable
+
+\item   {\bf boolean[]} ramc\_writable - which CLB RAM ports are writable
+
+\item   {\bf int[]} ramc\_dwidths = new int[20] - CLB RAM data widths for address widths
+
+\item   {\bf int} ramc\_addrmin[] - CLB RAM and ROM smallest address width for \verb'#' of ports
+
+\item   {\bf int} ramc\_addrmax[] - CLB RAM port max block address width for \verb'#' of ports
+
+\item   {\bf int} romc\_addrmin[] - CLB ROM port min block address width for \verb'#' of ports
+
+\item   {\bf int} romc\_addrmax[] - CLB ROM port max block address width for \verb'#' of ports
+
+\item   {\bf int[]} queue\_buffer\_cram\_depths - allowed depths for CLB RAM queue buffers
+
+\item   {\bf int} queue\_buffer\_min\_cram\_depth - smallest depth for CLB RAM queue buffers
+
+\item   {\bf int} queue\_buffer\_max\_cram\_depth - largest depth for CLB RAM queue buffers
+
+\item   {\bf int[]} queue\_buffer\_rram\_depths - allowed depths for block RAM queue buffers
+
+\item   {\bf int} queue\_buffer\_min\_rram\_depth - smallest depth for block RAM queue buffers
+
+\item   {\bf int} queue\_buffer\_max\_rram\_depth - largest depth for block RAM queue buffers
+
+\item   {\bf boolean} defaultOutputDirect - is the output mode direct flag default?
+
+\item   {\bf boolean} defaultStaticContinuous - is the static mode continuous flag default?
+
+\item   {\bf boolean} deviceHasTBUF - does device have 3-state buffers?
+
+\item   {\bf boolean} deviceAllowsQueue - does device allow queue mode?
+                                         queues require memory
+
+\item   {\bf boolean} deviceAllowsCMemory - does device allow cmemory mode?
+                                         requires CLB RAM
+
+\item   {\bf boolean} deviceAllowsRMemory - does device allow rmemory mode?
+                                         requires block RAM
+
+\item   {\bf int} ramc\_mux\_addr\_bits\_maxc - CLB RAM address bits beyond maximum
+                                         the number of extra address bits for
+                                         CLB RAM gained by MUXing
+
+\item   {\bf boolean} deviceFDRSEpatch - change FDRSE to FDCE + logic for CPLD
+
+\item   {\bf boolean} deviceCascadeGates - skip conversion of cascaded or wide gates
+
+\item   {\bf boolean} deviceCPLDarith - use CPLD addition/subtraction logic
+                                         i.e. simple logic instead of carry chain
+\blend
+
+These variables are assigned in the constructor for the FPGA class, XC5V etc
+which extend class TDECode.
+
+
+
+The following methods return FPGA parameters derived from the above class
+variables -
+\blist
+\item   LUTWidth() - return the LUT width for the FPGA
+\item   AddSubWidth() - return the maximum adder/subtracter input
+        width for the FPGA (9999 for no explicit limit)
+\item   DivWidth() - return the maximum divider input width
+        for the FPGA (9999 for no explicit limit)
+\item   SRLAddrWidth() - return the maximum SRL (shift register)
+        input width for the FPGA (0 if there is no SRL element)
+\item   cramPorts() - return the number of memory ports for
+        combinatorial-output RAM
+\item   rramPorts() - return the number of memory ports for
+        registered-output RAM
+\item   cramAwidthMax() - return the maximum address width for a
+        combinatorial-output RAM
+\item   rramAwidthMax() - return the maximum address width for a
+        registered-output RAM
+\item   rramDwidth() - return the data width associated with an address
+        width for a registered-output RAM
+\item   cramReadable() - determine if a combinatorial-output RAM port is
+        readable
+\item   cramWritable() - determine if a combinatorial-output RAM port is
+        writable
+\item   rramReadable() - determine if a registered-output RAM port is
+        readable
+\item   rramWritable() - determine if a registered-output RAM port is
+        writable
+\item   queueDepthUsingCram() - determine if a requested queue buffer
+        depth using combinatorial output memory is allowed
+\item   queueDepthUsingRram() - determine if a requested queue buffer
+        depth using registered output memory is allowed
+\item   minQueueDepth() - return the minimum asynchronous queue depth
+\item   maxQueueDepth() - return the maximum queue depth
+\item   outputDirect() - determine if the output mode 'direct' attribute
+        should be default for this device
+\item   defaultContinuous() - determine if the selectvalue mode
+        'continuous' attribute should be default for this device
+\item   hasTBUF() - determine if this device has internal 3-state
+        buffers
+\item   allowQueue() - determine if queue mode variables are allowed for
+        this device
+\item   allowCMemory() - determine if cmemory mode variables are allowed
+        forthis device
+\item   allowRMemory() - determine if rmemory mode variables are allowed
+        forthis device
+\item   needFDRSEpatch() - determine if this device requires gates to
+        fully implement an FDRSE flip-flop
+\item   needCascadeGates() - determine if this device must construct
+        wide AND or OR gates by cascading, rather than using inbuit
+        MUXes or a carry chain
+\item   needCPLDarith() - determine if special arithmetic for CPLDs is
+        needed; this means that addition and subtraction and magnitude
+        comparisons will be done by gate logic rather than using carry
+        chains
+\blend
+
+Abstract method outputExterns() writes all external ports to the EDIF netlist
+file. This method is overridden in class XTDECODE for Xilinx.
+
+The following methods optimise the netlist code and are described
+elsewhere.
+\blist
+\item   optimiseGNDandVCC()
+\item   optimiseINV()
+\item   optimiseAND()
+\item   optimiseOR()
+\item   optimiseXOR()
+\item   unNest()
+\item   inputEliminate()
+\item   optimiseLUT()
+\item   optimiseFDRS()
+\item   remapInputs()
+\blend
+
+
+
+
+
+
+
+
+
+The remainder of the methods are abstract and are overridden by
+methods in xilinx.XTDECode. All except the last seven are methods
+to convert TDEs to internal netlist constructs. The method names
+are self explanatory -
+\blist
+\item   TDESELECT()
+\item   TDETSELECT()
+\item   TDEREG()
+\item   TDEINV()
+\item   TDEAND()
+\item   TDEOR()
+\item   TDEXOR()
+\item   TDEDFF()
+\item   TDEIBUF()
+\item   TDEOBUF()
+\item   TDESTART()
+\item   TDEILOOP()
+\item   TDEWHEN()
+\item   TDEWHILE()
+\item   TDEDOWHILE()
+\item   TDERESYNC()
+\item   TDESAMPLE()
+\item   TDEEXECP()
+\item   TDECONNECT()
+\item   TDEOPERATOR()
+\item   TDEWAIT()
+\item   TDEDEL()
+\item   TDEDIVERGE()
+\item   TDEQUEUEBUFFER()
+\item   TDEPRIORITY()
+\item   TDECRAM()
+\item   TDERRAM()
+\item   TDECLOCK()
+\item   TDECLOCKINFO()
+\item   TDEELEMENT()
+\item   TDEELEMENTCONNECT()
+\item   TDEPORT()
+\item   TDESPECIAL()
+\blend
+
+The last seven abstract methods are miscellaneous. Again they are
+overridden by methods in xilinx.XTDECode.
+
+TDEOptimise() applies family-specific optimisations to the TDE list.
+
+optimise() carries out low-level optimisation of the internal netlist
+structure.
+
+convert() converts generic gate elements to appropriate elements
+for the target device. Before this is called the netlist structure
+might contain an AND gate with 10 inputs. Following conversion that
+element would have been replaced perhaps by 3 4-input LUTs connected
+to carry chain MUXCYs.
+
+verify() examines all elements to ensure there are no errors or
+inconsistencies. This method is not located in class netlist.Element
+as the checks are specific to target device elements rather than
+generic elements (there is however a method netlist.Net.verify()
+to check nets and this is generic since nets are not specific to
+the target device).
+
+netFromPin() returns the identifier of the net attached to a pad
+given the pad identifier.
+
+EDIFFileNameExtension() returns the EDIF file extension.
+
+
+Abstract method outputConstraints() writes constraints to the approprite file(s)
+(for Xilinx this is the ISE NCF or Vivado XDC file). This method is overridden in
+class XTDECODE for Xilinx.

@@ -1,0 +1,159 @@
+            Parameter {\bf in} is the queue-mode input variable.
+            
+            The queue must be written somewhere in the program (queues without
+            sources result in a fatal error on completion of immediate
+            execution). When the module is created the argument queue must have
+            an established write clock domain or a fatal error is generated.
+
+            If the input queue is read anywhere else in the program (i.e. other
+            than in this module) then it must be read in the bus clock domain
+            since that is the clock domain in which it is read in the module
+            created by this procedure.
+
+            If optional parameter {\bf wordcount} has an argument and it
+            is true, the number of words in the queue buffer can be interrogated
+            by the CPU. The input queue may have any of the allowed buffer sizes.
+            If the queue is asynchronous, i.e. the read domain is not the bus
+            clock domain, the count will not be exact but will be a guaranteed
+            minimum number of readable data.
+
+            If optional parameter {\bf wordcount} has an argument and it
+            is false, the data returned from reading the number of words in the
+            buffer is 0 or 1 instead of a count. A return of 1 means the queue
+            buffer is not empty, i.e. can be read. This option is provided to
+            simplify the logic where a simple empty/non-empty status is required.
+
+            If optional parameter {\bf wordcount} has no argument then
+            there will no interface to directly read the number of words in the
+            queue buffer, however an interrupt may be used instead.            
+
+            Note that an empty queue is guaranteed to return all ones to the CPU
+            when read. For most data types this single value will usually be
+            invalid and hence in that case it can be used as an indication of an
+            empty queue. This can be used instead of explicitly reading the
+            available word count.
+
+            If an argument to optional parameter {\bf ilevel} is provided then a
+            level interrupt on queue buffer status is established as follows -
+
+            If there is no argument then no interrupt is provided.
+
+            If the argument is type "log" with value false then the interrupt will
+            be asserted when the queue buffer is not empty.
+
+            If the argument is type "log" with value true then the interrupt will be
+            asserted when the number of words in the buffer equals or exceeds a
+            level which has been written to the interface from the CPU. The initial
+            value of this level is 1. A level value of 0 should not be written to
+            the interface as that will result in a continuous level interrupt
+            regardless of queue state.
+
+            If the argument is type "uint" or "int" then the interrupt will be
+            asserted when the number of words in the buffer equals or exceeds the
+            fixed value specified by the integer argument.
+
+            The optional output parameter {\bf count} provides a count of the
+            number of data in the queue. The inbuilt function queuewords() can
+            only be used in a module which reads the queue, which is usually not
+            the case where {\bf cpu\_api.read\_queue()} is the queue destination.
+            {\bf count} must have clock domain {\bf bus\_clk}. If it has no clock
+            domain, {\bf cpu\_api.read\_queue()} will set it to {\bf bus\_clk}.
+            The width of {\bf count} must be sufficient to hold the input queue
+            depth.
+
+            If optional output parameter {\bf out} has an argument, each datum
+            read from the input queue {\bf in} to the CPU local bus is also
+            written to queue {\bf out}. The type of {\bf out} must be such that
+            it can be assigned from {\bf in}. {\bf out} should not be allowed to
+            block since it cannot stop data being popped from {\bf in} to the CPU
+            bus. While {\bf out} in unavailable for writing, no attempt is made
+            to write data popped from {\bf in} to it.
+
+            If optional output parameter {\bf access} has an argument, the static
+            variable of type "log" is assigned true for one clock cycle every
+            time a datum is popped from the input queue {\bf in}. {\bf access}
+            may have any clock domain.
+            
+            On running info2c on the .json file the following C functions will have
+            been defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l | l |}
+            \hline
+            function                                 & when                   &                         \\ \hline \hline
+            fpga\_{\em name}\_read()                 & always                 & read a datum            \\ \hline
+            fpga\_{\em name}\_avail\_read()          & wordcount has argument & read number of words    \\ \hline
+            fpga\_{\em name}\_avail\_thresh\_write() & ilevel "log" true      & set interrupt threshold \\ \hline
+            fpga\_{\em name}\_enable()               & ilevel has argument    & enable interrupt        \\ \hline
+            fpga\_{\em name}\_disable()              & ilevel has argument    & disable interrupt       \\ \hline 
+            fpga\_{\em name}\_wait()                 & ilevel has argument    & wait on interrupt       \\ \hline  
+            \end{tabular}
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+                class(cpu, cpu_api());
+                
+                queue(p, "uint:16");
+                .
+                .
+                cpu.read("P1", p, wordcount=false, ilevel=false);
+                .
+                .
+            \end{lstlisting}
+            the CPU code in C should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                #include "prog_fpga.h"
+                .
+                .
+                fpga_t *fpga = NULL;
+                int     d[...];
+                int     i = 0;
+                .
+                .
+                fpga_open();
+                .
+                .
+                fpga_P1_event_wait(fpga);
+                while (fpga_P1_avail_read(fpga) != 0)
+                    d[i++] = fpga_P1_read(fpga);
+                .
+            \end{lstlisting}
+            The code will wait until the queue p goes from empty to non-empty
+            when an interrupt will release the wait. A loop while the queue
+            remains non-empty reads until the queue is empty. Note that since
+            {\bf wordcount} is given an argument but the value is false, the count
+            will only have values 0/1 for empty/not-empty.
+           
+            This procedure creates no in-line target code so the current clock
+            domain when this procedure is called is not relevant. The clock domain
+            is not changed by this procedure,
+            
+            The CPU code in Python3 should contain something like \\
+            \begin{lstlisting}[gobble=12, language=python]
+                import sys
+                sys.path.append("/Users/......./install/3pl")
+                import info2py
+                from cpu_serial import *
+
+                fpga_open()
+
+                fpga = info2py.info_from_file("prog")   # load info from prog.info file
+
+                d = []
+                fpga.P1_wait()
+                while (fpga.P1_avail_read() != 0)
+                    d.append = fpga.P1_read()
+
+            \end{lstlisting}
+            
+            Note that in the unusual case where a queue variable is both read and
+            written by the CPU and is not otherwise accessed in the FPGA the input
+            and output clock domains of the queue will be undefined. To overcome
+            this the clock domain can be set when the queu is created, e.g.
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+            queue(q, "uint10", domain=null);
+            \end{lstlisting}
+            
+            which will set both the input (write) and output (read) clock domains
+            to the current clock domain - see \autorefph{sec:ipqueue}).

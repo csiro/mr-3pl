@@ -1,0 +1,17 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+class(cpu, cpu_api());
+
+static(a, "int:25");
+static(b, "int:18");
+
+cpu.write(a <- "A");
+cpu.write(b <- "B");
+
+static(p, "int:48");
+
+p <- a * b;
+
+cpu.read(p, "P");
+
+cpu.receive_event(p == 1, "INT");   // interrupt when p == 1

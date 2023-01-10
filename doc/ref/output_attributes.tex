@@ -1,0 +1,133 @@
+        These attributes are not case-sensitive but will be converted to
+        lower case.
+         
+        The following six attributes are used by {\bf output()} itself.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf output mode} \\
+        \hline
+        direct       & 3PL        & log          & enable direct from test               \\
+        differential & netlist    & log or []log & differential                          \\
+        defaultout   & 3PL        & log or []log & default for unconnected outputs       \\
+        noshadow     & 3PL        & log or []log & don't duplicate output flip-flop      \\
+        loc          & constraint & str or []str & locations                             \\
+        \hline
+        \btabularxend
+        
+        Where an attribute value is an array the dimension must be equal to
+        the number of pins and each array member will apply to the corresponding
+        output pad or buffer. A single attribute value will be applied to all pins.
+        
+        {\bf direct} must have been set prior to any assignment statements using the
+        output mode variable. The other attributes are not used until completion of
+        immediate execution (excluding postprocessing).
+
+        {\bf direct} specifies that if possible the output 3-state enable will
+        be driven directly from a conditional signal, not through an execution
+        thread and WHEN block. This can significantly simplify the logic and
+        reduce the probability of failing to meet timing constraints locally.
+        Note that when this attribute is in effect the 3-state enable is
+        immediately active following configuration loading regardless of any 3PL
+        startup mechanisms - see {\bf
+        start()}(\autorefph{sec:ipstart}).
+        
+        {\bf direct} cannot be passed via iopins() as it cannot be expanded to
+        an array, being a single attribute applying to the whole variable and not
+        to individual outputs.
+        
+        {\bf differential} indicates that the output pads are differential.
+        Two locations must be supplied for each data bit (see {\bf loc} above).
+        
+        {\bf defaultout} specifies that unconnected outputs variables, or parts of
+        output variables, should be tied high or low. If this attribute is not
+        supplied then the action on encountering unconnected outputs depends on the
+        global directive "unass\_out" (see \autorefph{sec:directives}). The values
+        must be {\bf true} to tie the outputs high, or {\bf false} to tie low.
+        
+        {\bf noshadow} when true inhibits the duplication of flip-flops
+        whose output is connected to an output buffer. By default any
+        flip-flop whose output is connected to an output buffer is placed
+        in the IO pad containing the buffer. If the output of the flip-flop
+        is used elsewhere then the flip-flop is duplicated in a CLB with
+        all inputs in parallel with the pad flip-flop and the output of the
+        duplicate used for internal logic. If {\bf noshadow} is true then
+        duplication will not be done, the flip-flop will of necessity
+        reside in a CLB and its output will be routed to the output buffer.
+        This will result in much worse clock-to-output time. Setting this
+        attribute ensures that the pad output genuinely reflects the
+        flip-flop state and not that of a duplicate but at the cost of
+        delayed output.
+       
+        The {\bf loc} attribute is mandatory. The array dimension
+        must exactly match the number of bits in the variable type. If the output
+        is differential the array dimension must be twice the number of
+        bits, the locations being used in pairs for the +ve and the -ve inputs
+        (in that order).
+
+        The following attribute is read-only and is created when {\bf
+        output()} is called and can be retrieved from the output mode
+        variable if required by using inbuilt function {\bf attribute()}.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf output mode} \\
+        \hline
+        ids          & 3PL & []str & element IDs       \\
+        \hline
+        \btabularxend
+        
+        {\bf ids} is a string array that contains the netlist identifiers of the
+        output buffer elements. This attribute is read-only and is initialised
+        when the output variable is created. This identifier can be used should
+        there be a necessity to apply a constraint (other than location which is
+        done via the port name) to the output buffer.
+
+        The following attributes are required for constraint generation and are
+        handled at completion of immediate execution by library procedure {\bf
+        generateconstraints()} \autorefph{sec:lpgenerateconstraints}. The
+        attribute values are single values which will be applied to all output
+        bits.
+        
+        \btabularx
+        \hline
+        \multicolumn{3}{|l|}{\bf output mode attributes} \\
+        \hline
+        slew         & str or []str & slew rate         \\
+        drive        & int or []int & drive current     \\
+        tnm          & str or []str & timing group id   \\                  
+        pullup       & log or []log & pullup            \\
+        pulldown     & log or []log & pulldown          \\
+        iostandard   & str or []str & voltage standard  \\
+        \hline
+        \btabularxend
+       
+        The {\bf slew} attribute is the string "fast" or "slow" and selects
+        one of two slew rates for Xilinx output buffers (see Xilinx documentation).
+        
+        The {\bf drive} attribute is an integer which specifies the output drive
+        current for Xilinx output buffers (see Xilinx documentation).
+        
+        {\bf tnm} is the name of a timing group in which the output pads
+        are to be included for timing constraint purposes.
+        
+        If {\bf pullup} or {\bf pulldown} are true the output will be given
+        a weak pullup or pulldown. It is not allowed for both these
+        attributes to be true.
+        
+        {\bf iostandard} is a string specifying one of the allowed
+        I/O standards (see Xilinx documentation).
+        
+        The following attributes are tolerated but ignored. They may be included
+        as attributes for the input side of a bi-directional pin.
+        
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf input mode} \\
+        \hline
+        ibuf\_delay\_value & constraint & int & extra delay to IBUF                      \\
+        ifd\_delay\_value  & constraint & int & extra delay to IFD                       \\
+        \hline
+        \btabularxend
+
+        Any attributes that are not listed above will result in a fatal error.

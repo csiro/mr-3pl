@@ -1,0 +1,27 @@
+class(c1, s(7));
+println(c1.i + " (7)");
+println(c1.j + " (7)");
+class(c2, s(9));
+println(c2.i + " (9)");
+println(c2.j + " (9)");
+println(c1.i + " (7)");
+println(c1.j + " (7)");
+c1.j = 27;
+println(c1.j + " (27)");
+println(c2.j + " (9)");
+println(c1.f() + " (7)");
+println(c2.f() + " (9)");
+println(c2.n + " (33)");
+class s (int(i)) {
+    int(j, 14);
+    j = i;
+    if (i == 7)
+        int(z1);
+    else
+        int(z2);
+    
+    function f () {
+        int(class.n, 33);
+        return(i);
+    }
+}

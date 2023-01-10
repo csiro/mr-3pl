@@ -1,0 +1,119 @@
+(edif prog
+ (edifVersion 2 0 0)
+ (edifLevel 0)
+ (keywordMap (keywordLevel 0))
+ (status
+  (written
+   (timestamp 2021 10 19 0 25 3)
+   (program "3PL" (version "11.5.1M (devel svn 9947M, dun202)"))
+   (comment "
+        ALU = false
+        BOARD = avnet/microzed_7020
+        FIFO = false
+        OS = mac os x
+        QUEUEREG = false
+        arch = x86_64
+        compileOnly = false
+        compilerMakeDate = 2021-08-06 15:23:59 +1000
+        continuous = false
+        currentDirectory = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7
+        date = 2021-10-19 11:25:03 +1100
+        designName = prog
+        family = XC3S
+        filePath = false
+        forceExec = true
+        gatesNotLuts = false
+        intTruncWarning = false
+        intermediateOnly = false
+        listNets = false
+        listTDEs = false
+        listTDEsSel = 0
+        locations = false
+        netFile = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7/prog.net
+        netlistDisplay = false
+        netlistFile = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7/prog.edn
+        optimiseConnect = true
+        outputDirectory = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7/
+        parentDirectory = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7/
+        part = xc3s500evq100-4
+        postProcessTool = ise
+        reportFile = /Users/dun202/src/mine/3PL/test/11.5.1/classtest7/prog.rpt
+        rptToFile = false
+        sigList = false
+        skipPostProc = true
+        sourceFile = prog.3pl
+        srlAddrWidth = 4
+        unassOut = fatal
+        version = 11.5.1M (devel svn 9947M, dun202)
+    ")
+  )
+ )
+
+ (external xixc3s
+  (edifLevel 0)
+  (technology (numberDefinition ))
+  (cell GND (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port G (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell VCC (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port P (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell BUFG (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+  (cell IBUFG (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port I (direction INPUT))
+     (port O (direction OUTPUT))
+    )
+    (property LIBVER (string "2.0.0"))))
+ )
+
+ (library top_level
+  (edifLevel 0)
+  (technology (numberDefinition ))
+  (cell prog (cellType GENERIC)
+   (view view_1 (viewType NETLIST)
+    (interface
+     (port PORT_P89 (direction INPUT) (property LOC (string "P89")))
+    )
+    (contents
+     (instance b0 (viewRef view_1 (cellRef GND (libraryRef xixc3s))))
+     (instance b1 (viewRef view_1 (cellRef VCC (libraryRef xixc3s))))
+     (instance e0 (viewRef view_1 (cellRef BUFG (libraryRef xixc3s))))
+     (instance b2 (viewRef view_1 (cellRef IBUFG (libraryRef xixc3s))))
+     (net prog_FMOD1_dummy_c32_in
+      (joined
+       (portRef I (instanceRef e0))
+       (portRef O (instanceRef b2))
+      )
+     )
+     (net PORT_P89
+      (joined
+       (portRef PORT_P89)
+       (portRef I (instanceRef b2))
+      )
+     )
+    )
+   )
+  )
+ )
+
+ (design prog
+  (cellRef prog
+   (libraryRef top_level)
+  )
+  (property PART (string "xc3s500evq100-4"))
+ )
+)

@@ -1,0 +1,95 @@
+{
+    "version": {
+        "major": 1,
+        "minor": 0
+    },
+    "directives": {
+        "ALU": "false",
+        "FIFO": "false",
+        "OS": "mac os x",
+        "QUEUEREG": "false",
+        "arch": "x86_64",
+        "compileOnly": "false",
+        "compilerMakeDate": "2022-04-04 14:45:06 +1000",
+        "continuous": "false",
+        "currentDirectory": "/Users/dun202/snark/src/test/zynq_info_test",
+        "date": "2022-07-22 17:36:58 +1000",
+        "designName": "prog",
+        "family": "XC7",
+        "filePath": "false",
+        "forceExec": "true",
+        "gatesNotLuts": "false",
+        "intTruncWarning": "false",
+        "intermediateOnly": "false",
+        "listNets": "true",
+        "listTDEs": "true",
+        "listTDEsSel": "0",
+        "locations": "false",
+        "netFile": "/Users/dun202/snark/src/test/zynq_info_test/prog.net",
+        "netlistDisplay": "false",
+        "netlistFile": "/Users/dun202/snark/src/test/zynq_info_test/prog.edn",
+        "optimiseConnect": "true",
+        "outputDirectory": "/Users/dun202/snark/src/test/zynq_info_test/",
+        "parentDirectory": "/Users/dun202/snark/src/test/zynq_info_test/",
+        "part": "xc7z010clg400-1",
+        "postProcessCompress": "true",
+        "postProcessTool": "vivado",
+        "reportFile": "/Users/dun202/snark/src/test/zynq_info_test/prog.rpt",
+        "rptToFile": "true",
+        "sigList": "false",
+        "skipPostProc": "true",
+        "sourceFile": "prog.3pl",
+        "srlAddrWidth": "5",
+        "unassOut": "fatal",
+        "version": "11.7.0M (devel svn 10011:10036M, dun202)"
+    },
+    "spaces": {
+        "reg": {
+            "bus": "axi_mgp0",
+            "read_addr_bits": 2,
+            "write_addr_bits": 3,
+            "interfaces": {
+                "infoword": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 1,
+                    "data_bits": 32,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 32
+                    }
+                },
+                "inforeset": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 2,
+                    "data_bits": 0
+                },
+                "SR": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 2,
+                    "data_bits": 5,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 5
+                    }
+                },
+                "SW": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 4,
+                    "data_bits": 5,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 5
+                    }
+                }
+            }
+        }
+    },
+    "events": {
+    },
+    "length":     3038
+}
+

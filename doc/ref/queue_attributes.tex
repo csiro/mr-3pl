@@ -1,0 +1,165 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf queue mode attributes} \\
+        \hline
+        depth          & 3PL     & int     & queue buffer depth                          \\         
+        mindepth       & 3PL     & int     & minimum queue buffer depth                  \\         
+        buffersize     & 3PL     & int     & queue buffer depth                          \\         
+        minbuffersize  & 3PL     & int     & minimum queue buffer depth                  \\         
+        readdomain     & 3PL     & clock   & force the read (output) clock domain        \\    
+        writedomain    & 3PL     & clock   & force the write (input) clock domain        \\    
+        domain         & 3PL     & clock   & force both the read and write clock domains \\    
+        alu            & 3PL     & boolean & use an ALU if appropriate                   \\       
+        dsp            & 3PL     & boolean & use a DSP block                             \\       
+        fifo           & 3PL     & boolean & use a hardware FIFO                         \\       
+        queuereg       & 3PL     & boolean & extra output register to improve timing     \\       
+        continuous     & 3PL     & boolean & no startup dependence                       \\   
+        ignoremodules  & 3PL     & boolean & all reads treated as if in same module      \\   
+        readonly       & 3PL     & boolean & set to read only                            \\
+        queuefieldzero & netlist & boolean & clear unassigned fields                     \\
+        \hline
+        \btabularxend
+        
+        {\bf These attributes are case-insensitive.}
+        
+        {\bf depth} sets the depth of the queue buffer. The default depth is 2
+        for a synchronous queue and 16 for an asynchronous queue.
+        The values allowed depend on the FPGA family.
+
+        \begin{tabular}{| l | l | l |} \hline
+                                & using cmemory  & using rmemory \\ \hline \hline
+        Spartan-II, Spartan IIE & 16             &  256 to  4096 \\ \hline
+        Spartan-3               & 16             &  512 to 16384 \\ \hline
+        Virtex                  & 16 to  32      &  256 to  4096 \\ \hline
+        Virtex-E                & 16 to  32      &  256 to  4096 \\ \hline
+        Virtex-II               & 16 to  64      &  512 to 16384 \\ \hline
+        Virtex-II               & 16 to  64      &  512 to 16384 \\ \hline
+        Virtex 4                & 16             &  512 to 16384 \\ \hline
+        Virtex 5                & 16 to 128      & 1024 to 32768 \\ \hline                                        
+        \end{tabular}
+        
+        A depth of 0 may also be set. This is a special case, creating an
+        unbuffered queue. The use of unbuffered queues is very restricted -
+        see section \autorefph{sec:unbufferedqueues}.
+
+        {\bf buffersize} alternative older attribute name for {\bf depth}.
+
+        {\bf mindepth} sets the depth of the queue buffer but rounds the
+        supplied depth up to the next allowed value.
+
+        {\bf minbuffersize} alternative older attribute name for {\bf mindepth}.
+
+        {\bf readdomain} forces the read (output) clock domain to the specified
+        clock domain. {\bf writedomain} forces the write (input) clock domain to
+        the specified clock domain.
+        {\bf domain} forces both the read (output) clock domain and the write
+        (input) clock domain to the specified clock domain. 
+        If {\bf null} is assigned, the current clock domain
+        is selected. If the variable already has a clock domain as a result of
+        having been assigned or evaluated then that clock domain is compared with
+        the intended domain. If the assigned clock domain agrees with that already
+        in place then there is no further action, otherwise a fatal error occurs.
+        
+        {\bf alu} specifies that assignments of expressions containing
+        arithmetic operators '+' and '-' as the final or only operation can be
+        combined into a single common adder/subtracter using CLBs. If the {\bf alu}
+        attribute is false it can override the global directive {\bf ALU} to
+        suppress the use of an ALU for an individual static variable.
+        
+        The {\bf alu} attribute can save logic and incurs no time penalty for the
+        operations drawn in to the adder/subtracter, but all other assignments
+        suffer an increase in propagation time since assigned values must now
+        traverse the shared adder/subtracter. This tradeoff must be considered
+        in each case.
+        
+        The {\bf alu} attribute cannot be added or changed once the variable has been
+        assigned.
+        
+        The behaviour of the {\bf dsp} attribute depends on the FPGA -
+        \blist
+        \item   For Virtex-5 and Virtex-6 it has a similar effect to the
+                {\bf alu} option in that it draws arithmetic and bitwise logic
+                operations in assignments to the variable into a single ALU,
+                but using a DSP block rather than CLBs.
+        \item   For other FPGAs the attribute has no effect.
+        \blend
+        
+        The {\bf dsp} attribute will not use a Virtex-5 or Virtex-6 DSP block as an
+        ALU if the word width exceed 48 bits (multiplier operands are restricted
+        to 25 by 18 bits).
+        
+        Note that for Virtex-5 or Virtex-6 if the {\bf alu} attribute is true but not
+        the {\bf dsp} attribute then arithmetic operators '+' and '-' as the final or
+        only operation will be combined into a single common adder/subtracter
+        using CLBs.
+        
+        The {\bf fifo} attribute when true specifies that the queue buffer will
+        use inbuilt block RAM FIFO logic if possible. It is ignored if the FPGA
+        does not have this logic or the queue variable is asynchronous and uses
+        the read or write status outputs. This attribute cannot be used if the
+        queue is type "null", has the default depth of 2, or has a default depth
+        which such that CLB RAM is used (depth \verb'<=' 16). In these cases an
+        informative message is produced and the attribute is ignored. FIFO
+        hardware can be enabled globally by setting directive {\bf global.FIFO}
+        in which case this attribute can be assigned false to counteract the
+        directive, i.e. the attribute when set overrides the directive. The FIFO
+        directive is false by default.
+        
+        Use of the FIFO hardware is a compromise between speed and logic
+        usage. The FIFO hardware saves CLB gates and flip-flops, which would
+        otherwise be used, but has greater path delays which may cause
+        failure to meet timing constraints.
+        
+        The {\bf queuereg} attribute when true causes an extra pipelined output
+        register to be added. This reduces the clock-to-output time. The queue
+        buffer logic incorporates the extra buffer with no change to
+        functionality.
+
+        {\bf Continuous} true specifies that if possible assignment will occur
+        as soon as the FPGA is operational after configuration. This can
+        increase operating speed by eliminating clock-enable logic. There are
+        two situations where this can occur -
+        \blist
+        \item   the queue variable has a non-conditional assignment - the
+                assignment operates continuously following configuration loading
+                regardless of any 3PL startup mechanisms.
+        \item   a {\bf when} statement has only unconditional assignments to
+                variables in its nested code block(s) - the assignments are
+                enabled directly from the {\bf when} test expression (or its
+                inverse) and are not controlled from execution threads
+                initiated by the 3PL startup mechanisms.
+        \blend
+        see {\bf start()}(\autorefph{sec:ipstart}).
+        Note that if directive "continuous" is defined as type log with
+        value true at the end of immediate execution, all queue variables
+        will be treated as though they had the continuous attribute true.
+
+        {\bf ignoremodules} true specifies that all queue reads will be
+        treated as though from within the same module. Thus regardless of
+        which module a queue read is contained within it will pop the queue
+        when executed and the availability of the next datum will be seen
+        within all modules in which the queue is read. This is distinct from
+        the default behaviour of queue reads from multiple modules where a
+        queue read from each relevant module must be executed before the next
+        datum (if any) is seen as available to all the modules. This attribute
+        is ignored for unbuffered queues.
+        
+        The purpose of this option is to allow code within multiple modules
+        to read queues while looking after exclusive access where necessary
+        by means of explicit user code. This can also be done also by ensuring
+        that all the queue reads are contained within one module but this
+        restriction can be inconvenient and may result in more obscure code.
+        
+        {\bf readonly} true specifies that from now on this variable cannot
+        be assigned to. This attribute cannot be assigned false.
+        
+        {\bf queuefieldzero} false inhibits the clearing of unassigned fields or
+        array members when a queue variable is assigned. The default is {\bf true}.
+        If this attribute is made false for a queue variable which has a
+        non-primitive type and an incomplete assignment is made, i.e. not all
+        struct fields or array members are assigned, the unassigned elements
+        for the datum will be undefined instead of explicitly zero. The value
+        in making this attribute false is that it saves logic resources and
+        reduces the delays on some data paths. Where a queue variable has a primitive
+        type, or the whole variable is assigned in one statement or in multiple statements
+        a par or sync block, this attribute has no effect.

@@ -1,0 +1,50 @@
+# program 3PL version 11.5.1M (devel svn 9947M, dun202)
+# timestamp 2021-11-16 10:28:09 +1100
+# 
+#         ALU = false
+#         FIFO = false
+#         OS = mac os x
+#         QUEUEREG = false
+#         arch = x86_64
+#         comms_baud_rate = 115200
+#         compileOnly = false
+#         compilerMakeDate = 2021-08-06 15:23:59 +1000
+#         continuous = false
+#         currentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4
+#         date = 2021-11-16 10:28:09 +1100
+#         designName = prog
+#         family = XC3S
+#         filePath = false
+#         forceExec = true
+#         gatesNotLuts = false
+#         intTruncWarning = false
+#         intermediateOnly = false
+#         listNets = false
+#         listTDEs = false
+#         listTDEsSel = 0
+#         locations = false
+#         netFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4/prog.net
+#         netlistDisplay = false
+#         netlistFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4/prog.edn
+#         optimiseConnect = true
+#         outputDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4/
+#         parentDirectory = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4/
+#         part = xc3s500evq100-4
+#         postProcessTool = ise
+#         reportFile = /Users/dun202/src/mine/3PL/test/11.6.0/classtest4/prog.rpt
+#         rptToFile = false
+#         sigList = false
+#         skipPostProc = true
+#         sourceFile = prog.3pl
+#         srlAddrWidth = 4
+#         uart_cpu = true
+#         unassOut = fatal
+#         version = 11.5.1M (devel svn 9947M, dun202)
+#     
+NET PORT_P89 IOSTANDARD=LVCMOS33;
+NET glob_c32 TNM=C32;
+TIMESPEC TS_C32=PERIOD C32 31.25;
+NET PORT_P18 IOSTANDARD=LVCMOS33;
+NET PORT_P23 IOSTANDARD=LVCMOS33;
+NET PORT_P85 IOSTANDARD=LVCMOS33;
+NET PORT_P83 IOSTANDARD=LVCMOS33;

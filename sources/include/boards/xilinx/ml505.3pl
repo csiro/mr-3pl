@@ -1,0 +1,203 @@
+nosource
+
+// 3pl board support for Xilinx ML505 Evaluation Board
+// 
+// This header file is only partially completed.
+// There are still many board devices without pinouts or interfaces:
+//
+//	* Linear FLASH
+//	* I2C (EEPROM, fan controller, ...)
+//	* SPI (...)
+//	* USB host and peripheral (CY7C67300-100AI)
+//	* PS2 keyboard/mouse
+//	* Ethernet PHY (M88E1111)
+//	* AC97 audio codec (AD1981B)
+//	* VGA Video in codec (AD9980)
+//	* DVI codec (CH7301C-TF)
+//	* DDR2 memory SODIMM
+//	* SATA, SFP and SGMII
+//	* PCIE
+//	* SoftTouch Pro, Mictor and BDM connectors
+//	* SystemACE controller
+
+part("XC5VLX50TFF1136-1");
+source "xilinx/xc5v.3pl"
+
+str(lvcmos18, "LVCMOS18");
+str(lvcmos25, "LVCMOS25");
+str(lvcmos33, "LVCMOS33");
+str(lvds25, "LVDS_25");
+
+// clocks on SMA connectors
+iopins(smaclk_in_pins, "[2]str", {"H14", "H15"},
+    iostandard=lvds25, 
+    differential=true, diff_term=true, ibufg=true
+);
+iopins(smaclk_out_pins, "[2]str", {"J20", "J21"},
+    iostandard=lvds25,
+    differential=true, diff_term=true, ibufg=true
+);
+
+// clock oscillators
+iopins(c100_pin, "str", "AH15",
+    iostandard=lvcmos33, frequency=100.0e6, ibufg=true
+);
+iopins(c33_pin, "str", "AH17",
+    iostandard=lvcmos33, frequency=33.0e6, ibufg=true
+);
+iopins(c27_pin, "str", "AG18",
+    iostandard=lvcmos33, frequency=27.0e6, ibufg=true
+);
+iopins(c200_pins, "[2]str", {"L19", "K19"},
+    iostandard=lvds25, frequency=200.0e6, 
+    differential=true, diff_term=true, ibufg=true
+);
+
+// clock instantiation
+clock(c27_in, loc=c27_pin);		//simpleclock(global.c27, c27_in);
+clock(c33_in, loc=c33_pin);		//simpleclock(global.c33, c33_in);
+clock(c100_in, loc=c100_pin);		simpleclock(global.c100, c100_in);
+clock(c200_in, loc=c200_pins);		simpleclock(global.c200, c200_in);
+useclock(c100);
+
+// DIP switch at boards bottom right
+iopins(global.switch_pins, "[8]str", {
+	"U25", "AG27", "AF25", "AF26",
+	"AE27", "AE26", "AC25", "AC24"
+    }, iostandard=lvcmos18
+);
+
+// 8 green LEDS along board bottom edge (as array)
+iopins(global.led_pins, "[8]str", {
+	"H18", "L18", "G15", "AD26", "G16", "AD25", "AD24", "AE24"
+    }, iostandard=lvcmos25
+);
+iopins(, "str", led_pins[3], iostandard=lvcmos18);
+iopins(, "[3]str", led_pins[5..7], iostandard=lvcmos18);
+
+// 2 red LEDS along board bottom edge (as array)
+iopins(global.error_led_pins, "[2]str", {"F6", "T10"}, iostandard=lvcmos33);
+
+// 5 green LEDs adjacent to NSEWC button array 
+iopins(global.north_led_pin, "str", "AF13", iostandard=lvcmos33);
+iopins(global.south_led_pin, "str", "AG12", iostandard=lvcmos33);
+iopins(global.east_led_pin, "str", "AG23", iostandard=lvcmos33);
+iopins(global.west_led_pin, "str", "AF23", iostandard=lvcmos33);
+iopins(global.centre_led_pin, "str", "E8", iostandard=lvcmos33);
+
+// 5 buttons in a NSEWC array 
+iopins(global.north_button_pin, "str", "U8", iostandard=lvcmos33);
+iopins(global.south_button_pin, "str", "V8", iostandard=lvcmos33);
+iopins(global.east_button_pin, "str", "AK7", iostandard=lvcmos33);
+iopins(global.west_button_pin, "str", "AJ7", iostandard=lvcmos33);
+iopins(global.centre_button_pin, "str", "AJ6", iostandard=lvcmos33);
+
+// reset button (SW7) adjacent to 
+iopins(global.reset_button_pin, "str", "E9");
+
+// drives a piezo audio buffer
+iopins(global.piezo_pin, "str", "G30", iostandard=lvcmos18);
+
+// thumbwheel encoder with pressbutton on right edge of board
+iopins(global.rotary_encoder_inca_pin, "str", "AH30", iostandard=lvcmos18);
+iopins(global.rotary_encoder_incb_pin, "str", "AG30", iostandard=lvcmos18);
+iopins(global.rotary_encoder_push_pin, "str", "AH29", iostandard=lvcmos18);
+
+// 16x2 LCD display
+// (use chips/generic/lcd.3pl)
+iopins(global.lcd_data_pins, "[4]str", {
+	"T9", "G7", "G6", "T11"
+    }, iostandard=lvcmos33
+);
+iopins(global.lcd_rw_pin, "str", "AC10", iostandard=lvcmos33);
+iopins(global.lcd_en_pin, "str", "AC9", iostandard=lvcmos33);
+iopins(global.lcd_rs_pin, "str", "J17", iostandard=lvcmos25);
+
+// RS-232C port 0 (COM1) DE-9M, and port 1 (COM2) 2x5 header
+// port 1 requires J62/63 to be set to "FPGA"
+iopins(global.serial_txd_pins, "[2]str", {"AG20", "F10"}, iostandard=lvcmos33);
+iopins(global.serial_rxd_pins, "[2]str", {"AG15", "G10"}, iostandard=lvcmos33);
+
+
+
+// J20 controls voltage of IO bank driving J4 and J6
+log(j20_installed);
+str(j4_j6_cmos, j20_installed ? lvcmos33 : lvcmos25);
+
+// 64 uncommitted user IO pins (J4 and J6) down board right edge
+iopins(global.j4_pins, "[32]str", {
+	"L34",  "K34",  "K33",  "K32",  "P32",  "N32",  "T33",  "R34",
+	"R33",  "R32",  "U33",  "T34",  "U32",  "U31",  "V32",  "V33",
+	"W34",  "V34",  "Y33",  "AA33", "AF34", "AE34", "AF33", "AE33",
+	"AC34", "AD34", "AC32", "AB32", "AC33", "AB33", "AN32", "AP32"
+    }, iostandard=j4_j6_cmos
+);
+iopins(global.j6_pins, "[32]str", {
+	"H33",  "F34",  "H34",  "G33",  "G32",  "H32",  "J32",  "J34",
+	"L33",  "M32",  "P34",  "N34",  "AA34", "AD32", "Y34",  "Y32",
+	"W32",  "AH34", "AE32", "AG32", "AH32", "AK34", "AK33", "AJ32",
+	"AK32", "AL34", "AL33", "AM33", "AJ34", "AM32", "AN34", "AN33"
+    }, iostandard=j4_j6_cmos
+);
+
+
+
+// on-board RAM
+iopins(global.ext_ram_a_pins, "[1][18]str", {{
+	"k13", "h23", "g23", "h12", "j12", "k22", "k23", "k14",
+	"l14", "h22", "g22", "j15", "k16", "k21", "j22", "l16",
+	"l15", "l20"
+    }}, iostandard=lvcmos33
+);
+iopins(global.ext_ram_d_pins, "[1][36]str", {{
+	"ad19", "ae19", "ae17", "af16", "ad20", "ae21", "ae16", "af15",
+	"ah13", "ah14", "ah19", "ah20", "ag13", "ah12", "ah22", "ag22",
+	"n10",  "e13",  "e12",   "l9",  "m10",  "e11",  "f11",   "l8",
+	"m8",  "g12",  "g11",  "c13",  "b13",   "k9",   "k8",   "j9",
+	"d12",  "c12",  "h10",   "h9"
+    }}, iostandard=lvcmos33
+);
+iopins(global._ext_ram_cke_pins, "[1]str", {"J10"}, iostandard=lvcmos33);
+iopins(global._ext_ram_we_pins, "[1]str", {"AF20"}, iostandard=lvcmos33);
+
+iopins(global._sram_wea_pins, "[1]str", {"D10"}, iostandard=lvcmos33);
+iopins(global._sram_web_pins, "[1]str", {"D11"}, iostandard=lvcmos33);
+iopins(global._sram_wec_pins, "[1]str", {"J11"}, iostandard=lvcmos33);
+iopins(global._sram_wed_pins, "[1]str", {"K11"}, iostandard=lvcmos33);
+iopins(global._sram_oe_pin, "str", "B12", iostandard=lvcmos33);
+iopins(global.sram_mode_pin, "str", "A13", iostandard=lvcmos33);
+iopins(global.sram_adv_pin, "str", "H8", iostandard=lvcmos33);
+iopins(global.sram_clk_pin, "str", "G8", iostandard=lvcmos33);
+
+// RocketIO setup
+/*
+if (varexists(gtp_tile_params))
+    var(global.tile_116, gtp_tile_params, {
+	    "GTP_DUAL_X0Y4",
+	    "H4", "H3", "K1", "J1", "G1", "H1", "L2", "K2", "F2", "G2"
+	}
+    );
+*/
+
+var(global.gtp_tile_116, gtp_tile_params, {
+	"GTP_DUAL_X0Y4",             // location
+	"H4", "H3",                  // clock pins
+	true, true,                  // TX pre-emph boost
+	6, 6,                        // TX differential V
+	4, 4                         // TX pre-emphasis
+    }
+);
+
+// external ZBT memory setup
+module "boards/csiro/hymod/external_ram.3pl"
+
+trailermodule ("ext ram") {
+    ext_ram_trailer();
+}
+
+clock(global.ext_ram_clk);
+ext_ram_clk := c200;
+output(, "log", false, loc=_sram_oe_pin);
+output(, "log", false, loc=sram_mode_pin);
+output(, "log", false, loc=sram_adv_pin);
+output(, "log", ext_ram_clk, loc=sram_clk_pin);

@@ -1,0 +1,139 @@
+\documentclass[12pt,a4paper,twoside,fleqn]{article}
+\usepackage{inchmargins,fancyhdr,amsmath,graphicx,listings}
+\pagestyle{fancyplain}
+
+
+
+
+\newcommand{\fixdate}{11 July 2008}
+
+
+
+
+%\documentclass[12pt,a4paper,fleqn]{article}
+%\usepackage{inchmargins,fancyhdr,epsfig,html}
+%\pagestyle{fancyplain}
+ 
+\def\fps@table{htbp}
+%\def\topfraction{.9}
+%\def\bottomfraction{.9}
+%\def\textfraction{.1}
+%\def\floatpagefraction{.9}
+\renewcommand{\topfraction}{.95}
+\renewcommand{\bottomfraction}{.95}
+\renewcommand{\textfraction}{.05}
+\renewcommand{\floatpagefraction}{.95}
+\setlength{\mathindent}{2cm}
+\setcounter{topnumber}{5}
+\setcounter{bottomnumber}{5}
+\setcounter{totalnumber}{10}
+\newcommand{\blist}{\begin{list}{$\bullet$}{\setlength{\itemsep}{-5pt}\setlength{\topsep}{-5pt}}}
+\newcommand{\blend}{\end{list}}
+
+%\renewcommand{\section}{\@startsection
+%                           {section}
+%                           {1}
+%                           {0mm}
+%                           {-\baselineskip}
+%                           {0.5\baselineskip}
+%                           {\Large\bfseries}
+%                       }
+%\renewcommand{\subsection}{\@startsection
+%                           {subsection}
+%                           {2}
+%                           {0mm}
+%                           {-\baselineskip}
+%                           {0.5\baselineskip}
+%                           {\large\bfseries}
+%                       }
+
+
+\definecolor{orangered}{rgb}{0.99,0.27,0}
+\definecolor{brown}{rgb}{0.64,0.16,0.16}
+\definecolor{limegreen}{rgb}{0.19,0.76,0.19}
+\definecolor{darkorchid}{rgb}{0.6,0.19,0.8}
+\definecolor{darkviolet}{rgb}{0.58,0,0.82}
+
+\lstloadlanguages{C}
+\lstset{
+    basicstyle=\small\ttfamily,
+    basewidth={0.5em},
+    frame=single,
+    keywordstyle=\color{limegreen},
+    commentstyle=\color{darkorchid},
+    stringstyle=\color{darkviolet},
+}
+\lstdefinelanguage{threepl} {
+    morekeywords=[1]{value,selectvalue,pipe,static,input,output,priority,clock,var,struct,int,float,str,log,cram,rram,type,enum,input,output,useclock},
+    morekeywords=[2]{source,nosource,module,nomodule,procedure,function,global,local,calling,file,if,else,case,default,switch,while,do,for,seq,par,sync,when,break,return,unless},
+    otherkeywords={<,>,=,<=,>=,\!=,<-,<<-,|-,:=,->},
+    sensitive=true,
+    keywordstyle=\color{orangered},
+    keywordstyle=[1]\color{brown},
+    keywordstyle=[2]\color{limegreen},
+    commentstyle=\color{darkorchid},
+    stringstyle=\color{darkviolet},
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]"
+}
+\lstdefinelanguage{make} {
+    basicstyle=\small\ttfamily\color{blue},
+    basewidth={0.5em}
+}
+
+
+% xfig diagrams -
+% Helvetica-Narrow-Bold, size 8
+% arrow type solid (3rd in menu), thickness 1.0, width 3.0, height 6.0
+
+
+
+   
+\setlength{\parskip}{3ex}
+\setlength{\parindent}{0pt}
+    
+\newcommand{\kwd}[1]{{\bf #1}} % keyword
+\newcommand{\var}[1]{{\em #1}} % variable identifier
+    
+
+
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+%\renewcommand{\sectionmark}[1]{\markright{#1}}
+
+
+\lhead{3PL installation}
+%\chead{\leftmark\ - \rightmark}
+\chead{\leftmark}
+\rhead{CSIRO}
+\lfoot{CMSE High Speed Instrumentation group}
+\rfoot{\fixdate}
+\title{{\bf Installing 3PL}}
+\author{Paul Dunn \\
+CMSE High Speed Instrumentation group.}
+\date{\fixdate}
+   
+\setlength{\parskip}{3ex}
+\setlength{\parindent}{0pt}
+    
+
+\begin{document}
+     
+\maketitle
+
+
+\section{Preface}
+
+    This 3PL tutorial gives an outline of the language and attempts to introduce
+    some of its more unusual aspects. It does not attempt to document all the
+    features of the language and the 3PL manual should be consulted for more
+    detail. In the following the word {\bf target} refers to the FPGA, i.e. the
+    intended destination of the parallel pipelined code.
+
+\section{Static mode variables}
+
+
+
+
+\end{document}
+

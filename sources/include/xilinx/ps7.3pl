@@ -1,0 +1,25 @@
+nosource
+
+// Zynq PS block.
+//
+// NOT USED>
+// import() used instead
+global procedure
+ps7 (
+    clock({clk0, clk1, clk2, clk3}),
+    <-   
+) {
+    str(id, "ps7");
+    element("ps7", id);
+    
+    value(c, "[4]log");
+
+    outport(c <- id, "FCLKCLK" , 2);
+
+    elementend(id);
+    
+    clockfromexpr(clk0 <- c[0]);
+    clockfromexpr(clk1 <- c[1]);
+    clockfromexpr(clk2 <- c[2]);
+    clockfromexpr(clk3 <- c[3]);
+}

@@ -1,0 +1,4017 @@
+\pagebreak
+
+\chapter{Variables, Constants, Types, Modes, Attributes, Operators and Expressions}
+
+
+
+    \section{Input format}
+    
+        \index{input format}
+        The source code input may use either UNIX-style (newline character) or
+        DOS/Windows-style (carriage return, line feed) line termination. Tokens
+        are separated by white space (spaces, horizontal tabs or newlines). Good
+        formatting dictates the use of indenting but the compiler treats
+        indenting as simply white space. The last source code line need not be
+        terminated by a newline character, but it is usually preferable to do
+        so.
+
+        \index{comments}
+        Comments may have the form "/* ....... */", in which case they
+        may run over line breaks, or they may be indicated by "//....."
+        where they occupy the rest of the current line.
+
+
+    \section{File inclusion}\label{sec:fileinclusion}
+
+        Source files may be inserted in-line by means of file inclusion
+        statements. These are of two forms.
+        
+        The first form
+        \begin{lstlisting}[gobble=8, language=threepl]
+           source "filename"
+        \end{lstlisting}
+        \index{source statement}
+        \index{statement!source}
+        simply inserts the contents of the named file into the current file in
+        place of the entire {\em source} statement line. A file may only be
+        inserted once by a {\em source} statement.
+        
+        The second form
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module "filename"
+        \end{lstlisting}
+        \index{module statement}
+        \index{statement!module}
+        also inserts the contents of the named file into the current file in
+        place of the entire {\em module} statement line, but it differs from a
+        {\em source} statement in that the inserted file establishes a new
+        static module scope (for scope discussion see "Program source structure"
+        \autorefph{chap:progsrcstruct}). A file may only be inserted once by a
+        {\em module} statement.
+
+        White space (only) may precede the {\em source} or {\em module} on the
+        line and separate it from the quoted file name. The remainder of the line
+        following the quoted file name will be ignored. File inclusions using {\em
+        source} or {\em module} statements may be nested to any depth.
+
+        The quoted file name may be replaced in either of the above by
+        {\bf directive("ident")}, i.e.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           source directive("key")
+        \end{lstlisting}
+        or 
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module directive("key")
+        \end{lstlisting}
+        where the directive whose key is "key" contains the name of the
+        file to be included. Since file inclusion is done during parsing
+        the directive must be assigned using {\bf presetdirective()}
+        \autorefph{sec:ippresetdirective} or by using the command line option
+        -D.
+        
+        \index{ifdirective}
+        The file inclusion may be made conditional by using one of the following
+        forms -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           source ifdirective("key") "ident"
+        \end{lstlisting}
+        or 
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module ifdirective("key") "ident"
+        \end{lstlisting}
+        where the directive "key" will be examined to determine whether to
+        include the file "ident". If directive "key" does not exist or
+        it has the boolean value {\bf false} the file inclusion will
+        be skipped, otherwise the file will be included. Note that if the
+        directive is not boolean its existence will suffice, but if
+        boolean its value will be used.
+        
+        The above forms may also use a directive for the file identifier -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           source ifdirective("key1") directive("key2")
+        \end{lstlisting}
+        or 
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module ifdirective("key1") directive("key2")
+        \end{lstlisting}
+        Here directive "key1" is used as before to determine whether to
+        include the file and directive "key2" contains the name of the
+        file. The same directive may be used for both purposes, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           module ifdirective("lib1") directive("lib1")
+        \end{lstlisting}
+        will include the file whose name is contained in directive "lib1"
+        if that directive is defined.
+
+        File names are used exactly as supplied so any file name extension
+        must be included (use of the extension ".3pl" is recommended but not
+        required).
+
+        Note that these file inclusions are performed during parsing, not during
+        immediate execution, and so placing a {\em source} statement within
+        an {\em if} statement does not make the inclusion conditional (and
+        is syntactically incorrect).
+        
+        Files included by either of these mechanisms must contain syntactically
+        complete code, i.e. statements cannot be partially contained in an
+        included file.
+        
+        Since there are two mechanisms for inserting files, a file should
+        be able to ensure that it is not inserted by the wrong mechanism.
+        This can be done by including one of the lines
+        \begin{lstlisting}[gobble=8, language=threepl]
+           nosource
+        \end{lstlisting}
+        \index{nosource statement}
+        \index{statement!nosource}
+        to preclude sourcing this file or
+        \begin{lstlisting}[gobble=8, language=threepl]
+           nomodule
+        \end{lstlisting}
+        \index{nomodule statement}
+        \index{statement!nomodule}
+        to preclude calling this file as a module.
+        These must have no leading characters before the keyword. The remainder
+        of the line is ignored. 
+
+
+
+    \section{Single constants}
+
+        \index{constants}
+        Integer constants may be
+        \blist
+        \item    decimal
+        \item    hexadecimal (leading 0x or 0X)
+        \item    octal (leading 0)
+        \item    binary (leading 0b or 0B).
+        \blend
+        Their size is 64 bits.
+
+        Logical constants are {\bf true} and {\bf false}.
+
+        Floating point constants are decimal integers with a leading,
+        trailing or embedded '.' and an optional exponent consisting of "E"
+        or "e", an optional sign followed by an integer. If an exponent is
+        supplied the '.' can be omitted where appropriate.
+
+        String constants have double quotes surrounding the string. The string
+        may contain escape characters
+        \blist
+        %\item   \verb'\a' alert (bell)
+        %\item   \verb'\e' escape
+	\item   \verb'\n' new line (line feed)
+        \item   \verb'\t' horizontal tab
+        %\item   \verb'\v' vertical tab
+        \item   \verb'\b' backspace
+        \item   \verb'\r' carriage return
+        \item   \verb'\f' form feed
+        \item   \verb'\\' backslash
+	\item   \verb+\'+ single quote (single quotes do not need to be escaped)
+        \item   \verb'\"' double quote
+        \item   \verb'\0nnn' octal numeric escape where nnn is the 3 digit octal
+                character code
+        \item   \verb'\xnn' hexadecimal numeric escape where nn is the 2 digit
+                hexadecimal character code
+        \blend
+        
+        \index{mathematical constants}
+        The global variables {\bf \verb'math_pi'} and {\bf \verb'math_e'}
+        of type {\bf float} are created by the compiler prior to immediate
+        execution. These variables contain the values for $\pi$ and $e$ and
+        are read-only.
+
+    \section{Compound values}
+
+        \index{compound!value}
+        \index{value!compound}
+        Compound values are (possibly nested) array or struct values.
+        \blist
+        \item   They can be used to initialise compound variables.
+        \item   They can be assigned to compound variables.
+        \item   They can be passed to compound immediate or value
+                parameters in modules, procedures or functions.
+        \blend
+
+        A compound value is a comma-separated list enclosed in braces. Each list
+        element is an immediate expression or a compound value Each set of braces
+        matches a top level or nested array or struct. Trailing elements for an
+        array or struct may be omitted. Initial or intermediate elements may also
+        be omitted, commas being placed to indicate this. Lists must not exceed the
+        length of the array or struct they are intended to match.
+        
+        A compound value is processed from left to right, thus the left-most
+        item will appear at the lowest subscript or address.
+        
+        Missing elements in a compound value are simply not assigned.
+        Where a compound value with missing elements is used to initialise
+        an immediate compound variable, or is assigned to it, the variable
+        elements corresponding to the missing values will simply retain
+        their previous or default values. Where a compound value is
+        similarly used for a value variable, the variable elements
+        corresponding to the missing constants will not be assigned, retaining
+        their previous values (none if not previously initialised or assigned).
+
+        Examples -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           var(i, "[3][2]in", {{1, 2}, , {3}});
+           struct(s,
+               f1,     "[3]int",
+               f2,     "log",
+               f3,     "str"
+           );
+           var(v, s);
+           v = {{3, 4, 5}, true, "fred"};
+           proc(a <- {7, 8, false});
+        \end{lstlisting}
+        
+        Where a struct is initialised, assigned or passed an argument the
+        field values may be specified by naming the fields rather than matching
+        values to fields by position as in the example above, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(s,
+               f1,     "[3]int",
+               f2,     "log",
+               f3,     "str"
+           );
+           var(v, s);
+           v = {f3="fred", f1={3, 4, 5}, f2=true};
+           proc(a <- {7, 8, flag=false});
+        \end{lstlisting}
+        When a struct is assigned values by name in this way no following
+        position-matched values are allowed, for example the following
+        is accepted -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(s,
+               f1,     "[3]int",
+               f2,     "log",
+               f3,     "str"
+           );
+           var(v, s);
+           v = {{3, 4, 5}, f3="fred", f2=true};
+        \end{lstlisting}
+        but it is incorrect to do -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           struct(s,
+               f1,     "[3]int",
+               f2,     "log",
+               f3,     "str"
+           );
+           var(v, s);
+           v = {{3, 4, 5}, f2=true, "fred"};
+        \end{lstlisting}
+        because the last value is matched by position but is preceded by
+        a value matched by name. This limitation makes sense in that values
+        are matched by position in the list to fields in the struct until
+        a match by name is encountered after which point the argument positions
+        are no longer aligned with the fields.
+        
+        \index{array!initialisation}
+        \index{array!undimensioned}
+        \index{dimensions!missing}
+        An array initialised by a compound value may have some dimensions
+        omitted, in which case the missing dimensions will be inferred from the
+        compound value. Array dimensions cannot be omitted where a variable is
+        not a module, procedure or function parameter and is not initialised.
+        
+        Compound value entries for a string array may be types integer,
+        boolean or floating point in which case they will be converted to strings.
+
+        Leaf elements in the compound value must be immediate primitive
+        types (which includes pointers).
+
+
+    \section{Identifiers}
+
+        \index{identifier}
+        Identifiers begin with a letter or an underscore and contain any
+        number of letters, digits or underscores. Alphabetic case is
+        distinguished.
+
+        The following keywords may not be used as identifiers
+
+        \index{keywords}
+        \blist
+        \item   branch
+        \item   break
+        \item   case
+        \item   class
+        \item   conditionelse
+        \item   continue
+        \item   default
+        \item   do
+        \item   else
+        \item   for
+        \item   function
+        \item   global
+        \item   if
+        \item   ifcondition
+        \item   leadermodule
+        \item   module
+        \item   null
+        \item   par
+        \item   petrinet
+        \item   postmodule
+        \item   private
+        \item   procedure
+        \item   return
+        \item   seq
+        \item   source
+        \item   switch
+        \item   sync
+        \item   trailermodule
+        \item   unless
+        \item   varargs
+        \item   when
+        \item   while
+        \blend
+
+        Identifiers used for -
+        \index{identifier!ambiguity}
+        \blist
+        \item   variables
+        \item   struct fields
+        \item   modules and procedures
+        \item   functions
+        \item   directives
+        \blend
+        are stored in separate tables and hence the same
+        identifier can be used for multiple purposes. However, this practice may
+        render the code difficult to read.
+
+
+
+
+
+
+
+
+    \section{Variables and modes}
+
+        \subsection{variable modes}
+
+            \index{modes}
+            There are eleven modes of variable -
+            \blist
+            \item    {\bf immediate}
+            \item    {\bf selectvalue}
+            \item    {\bf value}
+            \item    {\bf static}
+            \item    {\bf queue}
+            \item    {\bf priority}
+            \item    {\bf input}
+            \item    {\bf output}
+            \item    {\bf cmemory}
+            \item    {\bf rmemory}
+            \item    {\bf clock}
+            \blend
+
+            Immediate variables only exist during program interpretation.
+            Variables in the other ten modes are target variables which
+            are active in the FPGA logic.
+
+
+            \subsubsection{immediate variables}
+
+                \index{immediate!variable}
+                \index{variable!immediate}
+                \index{mode!immediate}
+                Immediate variables do not survive into target code except as
+                constants (their current value at that point in the code during
+                immediate execution). These variables must not have a width
+                declared. Immediate integer variables are 64 bits and floating
+                point variables are 64 bit double precision.
+
+            \subsubsection{value variables}
+
+                \index{value!variable}
+                \index{variable!value}
+                \index{mode!value}
+                \index{value mode variables}
+                Variables of mode {\bf value} represent the result of
+                combinatorial expressions and hence do not have state (storage).
+                An expression contains constants, variables and function calls
+                joined by operators. An expression could consist of a single
+                variable in which case the value variable to which it is assigned
+                can be thought of as a pointer to that variable (or rather the
+                value of the variable, i.e. its output, since a variable cannot
+                be assigned (changed) via a value variable pointing to it).
+
+                The availability (see later) of a value variable depends on any
+                queue reads in the expression it represents.
+
+            \subsubsection{selectvalue variables}
+
+                \index{variable!selectvalue}
+                \index{mode!selectvalue}
+                \index{selectvalue mode variables}
+                Variables of mode {\bf selectvalue} represent buses or selectors.
+
+                The availability (see later) of a selectvalue variable depends
+                on any queue reads in the equivalent expression.
+
+            \subsubsection{input variables}
+
+                \index{variable!input}
+                \index{mode!input}
+                \index{input mode variables}
+                Variables of mode {\bf input} are external inputs.
+
+                An input variable is always (read) available.
+
+            \subsubsection{output variables}
+
+                \index{variable!output}
+                \index{mode!output}
+                \index{output mode variables}
+                Variables of mode {\bf output} are external outputs.
+
+                An output variable is always (write) available.
+
+            \subsubsection{static variables}
+
+                \index{variable!static}
+                \index{static mode variables}
+                Variables of mode {\bf static} have state - they are registers.
+                They have no associated signaling. They may be global, or local to
+                modules, procedures, functions or code blocks. Static
+                variables involve no signaling and their state changes are not
+                implicitly synchronised with pipeline operations except in as much
+                as module code may exercise local control.
+
+                Static variables containing arithmetic types may be any size
+                but initialisation or assignment from immediate expressions or
+                variables are restricted at the moment to a maximum of 64 bits for
+                integer or 52.11 for floating point.
+
+                A static variable is always available.
+
+            \subsubsection{queue variables}
+
+                \index{variable!queue}
+                \index{mode!queue}
+                \index{queue mode variables}
+                Variables declared {\bf queue} are dataflow variables which are
+                mainly used as pipeline connections between modules. They have
+                associated signaling to indicate their availability for reading,
+                examination or writing (assignment). When a datum is written to a
+                queue, the datum becomes available at the output of the queue. A
+                queue may contain more than one datum, in which case the data will
+                be available in the order they were written. In a module the
+                written end of a queue is referred to as an {\bf output queue}
+                since it is assigned to. The read or examined end of a queue is
+                referred to as an {\bf input queue}.
+
+                An input queue is available when it has a datum which can be read
+                or examined (a datum which is read is removed from the queue
+                whereas a datum which is examined remains in place), i.e. it is
+                not empty.
+
+                An output queue is available when it can be written to, i.e. it is
+                not full.
+
+                Queue variables containing arithmetic types may be any size but
+                initialisation or assignment from immediate expressions or
+                variables is limited to a maximum of 64 bits for integer or
+                52.11 for floating point.
+                
+                A queue is 'synchronous' if it is written and read in the same
+                clock domain.
+                
+                A synchronous queue has a default buffer depth of 2. An
+                asynchronous queue has a default buffer depth of 16. These
+                depths can be explicitly set.
+                
+                \index{null!queue}
+                \index{queue!null}
+                A queue may be type "null". This is useful for signalling as
+                the queue can be written (null must be assigned) or read
+                but no actual data storage is used.
+
+            \subsubsection{cmemory and rmemory variables}
+
+                \index{variable!memory}
+                \index{mode!memory}
+                \index{memory mode variables}
+                Variables of mode {\bf memory} represent RAM elements in the
+                FPGA.
+
+                Memory variables can only be accessed via inbuilt procedures and
+                functions and hence availability does not apply as they cannot be
+                used in expressions or assignment statements.
+
+           \subsubsection{priority variables}\label{priorityvariables}
+
+                \index{variable!priority}
+                \index{mode!priority}
+                \index{priority mode variables}
+                Variables of mode {\bf priority} implement a priority encoder
+                and are 
+                used for arbitration. The type must be a one dimensional array
+                of "log" (if the type is omitted "[20]log" will be used). The
+                array members are assigned combinatorial values in the same way
+                as value mode variables. However, the resultant values of the
+                logical array are not simply the input expressions but are
+                arbitrated values, the lowest subscript having highest priority.
+                Where one or more input expressions to the priority array are
+                true, one and only one array value will be true and that one
+                will correspond to the true input with the lowest subscript.
+
+                There is an inbuilt function, {\bf prielse()}, which returns
+                the value of the else case, i.e. a value which is true when
+                no priority inputs are true.
+
+                The entire array need not be assigned. Unused entries will be
+                ignored, but where an entry is evaluated (its output is used)
+                it must have an assigned input value. The converse is not
+                true - an entry that has been assigned need not be evaluated.
+                Assignments need not be done in any particular order. This method
+                of usage is designed to allow an array that is larger than
+                required to be created after which entries can be
+                assigned as immediate execution progresses. At the completion of
+                immediate execution a priority encoder will be created in target
+                code of a size which matches the entries in the array that have
+                actually been used. The avoids prior knowledge of the required
+                size of the encoder.
+        
+                A priority variable array member may be assigned more than once
+                but the default behaviour is that the final value assigned prior
+                to termination of immediate execution prevails, all other
+                previous assignments being lost. This can be changed by setting
+                attribute "multiplein" to true in which case all assignments
+                will be collected and ORed together on completion of immediate
+                execution to form the input to that priority array member.
+
+                {\bf At the moment assignments to priority variables cannot
+                contain queue reads. This restriction may be removed later.}
+
+                A priority variable is always available.
+
+            \subsubsection{clock variables}
+            
+                \index{variable!clock}
+                \index{mode!clock}
+                \index{clock mode variables}
+                Variables of mode {\bf clock} are used to represent signals.
+                There may be a number of clocks to which program logic is
+                synchronised, but there will also be associated intermediate
+                clock signals used to connect together the hardware components
+                used to generate these program clocks, such as input buffers,
+                delay-locked loops and clock buffers.
+
+
+        \subsection{variable creation}
+
+            \index{variable!creation}
+            Variables are created during immediate execution by means of
+            inbuilt procedures. The most general procedure used is {\bf
+            var(...)}. This has two to four arguments -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(name, mode, type, init)
+            \end{lstlisting}
+
+            {\bf name} is the identifier for the created variable.
+
+            Most variable creation inbuilt procedures allow creation of multiple
+            variables of the same type, mode and initial value by replacing the
+            {\em name} argument by an identifier list enclosed in braces {\em \{v1,
+            v2,\dots\}}.
+
+            \index{variable!mode}
+            The {\bf mode} argument is optional and must be one of the keywords
+            {\bf immediate}, {\bf value}, {\bf selectvalue}, {\bf static} or
+            {\bf queue} - memory or input mode variables must be created by
+            other procedures (see below). If the mode argument is omitted the
+            mode will be {\bf immediate}.
+
+            \index{variable!type}
+            The type argument must be a type-valued expression or a string-valued
+            expression describing the type. A type-valued expression can be a
+            variable or variable member of type "type", the inbuilt functions {\bf
+            type()} or {\bf struct()}, or a user-defined function returning type
+            "type".
+            
+            Type specifications in general and type variables in particular
+            are described in a \autorefph{sec:types}.
+
+            \index{variable!initialisation}
+            \index{initialisation!variable}
+            The final argument to {\bf var()} is optional and is an
+            initialisation value. This may take one of three forms -
+            \blist
+            \item   a single immediate expression of appropriate type for a
+                    variable of primitive type
+            \item   a variable reference of matching type to the created
+                    variable
+            \item   a compound value
+            \blend
+            
+            For the first two of the above cases where the mode is immediate the
+            type argument may be the string "empty" in which case the variable type
+            will be the type of the initialisation argument.
+            
+            Where initialisation is provided and more than one variable is being
+            created (using \{...\}) then all variables will be initialised
+            identically.
+
+            Immediate, static and queue variables may be initialised. If they are a
+            compound type the initialisation argument will usually be a compound
+            value or a compound variable of suitable type, but a compound
+            type may be initialised by a single immediate value in which case all
+            members of the compound type will be initialised to that single value
+            (the members of the compound type must all be the same primitive type
+            appropriate to the initialisation value).
+
+            Uninitialised immediate and static variables are automatically
+            initialised to 0, 0.0, false or "" as appropriate to the type.
+
+            Queue variables when initialised contain a single datum.
+            Uninitialised queues have no value as they are not available.
+            Initialised queues have a value and they are available.
+
+            A value mode variable can be initialised, but this does not preclude
+            assignment of one or more other values later. A value mode variable can
+            be initialised with an immediate constant in which case it behaves as a
+            target constant unless assigned another expression. Uninitialised value
+            variables have no default value. If the value variable is a compound
+            type it may be initialised by a compound value.
+
+            Selectvalue variables cannot be initialised but their output when
+            no input is selected can be specified.
+
+            Examples of variable creation -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(byte, "int", 8);
+               var(sum, value, "uint:16");
+               var(even, static, "log");
+               var(pixel, queue, "uint:" + byte);
+               var(trigger, queue, "null");
+            \end{lstlisting}
+
+            The first has no mode declared, so is immediate. It is given an
+            initial value of 8. The remainder are target variables. The
+            second last example uses the '+' operator to concatenate an
+            integer to a string to form the word size. The final example is a
+            queue with no data which can be used as an event trigger.
+            These examples all use string-valued expressions for the
+            type argument. The following examples illustrate the use of
+            type-valued arguments -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(t1, type, "int:8");
+               var(v1, value, t1);
+               var(s2, static, type(v1));
+               var(t2, type, type(s2));
+               var(q1, queue, "[4]t2");
+               var(s3, static, "(f1, int:8, f2, [4]t1)");
+            \end{lstlisting}
+
+            \index{mode!immediate!creation}
+            \index{variable!immediate!creation}
+            For convenience the following procedures can be used instead of
+            {\bf var(...)} to create primitive immediate variables -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(name, init);
+               log(name, init);
+               str(name, init);
+               file(name, init);
+               type(name, typespec);
+               struct(name, field1, type1, field2, type2, .....);
+            \end{lstlisting}
+            In each case a single variable of the type described by the
+            procedure name is created. The initialisation arguments are optional.
+
+            These are further desribed in 
+            \blist
+            \item   {\bf int()} (\autorefph{sec:ipint})
+            \item   {\bf log()} (\autorefph{sec:iplog})
+            \item   {\bf str()} (\autorefph{sec:ipstr})
+            \item   {\bf file()} (\autorefph{sec:ipfile})
+            \item   {\bf type()} (\autorefph{sec:iptype})
+            \item   {\bf struct()} (\autorefph{sec:ipstruct})
+            \blend
+
+            \index{mode!target!creation}
+            \index{variable!target!creation}
+            Similarly target variables can be created by-
+            \begin{lstlisting}[gobble=12, language=threepl]
+                   static(name, type, init);
+                   value(name, type, init);
+                   queue(name, type, init);
+            \end{lstlisting}
+            which are equivalent to -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(name, static, type, init);
+               var(name, value, type, init);
+               var(name, queue, type, init);
+            \end{lstlisting}
+            In all the above {\em init} is optional.
+
+            These are further desribed in 
+            \blist
+            \item   {\bf static()} (\autorefph{sec:ipstatic})
+            \item   {\bf value()} (\autorefph{sec:ipvalue})
+            \item   {\bf queue()} (\autorefph{sec:ipqueue})
+            \blend
+
+            \index{mode!memory!creation}
+            \index{variable!memory!creation}
+            Memory variables are created by the inbuilt procedures -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               cmemory(name, ports, atype, dtype, init);
+               rmemory(name, ports, atype, dtype, init);
+            \end{lstlisting}
+            These create combinatorial output RAM (mode {\bf cmemory}) and
+            registered output RAM (mode {\bf rmemory}) respectively. {\em name} is
+            an identifier for the memory, {\em ports} is the number of ports, {\em
+            dtype} is the data type, {\em atype} is the address type and {\em init}
+            is an optional initialisation array (immediate array variable or
+            compound value).
+            
+            See {\bf cmemory()} (\autorefph{sec:ipcmemory}) and
+            {\bf rmemory()} (\autorefph{sec:iprmemory}),
+                        
+            \index{mode!clock!creation}
+            \index{variable!clock!creation}
+            Clock variables are created by the inbuilt procedure -
+             \begin{lstlisting}[gobble=12, language=threepl]
+                clock(name, ...attributes...);
+            \end{lstlisting}
+            
+            See {\bf clock()} (\autorefph{sec:ipclock}).
+           
+            \index{mode!input!creation}
+            \index{variable!input!creation}
+            Input variables are created by the inbuilt procedure -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               input(name, type, ...attributes...);
+            \end{lstlisting}
+            {\em name} is an identifier for the input variable.
+            {\em type} is the variable type.
+            {\em attributes} is optional and is either one or more key=value
+            attribute arguments or a map of attributes.These arguments can be
+            omitted and attributes added later by using inbuilt procedure {\bf
+            attributes()}.
+            
+            See {\bf input()} (\autorefph{sec:ipinput}).
+            
+            \index{mode!output!creation}
+            \index{variable!output!creation}
+            Output variables are created by the inbuilt procedure -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               output(name, type, source, attributes);
+            \end{lstlisting}
+            {\em name} is an optional identifier for the output variable.
+            {\em type} is the variable type (also optional).
+            {\bf source} is an optional source value for unconditional assignment.
+            {\em attributes} is an optional map of attributes. The argument
+            can be a map containing the attributes or can be a compound value
+            containing the attributes as key=value entries in one-dimensional
+            list. This argument can be omitted an attributes added later by
+            using inbuilt procedure {\bf attributes()}.
+            
+            See {\bf output()} (\autorefph{sec:ipoutput}).
+            
+            \index{variable!scope}
+            \index{scope!variable}
+            Variables are normally created within the scope containing the call
+            to the variable creation inbuilt procedure. However, if the variable
+            identifier has a leading "global.", "file.", "calling." or "local."
+            it is created in the specified scope.
+
+            Using "global.", global variables can be created from within any
+            scope.
+
+            Using "file.", variables can be created in the current (deepest)
+            file module scope.
+           
+            Using "local." allows the conditional creation of variables in
+            the scope of a module, procedure or function. For example the
+            code -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               m (...) {
+                   if (doit)
+                       static(s, "log");
+               }
+            \end{lstlisting}
+            will create static variable {\bf s} in the module if variable
+            {\bf doit} is true. However, the following code -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               m (...) {
+                   if (doit) {
+                       static(s, "log");
+                       int(j);
+                   }
+               }
+            \end{lstlisting}
+            creates variables {\bf s} and {\bf j} in the scope of the
+            {\bf if} block and not in the module scope. By changing
+            the code to -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               module
+               m (...) {
+                   if (doit) {
+                       static(local.s, "log");
+                       int(local.j);
+                   }
+               }
+            \end{lstlisting}
+            variables {\bf s} and {\bf j} are created in the scope of
+            the called module.
+            
+            Using "calling." allows the creation of variables in
+            the scope of the previous module, procedure or function.
+            This is useful for writing procedures to create variables, in
+            which case the created variable needs to be in the calling
+            scope, not the scope of the called procedure.
+
+            Variables may be created at any point in the code, but they
+            must have been created prior to being referenced.
+
+            A variable reference where the identifier has a scope prepended
+            will attempt to locate the variable only in that scope.
+
+            It is important to note that variables exist independently of the
+            scope in which they are created. The scope only contains the map
+            which ties the variable identifier to the variable, not the
+            variable itself. That map disappears with the scope. If a pointer
+            to a variable is kept then that variable can be referred to via
+            the pointer even though the scope in which the variable was
+            created has disappeared. For example the following code illustrates
+            a variable created within a function which returns a pointer to that
+            variable so that it can be used elsewhere -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "->");
+               p = make_static("uint:12");
+
+               when (l)
+                   p-> <- v;
+
+               function
+               make_static (str(t)) {
+                   static(s, t);
+                   return(&s);
+               }
+            \end{lstlisting}
+            Here a pointer variable {\bf p} is assigned a pointer to a
+            static variable created by function {\bf make\_static}. It can
+            then be used by dereferencing the pointer; in the example the
+            static variable is conditionally assigned a value {\bf v} via
+            the pointer {\bf p}.
+            
+            \index{variable!creation!computed identifier}
+            \label{subsec:strvarcreat}
+            When creating any variable the identifier may be computed
+            by using the indirect operator on a string variable rather than
+            using an explicit identifier, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(i, 23);
+               str(name, "global.var" + i);
+               log(name->);
+            \end{lstlisting}
+            will create a logical immediate variable in global scope whose
+            identifier is {\bf var23}.
+
+
+
+
+
+
+    \section{Types}\label{sec:types}
+
+        \index{type}
+        \index{immediate!variable!type}
+        Immediate variables may be of primitive type
+        \blist
+        \item   bits
+        \item   uint
+        \item   int
+        \item   log
+        \item   str
+        \item   float
+        \item   \verb'->'
+        \item   type
+        \item   list
+        \item   map
+        \item   file
+        \item   empty
+        \blend
+
+        {\bf bits} is a long unsigned integer (64 bit). Arithmetic operators
+        +, -, *, / and \verb'%' and relational operators \verb'<', \verb'<=',
+        \verb'>' and  \verb'>=' cannot be used on this type, but the bitwise
+        logical operators and equality and inequality operators can be used.
+
+        {\bf int} is a signed long integer (64 bit).
+
+        {\bf uint} is an unsigned long integer (64 bit).
+
+        {\bf log} is a boolean type whose value is 'true' or 'false'.
+
+        {\bf str} is a character string type.
+
+        {\bf float} is a floating point double precision type.
+
+        {\bf \verb'->'} is a pointer to a variable, or components of a variable.
+
+        {\bf type} is a type specification.
+
+        {\bf list} is a list.
+
+        {\bf map} is a sorted map with string keys.
+
+        {\bf file} is a file.
+
+        {\bf empty} for immediate mode specifies that the type will be taken from
+        the variable initialisation argument.
+
+        Integer constants and expressions which are 0 or positive are automatically
+        given type {\bf uint}. Integer variables can be declared {\bf uint} but
+        they are implemented as {\bf int} and no checks are made that the value of
+        a uint remains non-negative.
+
+        \index{target!variable!type}
+        Target variables may be of primitive type
+        \blist
+        \item    bits:{\em n}
+        \item    int:{\em n}
+        \item    uint:{\em n}
+        \item    log
+        \item    fixed:{\em m}.{\em n}
+        \item    ufixed:{\em m}.{\em n}
+        \item    float:{\em m}.{\em n}
+        \item    null
+        \blend
+
+        {\bf bits:{\em n}} is a word of n bits. This is used for bit patterns that
+        do not represent weighted binary arithmetic values, e.g. ASCII
+        characters or gray codes. It can also be used where a variable is
+        used at different times for different types, e.g. a communications
+        bus in which case other types are cast in or out of it. This type
+        cannot be used in arithmetic operations.
+
+        {\bf int:{\em n}} and {\bf uint:{\em n}} are integers or unsigned
+        integers respectively whose size in bits is explicitly
+        declared by {\em n}. The size {\em n} must be an immediate expression.
+
+        {\bf log} is a logical type whose value is {\bf true} or {\bf false}.
+
+        {\bf fixed:{\em i}.{\em f}} and {\bf ufixed:{\em i}.{\em f}} are fixed
+        point or unsigned fixed point types respectively with an {\em i} bit
+        integer part and {\em f} bit fractional part. {\em i} or {\em f} may be
+        zero (but not both). The maximum size of the fractional part is 63 bits.
+        
+        {\bf float:{\em e}.{\em f}} is a floating point type with an {\em f}
+        bit mantissa and {\em e} bit biased exponent.
+
+        \index{null!queue}
+        \index{queue!null}
+        A {\bf null} type can be used where a queue is being used only as an
+        event trigger. It cannot be used for variables of other modes.
+
+        \index{compound!type}
+        \index{type!compound}
+        Variables may be of compound type
+        \blist
+        \item   struct
+        \item   array
+        \blend
+
+        A {\bf struct} is a compound type consisting of fields named by
+        an identifier. The fields may be any type, primitive or compound.
+
+        An array can be any type, including {\bf struct}s.
+        
+        There is an enumerated type. This is effectively a primitive type
+        but unlike the others is not specified the same way (see below).
+
+        \subsection{type specifications}
+        
+            \index{type!specification}
+            Where variable creation procedures require a type argument
+            this can either be a string type description expression or
+            a type variable (\autorefph{sec:iptype}).
+            
+            If a string representation of a type is used, which is the most
+            common way to specify types, this is just a string constant,
+            a string expression or a string variable.
+            
+            A type is specified by one of the following -
+            \blist
+            \item   A type keyword with optional trailing ":" and width
+                    where appropriate.
+            \item   The identifier of a type variable.
+            \item   The identifier of a string variable containing a type
+                    description string.
+            \item   A structure description.
+            \blend
+
+            Type keywords are
+            \blist
+            \item   {\bf bits} - a word of arbitrary bit encoding
+            \item   {\bf uint} - an unsigned integer
+            \item   {\bf int} - a signed integer
+            \item   {\bf ufixed} - an unsigned fixed point value
+            \item   {\bf fixed} - a fixed point value
+            \item   {\bf float} - a floating point value
+            \item   {\bf log} - a boolean
+            \item   {\bf str} - a string
+            \item   {\bf \verb'->'} - a pointer
+            \item   {\bf type} - a type
+            \item   {\bf class} - a class
+            \item   {\bf list} - a list
+            \item   {\bf map} - a map
+            \item   {\bf file} - a file
+            \item   {\bf null} - a dataless queue
+            \item   {\bf empty} - the immediate type will be taken from the
+                                  initialisation argument
+            \blend
+            An optional data width can only be appended to target mode numeric
+            types ({\bf uint}, {\bf int}, {\bf fixed} or {\bf float)}). The
+            width specification is separated from the type by a colon. For {\bf
+            uint}, {\bf int} a single width in bits is required. The {\bf
+            ufixed} and {\bf fixed} types have integer part width followed by
+            '.' and then fractional part width. For type {\bf float} the width
+            specification is given in the form {\bf {\em e}.{\em m}} where {\em
+            m} gives the number of bits in the mantissa and {\em e} the number
+            of bits in the biased exponent (the total size is 1+n+m as there is
+            also a sign bit). The actual mantissa fraction has an implied
+            integer 1 preceding the fraction.
+            
+            A type variable can be created by means of inbuilt procedures {\bf
+            type()} or {\bf var()}. Inbuilt procedure {\bf struct()} also creates a
+            type variable.
+            
+            Assuming we have created the variables -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(i, 8);
+               str(s, "uint:");
+            \end{lstlisting}
+            the following are valid type strings -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               "uint:8"
+               "uint:"+i
+               s+8
+            \end{lstlisting}
+            The first is a string constant. The second and third are string
+            expressions, the "+" giving concatenation when one operand is
+            a string (the other being converted to a string if necessary).
+            
+            Any spaces in a type specification string are removed prior
+            to its evaluation.
+            
+            \index{type!type}
+            A type variable is a variable of type "type" and is created by
+            the {\bf type()} inbuilt procedure, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               type(t, "uint:"+8);
+            \end{lstlisting}
+            The {\bf type()} inbuilt procedure takes a type specification string
+            and constructs a type variable containing that type value. There is an
+            inbuilt function, {\bf typestring()}, which will return a type
+            description string of the type of the argument. These roughly
+            complementary facilities allow manipulation of types. The type of a
+            module, procedure or function argument can be turned into a string,
+            modified, then used as the type of a new variable. Similarly types can
+            be constructed initially using parameters.
+
+            The {\bf struct()} inbuilt procedure also creates a variable
+            of type "type".
+           
+            The following example creates static variables a, b and c which
+            are unsigned integers of width 8 bits -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(i, 8);
+               str(s, "uint:");
+               var(a, static, "uint:8");
+               var(b, static, "uint:"+i);
+               var(c, static, s+8);
+            \end{lstlisting}
+
+            Note that types {\em uint} and {\em int} which can be used for
+            both immediate and target mode variables {\bf must} have a width
+            specified for target mode variables but {\bf must not} have a
+            width specified for immediate variables.
+            
+            Where a type key word is expected an identifier of a variable of type
+            "str" or type {\bf type} may be used. Such an embedded variable must
+            not be followed by a width specification! If the embedded variable is
+            type "str" then the string contained in the variable must itself be a
+            valid type description string. The identifier may have a preceding
+            scope such as {\bf calling.}, {\bf global.} etc.
+            Thus type string expressions and type variables can be nested,
+            e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               str(s1, "uint");
+               int(i, 8);
+               type(t, s1+i);
+               queue(p, "[4][3]t");
+               static(s, "[5]s1");
+            \end{lstlisting}
+            This nesting of string and type variables can be to any depth.
+            The following is incorrect as an embedded variable cannot be followed
+            by a width specification, i.e. it must be a complete type -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               type(t, "uint");
+               queue(p, "t:8"); // ERROR!
+            \end{lstlisting}
+            
+            Note that variables of type {\bf type} can be assigned to variables of
+            type "str" and vice versa and in each case a conversion will be
+            applied. However a string assigned to a type variable must have valid
+            type syntax or a fatal error occurs.
+            
+            Note also that a string describing a type which contains an embedded
+            identifier must be able to access that identifier when the string
+            is used to create a type. If for example the string is passed
+            to a module, procedure or function and is used within that
+            code body as the type of a variable then the variable embedded
+            within the type string must be accessible in the current scope.
+            Where a string is passed as an argument to a type parameter the
+            conversion occurs in the scope of the call, but if the string
+            is passed to a string parameter and then used later then there
+            may be a problem with the scope.
+            
+            The following example works as expected -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   f1, "int",
+                   f2, "log"
+               );
+               p("[3]s");
+
+               procedure p(type(t)) {
+                   var(v, t);
+                   .
+               }
+            \end{lstlisting}
+            The argument is a string describing a type and contains the embedded
+            type variable {\bf s} (this could also have been a string variable).
+            The procedure parameter {\bf t} is type {\bf type} and will be
+            assigned the type derived from the string. When the argument is
+            assigned to the procedure parameter the embedded
+            variable {\bf s} will be evaluated in the calling scope.
+            
+            If however we change the example to -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   f1, "int",
+                   f2, "log"
+               );
+               p("[3]s");
+
+               procedure p(str(t)) {
+                   var(v, t);  // cannot find embedded variable 's'!
+                   .
+               }
+            \end{lstlisting}
+            then the argument is passed unchanged and an attempt to use it as
+            a type within the procedure body fails as embedded variable {\bf s}
+            is not accessible within the scope of the procedure body.
+            
+            There are two ways this error could be overcome. We could
+            explicitly specify the calling scope in the argument -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   f1, "int",
+                   f2, "log"
+               );
+               p("[3]calling.s");
+
+               procedure p(str(t)) {
+                   var(v, t);
+                   .
+               }
+            \end{lstlisting}
+            but this seems rather unsatisfactory. Alternatively we could force the
+            conversion from string to type by using inbuilt function {\bf
+            strtotype()} \autorefph{sec:ifstot}. The parameter is of type "str" so
+            the assignment of the resulting type argument to the string parameter
+            would convert the value back to string automatically.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   f1, "int",
+                   f2, "log"
+               );
+               p(strtotype("[3]s"));
+
+               procedure p(str(t)) {
+                   var(v, t);
+                   .
+               }
+            \end{lstlisting}
+            We could have also used an intermediate type variable -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   f1, "int",
+                   f2, "log"
+               );
+               type(it, "[3]s");
+               p(it);
+
+               procedure p(str(t)) {
+                   var(v, t);
+                   .
+               }
+            \end{lstlisting}
+            
+
+
+        \subsection{arrays}
+
+            \index{array}
+            \index{type!array}
+            \subsubsection{creating arrays}   
+
+                \index{type!array!creation}
+                \index{array!creation}
+                Arrays are created by prepending dimensions in brackets
+                to the type, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   var(pix, value, "[3][3]uint:8");
+                   var(sum, static, "[10]int:16");
+                   var(q1, queue, "[2]uint:8");
+                \end{lstlisting}
+                \index{array!dimensions}
+                \index{array!undimensioned}
+                \index{dimensions!missing}
+                One or more dimensions may be omitted (empty brackets) for module,
+                procedure or function parameters in which case they will be
+                supplied from the matching argument. A parameter array which is
+                initialised may also have some dimensions omitted, in which case
+                the missing dimensions will be inferred from the  argument if
+                supplied or else by default from the initialisation. Either or both
+                the argument or the initialisation may be a variable of matching
+                compound type or a compound value.
+                
+                If a parameter has one or more undimensioned arrays and it has
+                no initialiser and is not passed an argument, the undimensioned
+                arrays will be given dimensions of 0.
+
+                Array dimensions cannot be omitted where a variable is not a
+                module, procedure or function parameter and is not initialised.
+                
+                The array type may be an identifier of a type or string variable
+                which specifies any type including an array.
+
+                Arrays may be used for modes {\bf immediate}, {\bf value}, {\bf
+                selectvalue}, {\bf static} or {\bf queue}. Variables of modes
+                {\bf memory} or {\bf clock} do not have types and hence cannot
+                be created as array types. Variables of mode {\bf priority}
+                must be arrays of {\em log} (default type if omitted).
+
+                Where array dimensions are given by immediate variables or
+                expressions a type string is created by concatenating the
+                dimensions and surrounding brackets, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   int(dim1, 8);
+                   int(dim2, 4);
+                   var(a, queue, "["+dim1+"]["+dim2+"]uint:8");
+                \end{lstlisting}
+                Care should be taken to parenthesize nested arithmetic
+                expressions where necessary to ensure that they are evaluated
+                first into numeric values prior to concatenation with strings,
+                otherwise the evaluation order may be erroneous, for example
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   int(i, 2);
+                   int(j, 3);
+                   var(a, queue, "["+i+j+"]uint:8");
+                \end{lstlisting}
+                will give a dimension of 23 not 5.
+
+            \subsubsection{referencing array members}
+
+                \index{type!array!reference}
+                \index{array!reference}
+                \index{array!subscripts}
+                An array subscript may be -
+                \blist
+                \item    a single subscript
+                \item    a subscript range
+                \item    missing
+                \blend
+                Trailing subscripts may be omitted entirely, implying that the
+                array reference includes the full dimensions where the
+                subscripts are omitted.
+                
+                A subscript range selects a sub-array.
+                If the first subscript of the pair is higher than the second
+                the sub-array members will be in reverse order.
+
+                Where arrays have greater than one dimension subscripts are
+                concatenated, each subscript being enclosed in brackets.
+                Intermediate subscripts may be omitted by using empty brackets.
+                Subscripts or subscript ranges may be any expression whose type
+                is {\em uint} or {\em int}. Subscripts may be immediate, value,
+                selectvalue, static or queue mode.
+                             
+                The following are subscript examples -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   a[2]        constant subscript
+                   a[i]        variable subscript
+                   a[2..j-1]   subscript range
+                   a[]         missing subscript - equivalent to full range
+                   a[2][i]
+                   a[2..4][i..i+3]
+                \end{lstlisting}
+
+                Some caution should be exercised when using target subscripts.
+                These employ considerable logic but more importantly the logic
+                delays may prove difficult to fit within timing constraints. In
+                particular delays can become large where the array dimensions
+                are large or array references are nested. At low clock rates
+                this is not a concern.
+
+
+
+        \subsection{structs}\label{sec:ssecstructs}
+        
+            \index{struct}
+            \index{type!struct}
+            Structures are usually created by using inbuilt procedure
+            {\bf struct()}, but they may also be specified by
+            a type string.
+
+            \subsubsection{using the struct() procedure}
+            
+                \index{type!struct!creation}
+                \index{struct!creation}
+                The first argument of the inbuilt procedure {\bf struct(...)}
+                is an identifier giving the struct name which will be created
+                as a variable of type "type". This is followed by a number of
+                argument pairs, the first component being an identifier giving
+                the field name and the second an associated type string-valued
+                expression.
+                
+                If the first component of a pair is the keyword
+                {\bf extends} then the second component must be a struct name.
+                The fields of that struct will be included in this struct at
+                that point. The type of a field can of course be another struct
+                in which case that struct is nested (rather than being
+                extended).
+                
+                The first component of a pair may be a comma-separated list
+                of identifiers enclosed in braces in which case several fields
+                of the same type will be created, one for each field identifier
+                in the list.
+                
+                The second component of a pair is the type of the field. This
+                is a string specifying the type or is a type variable.
+                
+                A field type cannot be, or contain, an undimensioned array.
+                
+                Fields are stored in the order in which they are listed.
+                
+                Examples -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(pixel,
+                       pix,    "uint:8",
+                       hr,     "log",
+                       vr,     "log"
+                   );
+                \end{lstlisting}
+                This declares a pixel structure which has an 8-bit unsigned
+                integer field called "pix', and horizontal and vertical reset
+                indicators which are logical (1 bit). The arguments are all
+                string constants but could be string variables or expressions.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(win,
+                       pixwin, "[3][3]pixel",
+                       edge,   "log"
+                   );
+                \end{lstlisting}
+                This example contains a field which has as its type the
+                previous structure. If we create a variable of this type -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   var(a, queue, win);
+                \end{lstlisting}
+                then we can access the pixel value of one member of the window
+                by -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   ...a[1][0].pix...
+                \end{lstlisting}
+
+                In the following case
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(pixaddr,
+                       extends,  pixel,
+                       address,  "uint:19"
+                   };
+                \end{lstlisting}
+                we have created a structure which includes the fields of struct
+                {\em pixel}. This is a single level struct and is not nested.
+
+                To create multiple fields of the same type a list of field
+                identifiers may be used, enclosed in braces, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(pixaddr,
+                       f1,          "int",
+                       {f2, f3},    "log"
+                   };
+                \end{lstlisting}
+
+                Structs are created within the scope containing the call to the
+                structure creation inbuilt procedure unless the struct identifier
+                has a leading "global.", "file.", "calling." or "local." in
+                which case it is created in the specified scope. Structs may be
+                created at any point in the code, but they must have been
+                created prior to being referenced.
+
+                A struct reference where the identifier has a leading "global.",
+                "file.", "calling." or "local." will attempt to locate the
+                struct only in the specified scope.
+
+                Note that structs must not mix types {\bf uint}, {\bf int}, {\bf
+                ufixed}, {\bf fixed} or {\bf float} such that some have a width
+                specified and some do not. If the struct is to be used for
+                immediate variables then there must be no widths specified. If the
+                struct is to be used for target variables then widths must be
+                given for these types. Types {\bf log} and {\bf enum} can be
+                interpretted as either immediate or target mode so can be included
+                in an immediate struct or a target struct. A target type can
+                howvere be included in an immediate struct by using a pointer to
+                the target type.
+
+            \subsubsection{using a string specification}
+            
+                A struct can also be created using a string specification. This
+                consists of outside parentheses enclosing field/type pairs, for
+                example
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   "(a, log, b, [3]uint:8)"
+                \end{lstlisting}
+                Field identifiers cannot be enclosed in braces; if several
+                successive fields have the same type they must still be
+                specified separately. String or type variable identifiers can
+                be included where a type would be expected. The following two
+                statements are equivalent -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   type(t, "(a, log, b, log, c, [3]uint:8)");
+                \end{lstlisting}
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(t,
+                       {a, b}, "log",
+                       c       "[3]uint:8"
+                   );
+                \end{lstlisting}
+
+                Any spaces in the specification string are removed prior
+                to its evaluation.
+
+                Structs may be used for modes {\bf immediate}, {\bf value},
+                {\bf selectvalue}, {\bf static} or {\bf queue}. Structs cannot
+                be used for modes {\bf memory}, {\bf clock} or {\bf priority}.
+
+            \subsubsection{referencing struct members}
+                
+                \index{type!struct!reference}
+                Struct members are accessed by using the struct name followed
+                by "." and the field identifier, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   v.f1
+                \end{lstlisting}
+                If the field has a compound type the field name may be
+                followed by more field identifiers or subscripts, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   v.f1[2].f2
+                \end{lstlisting}
+                
+                Note that structs are interchangeable if their fields and
+                associated types are identical. Thus the following code
+                is legitimate -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   struct(s1, f1, "int", f2, "log"};
+                   struct(s2, f1, "int", f2, "log"};
+                   var(v1, s1);
+                   var(v2, s2);
+                   v1 = v2;
+                \end{lstlisting}
+                though there seems no reason to do this and the practice
+                is confusing and to be discouraged.
+
+
+        \subsection{lists}\label{sec:sseclists}
+        
+            \index{list}
+            \index{type!list}
+            Lists are created by inbuilt procedure {\bf var()} with type string
+            "list". An initialiser may be provided which must be another list
+            variable or a compound value, in which case values will be copied
+            into the new list. If multiple list variables are created using a
+            variable list as the first argument then independent lists will be
+            created (they are not pointers to the same list). If an initialiser
+            is used when creating multiple list variables, each will be
+            initialised with data copied from the initialising list. If the
+            initialiser is a compound value the list must not contain nested
+            lists, null entries or key=value entries.
+            
+            List entries are always values, they are not pointers to other
+            variables!     
+            
+            List entries must only be immediate, clock, cmemory or rmemory mode.
+            Variables of other modes cannot be assigned to a list but pointers to
+            them can be. \footnote {Those target modes are allowed as they do
+            not have types and hence do not have subscripts or fields. The
+            complexities of nested subscripts and fields preceding and following
+            a list variable with its subscript (index) have been managed in the
+            case of immediate mode variables but this has yet to be expanded
+            to target modes. A future version of 3PL may allow all variable
+            modes to be appended to lists.}
+            
+            List entries may be any type and entries do not have to be
+            the same type.
+            
+            List operations are summarised in the following table -
+            
+            \begin{tabular}{| l | l |}
+            \hline
+            v = get(l, index);          & get the list entry \\
+            .... l[index]....           & get the list entry \\
+            append(l, index, v);        & append an item at the index position \\
+            appendall(l, index, l2);    & append contents of another list \\
+            change(l, index, v);        & change a list entry \\
+            l[index] = v;               & change a list entry \\
+            remove(l, index);           & remove a list entry \\
+            n = entries(l)              & get the number of list entries \\
+            \hline
+            l = l2;                     & assign another list \\
+            l = \{\dots\};              & copy a compound list \\
+            l = null;                   & clear the list \\
+            \hline
+            \end{tabular}
+
+            The inbuilt function {\bf entries()} returns the number of elements in
+            a list (or a map).
+            
+            Lists may be nested within arrays, structs and other lists and maps.
+            
+            Lists may contain arrays, structs and other lists and maps.
+            
+            Lists may contain null entries.
+            
+            A list can referenced via a pointer and a list entry can be selected
+            using a subscript after the pointer dereference.
+            
+            {\bf v = l[index] - get a list element using subscript notation}\\
+            {\bf v = get(l, index) - get a list element using a function}
+            
+            The form using subscript notation was a later addition to 3PL.
+            The inbuilt function has been retained as an alternative.
+            
+            List items are indexed starting at 0. The index may range from 0 to
+            {\bf entries(l) - 1} inclusive. If {\bf index} is outside this range
+            a fatal error occurs.
+            
+            A list item can also be accessed using a subscript. This can be done
+            to any depth. If a list entry contains structs, arrays, lists or maps
+            nested to any depth then trailing subscripts and fields can be used.
+            In the case of lists the subscript again is the index into the list.
+            In the case of maps the subscript may be a string (the key) or an
+            integer (an index to a key).
+            
+            In the case of the following -
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct (s,
+                   f1, "int",
+                   f2, "[4]list"
+               );
+               var(v, s);
+               var(va, "[3]int", {4, 6, 8});
+               append(v.f2[1], 0, va);
+            \end{lstlisting}
+            we could access the nested integer array by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               ........v.f2[1][2]....
+            \end{lstlisting}
+            If we wanted the whole array then -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               ........v.f2[1]....
+            \end{lstlisting}
+            would be appropriate.
+            
+            Note that where lists are assigned nested types the values are copies,
+            not pointers to the original variable.
+           
+
+
+
+            {\bf append(l, index, v) - append a list element}
+            
+            The item {\bf v} is appended at the position indicated by {\bf
+            index} in list {\bf l}. The index may range from 0 to {\bf
+            entries(l)} inclusive. If {\bf index} is outside this range a fatal
+            error occurs. An index of 0 inserts at the beginning of the list and
+            an index equal to the list size appends to the end of the list. If
+            the index argument is omitted the item will be appended to the end
+            of the list. If the last argument is omitted null will be appended.
+
+
+            {\bf appendall(l, index, l2) - append list elements from another list}
+            
+            The contents of list {\bf l2} are appended at the position indicated
+            by {\bf index} in list {\bf l}. The index may range from 0 to {\bf
+            entries(l)} inclusive. If {\bf index} is outside this range a fatal
+            error occurs. An index of 0 inserts at the beginning of the list and
+            an index equal to the list size appends to the end of the list. If
+            the index argument is omitted the items will be appended to the end
+            of the list.
+
+
+            {\bf l[index] = v - change a list element using subscript notation}\\
+            {\bf change(l, index, v) - change a list element using an inbuilt procedure}
+            
+            The form using subscript notation was a later addition to 3PL.
+            The inbuilt procedure has been retained as an alternative.
+
+            The item in list {\bf l} at position {\bf index} is replaced by item
+            {\bf v}. The index may range from 0 to {\bf entries(l) - 1}
+            inclusive. If {\bf index} is outside this range a fatal error
+            occurs. The new value does not have to be the same type as the
+            previous value. If the last argument is omitted the list item will
+            be changed to null.
+            
+            A list item may be changed by assigning using a subscript, the
+            subscript being the index into the list of the item to be changed.
+            Where an item in a list has nested structs, arrays, lists or maps
+            trailing subscripts and fields may be used to change items within
+            those nested types.
+            
+            In the case of the following -
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct (s,
+                   f1, "int",
+                   f2, "[4]list"
+               );
+               var(v, s);
+               var(va, "[8]int");
+            \end{lstlisting}
+            we could append an integer 3 to the nested list in {\em v} by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               append(v.f2[1], 0, 3);
+            \end{lstlisting}
+            We could then change that item to the value of variable {\em va}
+            by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               v.f2[1] = va;
+            \end{lstlisting}
+            We could now assign to the nested integer array by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               v.f2[1][3] = 15;
+            \end{lstlisting}
+
+
+            {\bf remove(l, index) - remove a list element}
+
+            The item in list {\bf l} at position {\bf index} is removed.
+            The index may range from 0 to {\bf entries(l) - 1}
+            inclusive. If {\bf index} is outside this range a fatal error
+            occurs.
+            
+
+
+            {\bf l = l2 - assign a list}
+
+            If the LHS of an assignment is a list variable and the RHS is a
+            list, the LHS list will be replaced by the RHS list. Unlike other
+            immediate assignments the LHS is assigned the RHS value, not a copy
+            of the RHS value. If a copy is required then the inbuilt function
+            {\bf copy()} \autorefph{sec:ifcopy} can be used.
+
+            The RHS may be a one-dimensional compound value list, in which case it
+            must not contain nested lists, null entries or key=value entries.
+            The LHS list is cleared and values from the compound list are
+            copied into the LHS list.
+
+
+            {\bf l = null - clear a list}
+
+            If the LHS of an assignment is a list variable and the RHS is
+            explicitly the keyword {\bf null} (not a null value) the list is
+            cleared.
+
+
+
+
+
+
+        \subsection{maps}\label{sec:ssecmaps}
+        
+            \index{map}
+            \index{type!map}
+            Maps are created by inbuilt procedure {\bf var()} with type string
+            "map". An initialiser may be provided which must be another map
+            variable, or a compound value, in which case values will be copied
+            into the new map. If multiple map variables are created using a
+            variable list as the first argument then independent maps will be
+            created (they are not pointers to the same map). If an initialiser
+            is used when creating multiple map variables, each will be
+            initialised with data copied from the initialising map. If the
+            initialiser is a compound value the list must not contain nested
+            lists or null entries and all entries must have key=value format.
+            
+            Map keys are strings (type "str"). The elements in a map are sorted
+            in the lexicographic order of their keys and remain so following
+            additions or deletions.
+            
+            Map entries must only be immediate, clock, cmemory or rmemory mode.
+            Variables of other modes cannot be assigned to a map but pointers to
+            them can be. \footnote {Those target modes are allowed as they do
+            not have types and hence do not have subscripts or fields. The
+            complexities of nested subscripts and fields preceding and following
+            a map variable with its subscript (key) have been managed in the
+            case of immediate mode variables but this has yet to be expanded
+            to target modes. A future version of 3PL may allow all variable
+            modes to be included in maps.}
+            
+            Map entries may be any type and entries do not have to be
+            the same type.
+            
+            Map operations are summarised in the following table -
+
+            \begin{tabular}{| l | l |}
+            \hline
+            v = get(m, key);    & get the map entry from a key \\
+            v = m[key];         & get the map entry from a key \\
+            v = get(m, index);  & get the map key at index \\
+            v = m[index];       & get the map key at index \\
+            put(m, key, v);     & put an item with a key \\
+            m[key] = v;         & put an item with a key \\
+            putall(m, m2);      & put items from another map \\
+            remove(m, key);     & remove a map entry \\
+            n = entries(m)      & get the number of map entries \\
+            \hline
+            m = m2;             & assign a map \\
+            m = \{\dots\};      & copy a compound list \\
+            m = null;           & clear the map \\
+            \hline
+            \end{tabular}
+
+            The inbuilt function {\bf entries()} returns the number of elements in
+            a map (or a list).
+
+            
+            {\bf v = m[key] - get a map element using a key (subscript notation)}\\
+            {\bf v = get(m, key) - get a map element using a key (inbuilt function)}\\
+           
+            The map item for the key is returned.
+            If no item with that key exists then null is returned.
+            
+            The use of a key as a subscript to access a map was a later addition
+            to 3PL. The inbuilt function has been retained as an alternative.
+            
+            A map item may also be referenced by using the string key
+            as a 'subscript'. If the map is nested within an array, struct, list
+            or map additional subscripts, fields, indices or keys as appropriate may
+            precede the map key itself. If the map item is itself a nested
+            type containing arrays, structs, lists or maps then trailing
+            subscripts, fields, indices or keys as appropriate can be appended.
+
+            
+            {\bf v = m[index] - get a map key using an index (subscript notation)}\\
+            {\bf v = get(m, index) - get a map key using an index (inbuilt function)}
+            
+            The use of an integer index as a subscript to access a map was a later addition
+            to 3PL. The inbuilt function has been retained as an alternative.
+            
+            Map items are indexed starting at 0. Map entries are ordered
+            according to the lexicographic order of the keys. The index may
+            range from 0 to {\bf entries(l) - 1} inclusive. If {\bf index} is
+            outside this range a fatal error occurs. The key at that position is
+            returned. To get a value instead of a key using an index the calls
+            must be nested, e.g. get(get(m, index)) or alternatively m[m[index]].
+            
+            Access by means of an index allows iterative traversal of a whole map,
+            e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(m, "map");
+               .
+               .
+               .
+               for(int(i) ; i<entries(m) ; i++)
+                   println(m[m[i]]);
+            \end{lstlisting}
+            
+            The items will be accessed in lexicographic order.
+
+
+            {\bf m[key] = v) - put an element into a map using subscript notation}\\
+            {\bf put(m, key, v) - put an element into a map using an inbuilt procedure}
+            
+            The item {\bf v} is placed in the map {\bf m} against key
+            {\bf key}. If that key is already in the map the value will
+            be replaced. If the last argument is omitted null will be put
+            against the key. The key should be type "str" but if it is type
+            "int" or type "uint" it will be converted to a string when
+            the entry is inserted into the map.
+            
+            When using subscript form, subscripts, fields, indices and keys
+            may precede or follow the key 'subscript' as appropriate where
+            the map is itself is nested within a struct, array, list or map or
+            the map value is itself of nested types.
+
+
+            {\bf putall(m, m2) - put all elements from another map into a map}
+            
+            All items from map {\bf m2} are added to map {\bf m}. Where a
+            key already exists its value will be replaced.
+
+            
+            {\bf v = remove(m, key) - remove a map element using a key}
+            
+            The map item for the key is removed from the map.
+            If no item with that key exists then no change occurs.
+            
+            
+            {\bf m = m2 - assign a map}
+            
+            If the LHS of an assignment is a map variable and the RHS is another
+            map, the RHS map is assigned to the LHS variable. Unlike other
+            immediate assignments the LHS is assigned the RHS object, not a copy
+            of the RHS object. Thus m and m2 contain the same map and changes to
+            map entries  via either variable will be reflected in the other. If
+            a copy is required then the inbuilt function {\bf
+            copy()} \autorefph{sec:ifcopy} can be used.      
+
+            If the LHS of an assignment is a map variable and the RHS is a
+            compound value, the LHS map is cleared and the values in the RHS
+            are entered. The compound value list must not contain nested lists
+            or null entries and all entries must be key=value format.
+
+
+            {\bf m = null - clear a map}
+
+            If the LHS of an assignment is a map variable and the RHS is
+            explicitly the keyword {\bf null} (not a null value) the map is
+            cleared, i.e. all entries are removed.
+            
+            Maps may be compared using the \verb'==' operator. Two maps
+            will appear equal if they are indeed the same map (one assigned to
+            the other) or if the maps are independent but represent the
+            same mappings.
+
+
+
+        \subsection{enums}\label{sec:ssecenums}
+        
+            An enumerated type is usually created by using inbuilt procedure
+            {\bf enum()} or {\bf enumv()}, but it may also be specified
+            by a type string. Enumerated types have ordered values which are
+            selected by an associated identifier. Each value has an
+            associated unique ordinal which is not related to the ordering.
+            The order of enumerated type values is that of their occurrence
+            in the argument list of the procedures which create the type.
+
+            \index{type!enum!creation}
+            \subsubsection{using the enum() and enumv() procedures}
+                
+                The first argument of the inbuilt procedure {\bf enumv(...)}
+                is an identifier giving the enum name which will be created
+                as a variable of type "type". This is followed by a number of
+                argument pairs, the first component being an identifier
+                and the second an associated ordinal value which must be
+                a positive integer expression.  
+
+                Example -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   enumv(e1,
+                       none,   3,
+                       typea,  7,
+                       typeb,  5
+                   );
+                \end{lstlisting}
+                The identifiers and ordinals must be unique within this
+                enum, but the identifiers may be used in other enums
+                or as variable identifiers without conflict.
+                
+                If specific ordinals are not required the simpler procedure
+                {\bf enum()} can be used, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   enum(e1, none, typea, typeb);
+                \end{lstlisting}
+                which is the same as the previous example except that the
+                ordinals are now 0, 1, 2 etc.
+                
+                
+                
+            \subsubsection{using a string specification}
+            
+                An enum type can also be created using a string specification.
+                This consists of outside braces enclosing identifier/ordinal
+                pairs, for example
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   "{none, 3, typea, 7, typeb, 5}"
+                \end{lstlisting}
+                The ordinals must be explicitly specified.
+                
+                Note that
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   type(e1, "{none, 3, typea, 7, typeb, 5}");
+                \end{lstlisting}
+                is equivalent to
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   enumv(e1, none, 3, typea, 7, typeb, 5);
+                \end{lstlisting}
+
+                Any spaces in the specification string are removed prior
+                to its evaluation.
+
+
+            \subsubsection{selecting enum values}
+            
+                \index{type!enum!reference}
+                An enum value is selected by appending a "." and
+                the value identifier to the type identifier, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   type(e1, "{none, 3, typea, 7, typeb, 5}");
+                   var(v, e1);
+                   if (v == e1.typea)
+                       v = e1.typeb;
+                \end{lstlisting}
+                
+                Note that two enum types are interchangeable if their
+                identifiers and ordinals are identical ordered lists.
+                Thus for example if we create identical types -
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   type(e1, "{none, 3, typea, 7, typeb, 5}");
+                   type(e2, "{none, 3, typea, 7, typeb, 5}");
+                \end{lstlisting}
+                then types e1 and e2 are interchangeable, so we could write
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   var(v, e1);
+                       v = e2.typea
+                \end{lstlisting}
+                without error. However, there seems no legitimate reason to do
+                this and to avoid confusion it is to be discouraged.
+                
+                
+                
+            \subsubsection{associated functions}
+            
+                \index{type!enum!functions}
+                There are a number of inbuilt functions associated
+                with enumerated types -
+
+                \begin{tabular}{| l | l |}
+                \hline
+                ord(v)     \autorefph{sec:iford}     & the ordinal value of variable v \\
+                \hline
+                next(v)    \autorefph{sec:ifnext}    & the next value of variable v \\
+                \hline
+                prev(v)    \autorefph{sec:ifprev}    & the previous value of variable v \\
+                \hline
+                hasnext(v) \autorefph{sec:ifhasnext} & true if variable v has a next
+                                             value (i.e. it is not the last
+                                             value) \\
+                \hline
+                hasprev(v) \autorefph{sec:ifhasprev} & true if variable v has a previous
+                                             value (i.e. it is not the first
+                                             value) \\
+                \hline
+                first(x)   \autorefph{sec:iffirst}   & the first ordered value of
+                                             variable or enum type x \\
+                \hline
+                last(x)    \autorefph{sec:iflast}    & the last ordered value of
+                                             variable or enum type x \\
+                \hline
+                \end{tabular}
+
+                Note that the order of enum values is not given by the
+                magnitude of the ordinals but by their order in the argument
+                list of the creation procedure.
+                
+                The identifier of an enum value can be obtained by using
+                the inbuilt function {\bf tostring()} \autorefph{sec:iftostring}.
+  
+
+        \subsection{files}
+
+            \index{files}
+            Procedure {\bf println()}(\autorefph{sec:ipprintln}) can be used
+            to write to standard output.
+
+            A file variable is created using the inbuilt procedure {\bf file()}.
+            To read or write a file it must be opened. This is done by the
+            inbuilt procedure {\bf open()}(\autorefph{sec:ipopen}), e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               file(f1, "file1");
+               open(f1, "r");
+            \end{lstlisting}
+            where the "r" specifies opened for reading.           
+                    
+            A number of files are already open as global variables. {\bf stdin} is the
+            standard input, {\bf stdout} and {\bf stderr} are standard output and standard
+            error, and {\bf rpt} is the 3PL report file. The report file is {\bf
+            design\_name.rpt} if 3PL was called with the -r option, otherwise it is {\bf
+            stdout}.
+            
+            A file variable can be copied to another file variable, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                file(f1, "file1");
+                file(f2, "file2");
+                f2 = f1;
+            \end{lstlisting}
+            after which f1 and f2 now share the same file descriptor.
+            
+            A file opened for reading can be read by inbuilt function {\bf
+            readln()}(\autorefph{sec:ifreadln}). This function has one argument,
+            which is the file variable, and returns a line from the file as a
+            string.
+            
+            Formatted input lines can be read by
+            {\bf scanf()}(\autorefph{sec:ipscanf})
+            or {\bf fscanf()}(\autorefph{sec:ipfscanf}).
+            
+            If a file read is attempted at the end-of-file position an empty string
+            is returned. This can be tested by inbuilt function
+            {\bf hadeof()}(\autorefph{sec:ifhadeof}) which returns true if the
+            previous read occurred at end-of-file.
+            
+            A line can be written to a file opened for writing by
+            inbuilt procedure {\bf writeln()}(\autorefph{sec:ipwriteln}) where the
+            first argument is the file variable and the second argument is the
+            string to be written.
+            
+            Formatted lines can be written using {\bf printf()}(\autorefph{sec:ipprintf})
+            or {\bf fprintf()}(\autorefph{sec:ipfprintf}).
+            
+            On completion the file can be closed by {\bf
+            close()}(\autorefph{sec:ipclose}) where its argument is the file
+            variable.
+            
+            There are a number of inbuilt functions which can be used to test
+            files and directories. These do not require file variables but
+            operate on path names.
+
+            \begin{tabular}{| l | l |}
+            \hline
+            {\bf filecanread()}(\autorefph{sec:iffilecanread})            & file can be read\\
+            \hline
+            {\bf filecanwrite()}(\autorefph{sec:iffilecanwrite})          & file can be written\\
+            \hline
+            {\bf filedelete()}(\autorefph{sec:iffiledelete})              & delete file\\
+            \hline
+            {\bf fileexists()}(\autorefph{sec:iffileexists})              & file exists\\
+            \hline
+            {\bf filegetparent()}(\autorefph{sec:iffilegetparent})        & absolute path above file\\
+            \hline
+            {\bf fileisdir()}(\autorefph{sec:iffileisdir})                & file is a directory\\
+            \hline
+            {\bf fileisfile()}(\autorefph{sec:iffileisfile})              & file is a file\\
+            \hline
+            {\bf filelastmod()}(\autorefph{sec:iffilelastmod})            & time of last modification\\
+            \hline
+            {\bf filelength()}(\autorefph{sec:iffilelength})              & file length\\
+            \hline
+            {\bf filelist()}(\autorefph{sec:iffilelist})                  & list of files and sirectories\\
+            \hline
+            {\bf filelistdirs()}(\autorefph{sec:iffilelistdirs})          & list of directories\\
+            \hline
+            {\bf filelistfiles()}(\autorefph{sec:iffilelistfiles})        & list of files\\
+            \hline
+            {\bf filemkdir()}(\autorefph{sec:iffilemkdir})                & create a directory\\
+            \hline
+            {\bf filerename()}(\autorefph{sec:iffilerename})              & rename a file or directory\\
+            \hline
+            {\bf filesetreadonly()}(\autorefph{sec:iffilesetreadonly})    & change permission to read-only\\
+            \hline
+            \end{tabular}
+     
+     
+
+
+
+        \subsection{type conversion}
+
+            \index{type!conversion}
+            Types may be converted using the {\bf cast()} inbuilt function.
+
+            \subsubsection{immediate type conversion}
+
+                For immediate types, conversions between types {\em bits}, {\em
+                uint}, {\em int} and {\em str} are allowed with the provisos -
+                \blist
+                \item   int to uint gives an error if the integer is -ve
+                \item   str to numeric gives an error if not correctly formatted
+                \blend
+                A string to be converted to numeric must be
+                \blist
+                \item   a string of 0's and 1's preceded by "0b" or 0B"
+                \item   a string of hexadecimal digits preceded by "0x" or "0X"
+                \item   a string of octal digits preceded by "0"
+                \item   a string of decimal digits whose 1st digit is not 0
+                \blend
+                An {\em int} may be converted to a {\em float} and vice versa.
+
+            \subsubsection{target type conversion}
+
+                Target mode type conversions allowed are shown in the following
+                table -
+
+                \begin{tabular}{| l | l || l | l | l | l | l | l | l | l |}
+                \hline
+                \multicolumn{2}{| c |}{} & \multicolumn{8}{| c |}{to} \\
+                \multicolumn{2}{| c |}{} & bits & uint & int & ufixed & fixed & log & float & enum \\
+                \hline \hline
+                     & bits   & az & az & as & az & as & az & az & - \\ \cline{2-10}
+                     & uint   & az & az & as & cz & cs & az & - & az \\ \cline{2-10}
+                     & int    & as & -  & as & -  & cs & -  & - &  - \\ \cline{2-10}
+                from & ufixed & az & bz & bs & dz & dz & -  & - &  - \\ \cline{2-10}
+                     & fixed  & as & -  & bs & -  & ds & -  & - &  - \\ \cline{2-10}
+                     & log    & az & az & -  & -  & -  & a  & - &  - \\ \cline{2-10}
+                     & float  & az & -  & -  & -  & -  & -  & e &  - \\ \cline{2-10}
+                     & enum   & -  & az & -  & -  & -  & -  & - &  - \\
+                \hline
+                \end{tabular}
+
+                \blist
+                \item[{\bf a}] copy right justified
+                \item[{\bf b}] copy from left of binary point, ignoring fractional part
+                \item[{\bf c}] copy to left of binary point and zero fractional part
+                \item[{\bf d}] copy aligned with binary point truncating or zero padding least significant
+                  bits if size of fraction differs
+                \item[{\bf e}] copy with adjustments to biased exponent and mantissa as required
+                \blend
+
+                \blist
+                \item[{\bf z}] zero pad or truncate most significant end if width differs
+                \item[{\bf s}] sign extend or truncate most significant end if width differs
+                \blend
+
+                If casting to or from compound types any types are allowed
+                (including primitive types) as long as the numbers of bits are
+                identical. Conversions into or out of compound types is carried
+                out by mapping the bits in order without regard to component
+                boundaries.
+
+                When casting between int or uint and fixed or ufixed the binary
+                point is recognised and where appropriate the sign is
+                propagated, i.e. the cast retains numeric sense.
+
+                When casting between bits and fixed or ufixed the binary point
+                is not recognised and bits are simply right justified.
+
+                When casting between bits and int or fixed and the cast type is
+                wider, sign extension is performed instead of zero padding.
+
+                Type float can only be cast to another float, adjusting the
+                biased exponent and mantissa as required.
+
+                Type bits or uint can be cast to type log which will extract the
+                rightmost bit as false (0) or true (1). Casting type log to bits
+                or uint results in a single bit, zero padded where required.
+
+                Casting an enum to a uint provides the ordinal value (there is
+                also an ord() built in function). Casting a uint to an enum
+                selects the enum value given the ordinal.
+
+                The function call is
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   cast(expression, type)
+                \end{lstlisting}
+                where {\em type} is a string type specification or a type.
+
+
+        \subsection{pointers}\label{sec:pointers}
+
+            \index{type!pointer}
+            \index{pointer}
+            Pointers are immediate variables which can point to immediate or target
+            variables, or components of compound variables. They can also point to
+            classes, modules, procedures and functions. Target variables cannot
+            themselves be pointers. Pointers can only be used during immediate
+            execution, not target execution, i.e. all pointers are resolved before
+            target code is generated. A pointer type is indicated by a {\em \verb'->'}
+            in the type string. The type may be an array of pointers, e.g.
+            \index{pointer!creation}
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(ptr1, "->");
+               var(ptr2, "[10]->");
+               var(ptr3, immediate, "[10]->");
+            \end{lstlisting}
+            The first example is a single pointer, the second an array of
+            pointers. The 3rd example shows the redundant use of the {\em
+            immediate} keyword - unnecessary since omission of the variable
+            mode argument means that the variable is immediate.
+
+            An unassigned pointer has a null value, which can be tested.
+
+            Pointers may point to compound types (arrays, structs, subarrays,
+            struct fields etc.).
+
+            struct fields may be pointer types.
+
+            Note that the type of the variable pointed to is not specified. A
+            pointer may point to any type of variable and type checking is
+            done when the pointer is resolved.
+
+            \index{operator!\&}
+            \index{type!pointer!assignment}
+            \index{pointer!assignment}
+            A pointer variable is assigned using the immediate assignment
+            statement syntax
+            \begin{lstlisting}[gobble=12, language=threepl]
+               ptr1 = &v1;
+               ptr2[i] = &v2;
+               ptr3 = &println;
+            \end{lstlisting}
+            The {\em \verb'&'} operator gets a pointer to a variable, class, module,
+            procedure or function. A pointer to a variable can be to the whole
+            variable, a sub array, an array member or a struct field. A pointer can
+            also point to a list or a map. However, a pointer cannot point to a list
+            entry or a map entry or anything inside such an entry.
+            
+            A pointer reference from the {\em \verb'&'} operator can be -
+            \blist
+            \item   assigned to a pointer variable, array member or struct
+                    field
+            \item   passed as an argument to a pointer parameter
+            \item   used as an initialiser to a created pointer variable
+            \item   used as an initialiser within a compound value
+            \item   appear within a compound value on the RHS of an
+                    assignment statement
+            \item   appear within a compound value which is an
+                    argument in a module, procedure or function call
+            \blend
+            
+            For modules, procedures and functions these can be either inbuilt or
+            user-defined. Since variables and inbuilt and user-defined modules,
+            procedures and functions have separate identifier tables, and across these
+            tables identifiers may not be exclusive, the address operator {\bf
+            \verb'&'} searches in the following order -
+            \blist
+            \item   variables
+            \item   user-defined classes (there are no inbuilt classes)
+            \item   inbuilt modules
+            \item   user-defined modules
+            \item   inbuilt procedures
+            \item   user-defined procedures
+            \item   inbuilt functions
+            \item   user-defined functions
+            \blend
+            and returns the first that it encounters.
+
+            \index{type!pointer!null assignment}
+            \index{pointer!null assignment}
+            A pointer may be explicitly assigned null by -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               ptr = null;
+            \end{lstlisting}
+
+            \index{type!pointer!testing}
+            \index{pointer!testing}
+            Pointers may be tested for equality using the {\em ==} and {\em
+            !=} operators, e.g. -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               ptr1 == ptr2
+               ptr3 != null
+               ptr4 == &var[1].f
+            \end{lstlisting}
+            the other relational operators and arithmetic operators cannot be
+            used on pointers.
+
+            \index{type!pointer!resolving}
+            \index{pointer!resolving}
+            A pointer is resolved by using the operators {\em \verb'->'}. If
+            the pointer points to a compound type then subscripts or field
+            identifiers follow the {\em \verb'->'}. Subscripts and fields
+            associated with the pointer variable are placed following the
+            variable identifier and prior to the {\em \verb'->'}.
+            
+            A second version of the {\em \verb'->'} pointer operator can be used
+            to dereference pointers in arguments to modules, procedures or
+            functions. This operator is {\em \verb'->>'}. An attempt to
+            dereference a pointer which is null using {\em \verb'->'} results
+            in a fatal error. A null pointer dereferenced using {\em \verb'->>'}
+            results in a null value. As an argument this is equivalent to
+            omitting the argument. Thus if a module, procedure or function is
+            called using arguments which are pointers dereferenced by using
+            {\em \verb'->>'} then any pointer which is null will simply
+            omit the argument. Use of {\em \verb'->'} in this case would
+            give a fatal error. The two forms of pointer dereferencing are
+            otherwise identical but the resulting null from the second form
+            is not acceptable in other contexts so it would confer no advantage.
+
+            The following example shows a single pointer to a single variable
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(ptr, "->");
+               static(v1, "uint:8");
+               static(v2, "uint:8");
+
+               ptr = &v1;
+
+               ptr-> <- 3;     // equivalent to v1 <- 3
+               v2 <- ptr->;    // equivalent to v2 <- v1
+            \end{lstlisting}
+            Note that a pointer operator can be used on the left hand side of
+            an assignment statement.
+
+            For a pointer to an array
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(ptr, "->");
+               static(v1, "[4]uint:8");
+               static(v2, "uint:8");
+               int(i, 1);
+
+               ptr = &v1[0];
+
+               ptr->[1] <- 3;     // equivalent to v1[1] <- 3
+               v2 <- ptr->[i];    // equivalent to v2 <- v1[i]
+            \end{lstlisting}
+
+            For a pointer to a struct
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                       f1,   "log",
+                       f2,   "uint:8"
+               );
+               static(v1, s);
+               static(v2, "log");
+               var(ptr, "->");
+
+               ptr = &v1;
+
+               ptr->.f2 <- 3;     // equivalent to v1.f2 <- 3
+               v2 <- ptr->.f2;    // equivalent to v2 <- v1.f2
+            \end{lstlisting}
+
+            For an array of pointers
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                       f1,   "log",
+                       f2,   "uint:8"
+               );
+               var(ptr, "[4]->");
+               static(v1, "[4]s");
+               static(v2, "uint:8");
+               int(i, 3);
+
+               ptr[0] = &v1[0].f1;
+               ptr[1] = &v1[1];
+               ptr[2] = &v1;
+
+               ptr[0]-> <- false;
+               v2 <- ptr[1]->.f2;
+               when (ptr[2]->[i].f1)
+                   ........;
+            \end{lstlisting}
+
+            For pointer to pointers to pointers etc. the pointer
+            dereferencing operator is simply repeated, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               p1[1]->.f1->[i].f2->
+               p2->->->
+            \end{lstlisting}
+
+            Note that in the above examples where target variables are
+            referenced using an immediate variable subscript, the value of
+            the subscript at that time is substituted and thus the subscript
+            in the target code is a constant. Target subscripts containing
+            static and queue mode variables can be used for target variables
+            and this is described later.
+            
+            \index{pointer!module}
+            \index{pointer!procedure}
+            \index{indirect!module call}
+            \index{indirect!procedure call}
+            Pointers to modules and procedures are dereferenced again using
+            the {\bf \verb'->'} operator -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "->");
+               .
+               .
+               p = &buffer;
+               .
+               .
+               p->(p1 <- p2);
+            \end{lstlisting}
+            A pointer variable {\bf p} has been assigned a pointer to the
+            inbuilt module {\bf buffer()} and then the module has been
+            called via the pointer. Note that we could also have initialised
+            the pointer variable -
+            \index{type!pointer!initialisation}
+            \index{pointer!initialisation}
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "->", &buffer);
+               .
+               .
+               p->(p1 <- p2);
+            \end{lstlisting}
+            Procedures are handled using the same syntax.
+            
+            \index{indirect!function call}
+            \index{pointer!function}
+            Pointers to functions are handled in a similar manner -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "->", &exists);
+               .
+               .
+               if (p->(v))
+                   println("variable '" + v + "' exists");
+            \end{lstlisting}
+            
+            Where such a pointer is within an array or a struct subscripts
+            and fields can be interposed -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "[3]->", {, &exists});
+               .
+               .
+               if (p[1]->(v))
+                   println("variable '" + v + "' exists");
+            \end{lstlisting}
+            
+            Further indirection could be used -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(p, "[3]->", {, &exists});
+               var(q, "[4]str", {,, "p"});
+               .
+               .
+               if (q[2]->p[1]->(v))
+                   println("variable '" + v + "' exists");
+            \end{lstlisting}
+            
+            Where a function returns a pointer the pointer can be
+            dereferenced by applying the {\bf \verb'->'} operator to the
+            function call, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               c = f(a, b)->;
+            \end{lstlisting}
+            Subscripts and fields can be appear both before and after the
+            \verb'->' where appropriate.
+            
+
+
+
+
+    \section{Dimensionality of variable references}
+
+        \index{dimensionality}
+        When assigning variables or passing variables as arguments to
+        modules, procedures or functions compound types are allowed. Thus an
+        array, sub-array or struct, or any legitimate combination of these,
+        can be assigned or passed as an argument. Clearly when this is done
+        the type structure must match across the assignment or
+        argument/parameter match.
+
+        A constant subscript reduces the dimensionality of an array. For
+        example if we declare an array by -
+        \begin{lstlisting}[gobble=8, language=threepl]
+              var(a, "[4]int");
+        \end{lstlisting}
+        then {\bf a} is an array, {\bf a[1..2]} is an array, but {\bf a[1]} is not
+        an array. Similarly for -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           var(a, "[4][3][4]int");
+        \end{lstlisting}
+        {\bf a[][2][1..2]} is a 2-dimensional array since the constant
+        subscript gets rid of one dimension. Trailing subscripts can be
+        omitted without changing the result, so that {\bf a[1..2][2]} is a
+        2-dimensional array as the omitted trailing subscript implies the
+        full dimension.
+
+        \index{assignment!arrays}
+        \index{array!assignment}
+        \index{assignment!structs}
+        \index{struct!assignment}
+        \subsection{compound assignment}
+
+            Compound objects can be assigned as long as the dimensionality of the
+            LHS and RHS match. For example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(a, "[4][3][4]int");
+               var(b, "[6][4]int");
+               a[1..2][1] = b[3..4];
+            \end{lstlisting}
+            is valid as each side has dimensions {\bf [2][4]}.
+
+            Structs can be nested within types but the same dimensionality
+            consideration applies -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               struct(s,
+                   a,  "[2][8]int",
+                   b,  log
+               );
+               var(a, "[4][3][4]s");
+               var(b, "[6][4]int");
+               a[1..2][1][2].a[1][2..5] = b[3..4];
+            \end{lstlisting}
+            here each side again has dimensions {\bf [2][4]}.
+            
+            If the RHS is a compound value with missing elements, LHS
+            elements corresponding to those missing on the right will
+            not be changed.
+
+        \subsection{compound arguments}\label{sec:compoundarg}
+
+            \index{argument!compound}
+            \index{compound!argument}
+            When a compound argument is passed to a module, procedure or
+            function parameter which has no type, the parameter takes
+            on a type which matches the dimensionality of the argument.
+            Any subscripts
+            and field identifiers attached to the parameter apply to the
+            compound object passed to the parameter. Thus in the
+            following example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(a, "[4][3][4]int");
+
+               .
+               proc(a[1..2][1]);
+               .
+
+               procedure
+               proc(var(p)) {
+                   ...p...             // 2-dimensional array
+                   ...p[0]...          // 1-dimensional array
+                   ...p[0][1..2]...    // 1-dimensional array
+                   ...p[][0]...        // 1-dimensional array
+                   ...p[0][1]...       // single int
+               }
+            \end{lstlisting}
+            the procedure parameter is passed a 2-dimensional array. The
+            matching parameter is now handled in the procedure as though
+            declared as a 2-dimensional array with dimensions appropriate to
+            the array passed. As with assignments the parameter can be
+            referenced as a 2-dimensional array, a 1-dimensional array (one
+            subscript given) or a single element (two subscripts given).
+
+            Again struct field identifiers may appear among the subscripts if
+            structs are involved.
+            
+            If a module, procedure or function parameter is created as
+            a compound type then the type of the argument must match
+            that of the parameter.
+            
+            Between these extremes if a parameter contains undimensioned arrays
+            then these will take on the dimensionality of the argument, but
+            otherwise the types must match. If a parameter contains target types
+            whose width specifiers are missing these will be supplied from the
+            argument, but again the types must otherwise match. An undimensioned
+            array parameter can derive missing array dimensions from the argument
+            supplied or else from an initialiser if present. The argument and the
+            initialiser may be variables or compound values. If a parameter
+            containing undimensioned arrays is not initialised and is not passed
+            an argument then the undimensioned arrays will be given dimensions
+            0.
+            
+            \index{array!undimensioned}
+            \index{dimensions!missing}
+            If a parameter creates an undimensioned array because it is
+            not passed an argument and has no initialiser then an execution
+            error occurs. If a parameter has an undimensioned array type
+            and the argument is optional then some initialisation must be
+            supplied, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               procedure
+               p1 (var(p, "[]int", {})) {
+                   ...
+                   ...
+               }
+            \end{lstlisting}
+            which will create an integer array of dimension 1. Since the
+            initialisation entry is null no assignment is made and the
+            single array member will have the default value, which in the case
+            of an integer is 0.
+            
+            Note that if a list of identifiers is supplied as the first argument to
+            {\bf var()}, rather than a single identifier, then missing dimensions in
+            an array type cannot be inferred from arguments since all variables are
+            constructed to be the same single type. However, missing dimensions may
+            still be derived from an initialiser.
+            
+            A value mode parameter may be passed an immediate agument. If the
+            argument is a compound type then the parameter must have a target type
+            equivalent to the immediate type type of the argument. Arithmetic
+            values will be checked to ensure that they fit within the size of
+            the matching target sub-types. For example -
+            
+            \begin{lstlisting}[gobble=12, language=threepl]
+               int(i, 4);  
+               struct (st,
+                   ls, "[2]log",
+                   fi, "int:8"
+               );
+
+               p({{false, true}, i+30});
+
+               procedure p (value(v, st))) {
+                   .
+                   .
+               }
+            \end{lstlisting}
+
+
+    \section{Arrays of queues or memories}
+
+        \index{array!queues}
+        \index{array!memories}
+        Arrays of queues and arrays of memories are not supported in 3PL. However,
+        when these are required there is a way to effectively create and access
+        these. Queues and memories can be created within a function or procedure
+        as local variables and pointers to them returned in a pointer array. For
+        example to create a one-dimensional array of queues the following code
+        would suffice (this is a simplified version as the library procedure of
+        the same name in {\em stdlib.3pl} will handle any number of dimensions) -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           procedure
+           queuearray (var(ptr) <- str(type)) {
+               for (int(i) ; i<dimension(ptr) ; i++) {
+                   queue(p, type);
+                   ptr[i] = &p;
+               }
+           }
+        \end{lstlisting}
+        The output parameter is a 1-dimensional array of pointers. The
+        procedure creates as many queues as there are pointers in that array.
+        The queues are created inside the {\em for} loop which has an
+        immediate statement block. Each queue has the same identifier but they
+        are unique as each iteration of the loop has a new scope. A pointer
+        to each queue is assigned to a member of the pointer array after it is
+        created (variables survive the termination of their scope but cannot
+        be accessed directly via an identifier, only through a pointer).
+
+        Note also that the {\em for} loop has a statement block in brackets,
+        which has its own scope. A single unbracketed variable creation
+        procedure call in a {\em for} loop would create the variable in the
+        scope containing the loop, so the following code - 
+        \begin{lstlisting}[gobble=8, language=threepl]
+           for (int(i) ; i<dimension(ptr) ; i++)
+               queue(p, type);
+        \end{lstlisting}
+        would produce a multiply-defined variable (the code would be useless
+        anyway since we have not assigned pointers to the queues).
+
+        The queues in the array can now be used by the following constructions -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           .
+           .
+           p[1]-> <<- ....;
+           .
+           .... <- p[i]->;
+           .
+           .
+        \end{lstlisting}
+        If the queues are compound (arrays or structs) then the subscripts and
+        field identifiers follow the right arrow.
+
+
+
+
+    \section{Directives}\label{sec:directives}
+    
+        \index{directive}
+        Directives are intended as a means by which immediate program execution
+        can control the compiler. Thus far 40 directives are recognised by
+        the compiler interpreter (see below) but more may be implemented in the
+        future. Since directives can be created and evaluated by the application
+        code as well as by the compiler interpreter they can be used in a
+        limited way as an extra variable mechanism.
+
+        A directive is an entry in a global map. Each directive has a key and a
+        value. The directive is stored in the map using the key to access the
+        value. The key is a string. The value may be one of the 3PL immediate
+        primitive types {\bf int}, {\bf log}, {\bf float} or {\bf str} (but not
+        an enumerated type).
+
+        Directives are entered by using the inbuilt procedure {\bf
+        directive()} (\autorefph{sec:ipdirective}) and are extracted by
+        the inbuilt function {\bf directive()} (\autorefph{sec:ifdirective}).
+        The inbuilt function {\bf direxists()} (\autorefph{sec:ifdirexists}) can
+        be used to check if a particular directive is present. The directive
+        map can be obtained using the inbuilt function {\bf directives()}
+        (\autorefph{sec:ifdirectives}).
+
+        Directives may also be entered by using the -D command line option when
+        calling 3PL (\autorefph{options}).
+
+        A directive can also be entered during parsing (prior to immediate
+        execution) by the inbuilt procedure {\bf presetdirective()}
+        (\autorefph{sec:ippresetdirective}).
+
+        Directives are global in scope.
+        
+        The following directives are recognised by the compiler or set by the
+        compiler itself -
+        
+        \blist
+        \item   "{\bf languageVersion}"
+	\item   "{\bf compileOnly}"
+        \item   "{\bf compilerMakeDate}"
+        \item   "{\bf author}"
+        \item   "{\bf ALU}"
+        \item   "{\bf continuous}"
+        \item   "{\bf currentDirectory}"
+        \item   "{\bf date}"
+        \item   "{\bf designName}"
+        \item   "{\bf family}"
+        \item   "{\bf FIFO}"
+        \item   "{\bf filePath}"
+	\item   "{\bf forceExec}"
+        \item   "{\bf gatesNotLUTs}"
+	\item   "{\bf intermediateOnly}"
+        \item   "{\bf intTruncWarning}"
+	\item   "{\bf listNets}"
+	\item   "{\bf listTDEs}"
+	\item   "{\bf listTDEsSel}"
+	\item   "{\bf locations}"
+        \item   "{\bf netlistcomment}"
+        \item   "{\bf netlistDisplay}"
+        \item   "{\bf netlistFile}"
+        \item   "{\bf optimiseConnect}"
+        \item   "{\bf outputDirectory}"
+        \item   "{\bf OS}"
+        \item   "{\bf parentDirectory}"
+        \item   "{\bf part}"
+        \item   "{\bf postProcessTool}"
+        \item   "{\bf QUEUEREG}"
+        \item   "{\bf reportFile}"
+        \item   "{\bf rptToFile}"
+        \item   "{\bf shell}"
+        \item   "{\bf sigList}"
+        \item   "{\bf skipPostProc}"
+        \item   "{\bf sourceFile}"
+        \item   "{\bf sourceVersion}"
+        \item   "{\bf srlAddrWidth}"
+        \item   "{\bf unass\_out}"
+        \item   "{\bf verbose}"
+        \blend
+
+        The compiler itself creates the following directives -
+        \index{directive!arch}
+        \index{directive!OS}
+        \index{directive!cellName}
+        \index{directive!compilerMakeDate}
+        \index{directive!currentDirectory}
+        \index{directive!date}
+        \index{directive!designName}
+        \index{directive!family}
+        \index{directive!languageVersion}
+        \index{directive!netlistFile}
+        \index{directive!outputDirectory}
+        \index{directive!parentDirectory}
+        \index{directive!sourceFile}
+        \index{directive!sourceVersion}
+        \index{directive!srlAddrWidth}
+
+        \begin{tabular}{| l | l | p{10.0cm} |}
+        \hline
+        "languageVersion"  & str & the compiler language version
+        \\ \hline
+        "sourceVersion"    & str & the current compiler source code version
+                                   number
+        \\ \hline
+        "compilerMakeDate" & str & the date the compiler was made. Note that the
+                                   date and time that the 3PL compiler is
+                                   executed can be obtained using inbuilt
+                                   functions \autorefph{sec:iftime} {\bf
+                                   time()} for date and time elements and
+                                   \autorefph{sec:iftimestring} {\bf
+                                   timestring()} for date and time as a
+                                   string.
+        \\ \hline
+        "OS"               & str & the host computer operating system
+        \\ \hline
+        "arch"             & str & the host computer architecture
+        \\ \hline
+        "srlAddrWidth"     & int & the address width of CLB shift registers
+        \\ \hline
+        "date"             & str & the current date and time
+        \\ \hline
+        "sourceFile"       & str & the source file name specified on the
+                                   command line (with ".3pl" appended by 3PL if
+                                   absent)
+        \\ \hline
+        "parentDirectory"  & str & the full path name of the directory containing the
+                                   main source file
+        \\ \hline
+        "currentDirectory" & str & the full path name of the current directory
+        \\ \hline
+        "outputDirectory"  & str & the full path name of the output directory specified by the -o
+                                   command line option, or the parent
+                                   directory by default
+        \\ \hline
+        "designName"       & str & the design name derived from the source
+                                   file name or specified by the -N command
+                                   line option
+        \\ \hline
+        "cellName"         & str & the cell name to use if the netlist is a logic
+                                   core produced by calling inbuilt procedure
+                                   {\bf export()} \autorefph{sec:ipexport}.
+        \\ \hline
+        "family"           & str & a string designating the FPGA family, e.g. XC5V
+%        \\ \hline
+%        "simulation"             & log & true if the -s command line option has
+%                                         been used - the simulator will be
+%                                         executed following immediate execution
+        \\ \hline
+        \end{tabular}
+
+        The compiler creates the following directives from command
+        line options. Most of these directives can also be set by application code
+        which will override any value derived from command line options.
+        \index{directive!compileOnly}
+        \index{directive!forceExec}
+        \index{directive!gatesNotLUTs}
+        \index{directive!intTruncWarning}
+        \index{directive!intermediateOnly}      
+        \index{directive!listNets}
+        \index{directive!listTDEsSel}
+        \index{directive!listTDEs}
+        \index{directive!locations}
+        \index{directive!netlistDisplay}
+        \index{directive!optimiseConnect}
+        \index{directive!rptToFile}
+        \index{directive!sigList}
+        \index{directive!skipPostProc}
+        \index{directive!verbose}
+
+        \begin{tabular}{| l | l | p{10.0cm} |}
+        \hline
+        "compileOnly"       & log &  true if the -c command line option has
+                                     been used. 3PL will exit after compiling
+                                     the source code and before execution.
+                                     Cannot be set during execution.
+        \\ \hline
+        "forceExec"         & log &  true if the -f command line option has
+                                     been used. If true immediate execution
+                                     and netlist code generation will be
+                                     carried out regardless of the time of
+                                     last modification of associated files.
+                                     Cannot be set during execution.
+        \\ \hline
+        "gatesNotLUTs"      & log &  true if the -G command line option has
+                                     been used. If true this will generate
+                                     netlist logic encoded as gates (AND, OR
+                                     etc.) rather than as LUTs.
+        \\ \hline
+        "intermediateOnly"  & log &  true if the -i command line option has
+                                     been used. 3PL will exit after compiling
+                                     the source code and completing execution
+                                     but prior to netlist generation. It can be
+                                     invoked if the aim is just to examine the
+                                     TDE list rather than to produce a netlist.
+        \\ \hline
+        "intTruncWarning"   & log &  true if the -w command line option has
+                                     been used. 3PL will emit a warning to the
+                                     report file for any target "int" or "uint"
+                                     that has been assigned to a narrower
+                                     destination. "fixed" and "ufixed" warnings
+                                     are always given. If set during execution
+                                     it wil take effect from then on. Similarly
+                                     can be cleared during execution.
+        \\ \hline
+        "listNets"          & log &  true if the -n command line option has
+                                     been used. This will produce a list
+                                     of nets used in the netlist file with
+                                     all aliases. The report is written to
+                                     a .net file.
+        \\ \hline
+        "listTDEs"          & log &  true if the -t or -T command line options
+                                     have been used. Either of these options
+                                     may optionally be followed by the digit
+                                     0, 1, 2 or 3 which will print the TDE list -\\
+                                     & & 0 - after all optimisation \\
+                                     & & 1 - before any optimisation \\
+                                     & & 2 - after the 1st optimisation \\
+                                     & & 3 - after family-specific optimisation. \\
+                                     & & If no digit is encountered then the TDE list
+                                     after all optimisation is printed.
+        \\ \hline
+        "listTDEsSel"       & int &  this directive contains an integer value
+                                     derived from the optional digit described
+                                     in "listTDEs" above. It is 0 by default.
+        \\ \hline
+        "locations"         & log &  true if the -l command line option has
+                                     been used. If true listings of the TDE
+                                     list will contain source code locations
+        \\ \hline
+        "netlistDisplay"    & log &  true if the -d command line option has
+                                     been used. If true the interactive
+                                     netlist display window will pop up
+                                     following netlist generation.
+        \\ \hline
+        "optimiseConnect"   & log &  false if the -O command line option has
+                                     been used; true by default. This disables
+                                     code which attempts to eliminate CONNECT
+                                     TDEs and connect them through the catalog
+                                     instead. It can be used to diagnose some
+                                     logic inconsistencies should they arise. It
+                                     is only used during development or
+                                     maintenance.
+        \\ \hline
+        "rptToFile"         & log &  true if the -r command line option has
+                                     been used - verbose mode is enabled and
+                                     the report output is written to file
+                                     {\bf {\em design\_name}.rpt}
+        \\ \hline
+        "sigList"           & log &  true if the -T command line option has
+                                     been used. It causes the TDE signal definition
+                                     section of the TDE list to be printed along
+                                     with the list itself. This is usually not
+                                     usefull.
+                                     {\bf {\em design\_name}.rpt}
+        \\ \hline
+        "skipPostProc"      & log &  true if the -s command line option has
+                                     been used. It causes any post-processing
+                                     3PL code to be skipped.
+        \\ \hline
+        "verbose"           & log &  true if the -v, -r, -t, -T or -P command
+                                     line options have been used - a detailed
+                                     report will be written to standard output by
+                                     default or to file {\bf {\em
+                                     design\_name}.rpt} if the -r option has been
+                                     given. If set during execution some initial
+                                     report output will be missing.
+        \\ \hline
+        \end{tabular}
+
+
+        The remaining directives used by 3PL are set by application code -
+
+        \index{directive!author}
+        String directive "{\bf author}" is optional. If given a value
+        (string) this will be inserted as an author field in the EDIF file
+        (Xilinx claim this field should contain the company name, though there
+        seems no reason why it matters what it contains). The compiler
+        interpreter uses the value of the directive (if any) at the completion
+        of immediate code execution.
+
+        \index{directive!ALU}
+        String directive "{\bf ALU}" specifies that any static or
+        selectvalue variables which are directly assigned the result of an
+        arithmetic operation\footnote{At the moment only + and -.} in two or
+        more statements will have those operations combined into a single
+        Arithmetic Logic Unit (ALU). Where a value to be added, subtracted or
+        assigned is a constant, such constants are optimised to only appear
+        once. This optimisation only applies to an operator whose result is
+        directly assigned to the variable, not to operators in sub-expressions
+        since these are evaluated in parallel and must have separate operator
+        logic.
+        
+        Where a number of increments, decrements, additions or subtractions
+        are made to a static variable the use of an ALU avoids duplication of
+        expressions for each instance using instead a single combined
+        adder/subtracter. In simple cases this substantially reduces
+        the use of logic gates and does not increase path delays. However
+        if any values to be assigned, added to or subtracted from the variable
+        require combinatorial logic of significant depth, i.e. they involve
+        further arithmetic operators, then the use of a shared ALU may
+        result in greater path delays which may exceed the clock domain
+        timing constraint.
+        
+        The effect of this directive can be changed for individual
+        static variables by setting the {\bf ALU} attribute. If the directive
+        is not defined or is not true then the ALU attribute can be set
+        true on individual static variables to implement an ALU if
+        appropriate (as per the mixed assignment types described above).
+        If the directive is defined and is true setting attribute ALU
+        false will disable the effect on a particular static variable.
+
+        \index{directive!continuous}
+        String directive "{\bf continuous}" is defined and true (log)
+        the following logic simplifications will be applied -
+        \blist
+        \item   conditional static and queue assignments (within a {\bf when}
+                statement) will be enabled directly from the {\bf when} test
+                expression rather than indirectly via an execution signal
+                through a {\bf when} TDE. This optimisation occurs if the
+                directive exists and is true on encountering a when during
+                immediate execution.
+        \item   during optimisation following immediate execution all
+                unconditional static and queue assignments will be removed from
+                execution threads and enabled continuously. This achieves the
+                same effect as setting the {\bf continuous} attribute true on
+                each static variable. This optimisation occurs if the
+                directive exists and is true at completion of immediate execution.
+        \blend
+        To enable both optimisations universally "{\bf continuous}"
+        should be created and set true. This should be done using
+        presetdirective() rather than directive() since it should be set
+        prior to immediate execution - if set during immediate execution prior
+        code may be generated without the directive which might introduce some
+        subtle problems. The use of directive() for this purpose is not
+        prohibited since it may be required to be set conditionally, in which
+        case the conditional code should precede any  target code. Use of this
+        directive can significantly reduce logic path delays and to a small
+        extent the logic resources used.
+
+        Directive "{\bf continuous}" can also be set by supplying the 3PL
+        command line argument -D continuous.
+        
+        To restrict this optimisation to individual variables the "continuous"
+        attribute can be set true on a static or queue mode variable instead
+        of using the global directive. Alternatively the global effect can
+        be removed for individual static or queue mode variables by setting
+        the "continuous" attribute to false. The directive prevails if the
+        attribute has not been set, otherwise the attribute is used.
+
+        \index{directive!FIFO}
+        Directive "{\bf FIFO}" when set true prior to completion
+        of immediate execution specifies that queue mode variables whose depth is
+        such that block RAMs will be used (generally depth \verb'>' 16) will be
+        implemented using FIFO hardware associated with the block RAMs if the
+        FPGA includes such hardware. This feature can be controlled on
+        individual queue mode variables by attribute {\bf FIFO} which if
+        specified overrides the directive. The default behaviour if neither
+        directive nor attribute are used is to NOT use the dedicated FIFO
+        hardware.
+        
+        Use of the FIFO hardware is a compromise between speed and logic
+        usage. The FIFO hardware saves CLB gates and flip-flops, which would
+        otherwise be used, but has greater path delays which may cause
+        failure to meet timing constraints.
+        
+        \index{directive!filePath}
+        Directive "{\bf filePath}" when true causes error messages to
+        give file paths rather than file names. This may occasionally
+        be useful to disambiguate variables of the same name in source
+        files in different directories. This can also be set by the command
+        line option -F.
+
+        \index{directive!gatesNotLUTs}
+        String directive "{\bf gatesNotLUTs}" when set true prior to
+        completion of immediate execution causes many LUTs normally produced by
+        the code generated to be replaced with nested gates. The logic remains
+        the same but the use of nested gates instead of explicit LUTs may change
+        the way the vendor place-and-route software optimises and packs the
+        logic which in turn may change the ease, or lack thereof, with which the
+        timing contraints can be met. Thus when timing constraints fail to be
+        met, trying the -G option may improve the situation. The directive can
+        also be set using the -G option when calling 3PL
+
+        \index{directive!netlistcomment}
+        String directive "{\bf netlistcomment}", if defined, is copied as
+        a comment to the EDIF netlist file and the NCF contraints file or the
+        XDC constraints file. In the EDIF netlist file it appears within double
+        quotes in a comment field. In the constraint files it appears following
+        a "\#". If the directive contains more than one line these will appear
+        as separate comment lines in the constraint files, but in the netlist
+        file the whole string will appear within a single pair of quotes,
+        including the newlines.
+
+        \index{directive!part}
+        String directive "{\bf part}"must contain the full FPGA part
+        specification (string). It is set within inbuilt procedure
+        {\bf part()}(\autorefph{sec:ippart}). The part specification is not only inserted in
+        the EDIF netlist file, it is also used to guide code generation to suit
+        the FPGA type. The directive must be assigned a value prior to target
+        code generation and its value cannot be changed during  the remainder of
+        immediate execution. An attempt to change the directive will result in a
+        warning message. If this directive is not recognised a fatal error will
+        be flagged and compilation will terminate. If this directive is not
+        defined, at the moment (with single vendor implementation) the Xilinx
+        UNISYMS generic part will be used.
+        
+        Allowed values for directive "part" are -                       
+        \blist
+        \item   "XC95..." XC9500 CPLD, e.g. "XC9536PC44-5"
+        \item   "XC2C..." Coolrunner 2 CPLD, e.g. "XC2C32APC44-6"
+        \item   "XC2S..." Spartan 2 FPGA
+        \item   "XC3S..." Spartan 3 FPGA
+        \item   "XC6S..." Spartan 6 FPGA
+        \item   "XCV..." Virtex or Virtex E FPGA, e.g. "XCV300EBG432-7"
+        \item   "XC2VP..." Virtex 2 Pro FPGA, e.g. "XC2VP40FF1152-6"
+        \item   "XC2V..." Virtex 2 FPGA, e.g. "XC2V3000BF957-4"
+        \item   "XC4V..." Virtex 4 FPGA
+        \item   "XC5V..." Virtex 5 FPGA
+        \item   "XC6V..." Virtex 6 FPGA
+        \item   "XC7A..." Artix 7 FPGA
+        \item   "XC7K..." Kintex 7 FPGA
+        \item   "XC7V..." Virtex 7 FPGA
+        \item   "XC7Z..." Zynq FPGA
+        \blend
+
+        \index{directive!QUEUEREG}
+        String directive "{\bf QUEUEREG}" when set true prior to
+        completion of immediate execution specifies that queue mode variables are
+        to have a pipelined register added to their outputs. This reduces the
+        clock-to-output time. The queue buffer logic incorporates the extra
+        buffer with no change to functionality. The attribute {\bf QUEUEREG} may
+        be set (true or false) on individual queue mode variables, overriding
+        the global directive.
+
+        \index{directive!reportFile}
+        String directive "{\bf reportFile}" contains the absolute path name
+        of the report file.
+
+        \index{directive!shell}
+        If the {\bf shell()} \autorefph{sec:ipshell} procedure is to be used and
+        a shell other than the default shells {\bf /usr/bin/bash} or {\bf
+        /bin/bash} is required then the string directive {\bf shell} should be
+        defined with the value being a string giving the shell path.
+
+        \index{directive!unass\_out}
+        String directive "{\bf unass\_out}" controls the behaviour of
+        output mode variables which have unassigned components. The directive
+        type "log" -
+        \blist
+        \item   false - connect to ground
+        \item   true - connect to VCC
+        \blend
+        For individual output mode variables the default can be controlled
+        by the output mode variable attribute {\bf defaultout} (see
+        \autorefph{sec:attributes}). The action of this attribute overrides
+        directive "unass\_out". If neither specify a values an unassigned output
+        mode variable component will result in a fatal error.
+
+        \index{directive!postProcessTool}
+        String directive "{\bf postProcessTool}" is mandatory. It should have
+	the value "ise" (for the Xilinx ISE tools) or "vivado" (for Xilinx
+	Vivado).  {\bf It must be defined
+        during parsing by presetdirective() or fatal termination of 3PL
+        immediate execution will occur.} This should be done in the header file
+        for each FPGA family member. If the directive is changed during
+        immediate execution it must be remembered that post-processing 3PL code
+        will use this directive and the default value for the FPGA platform
+        will prevail if post-processing is not preceded by main-code execution
+        because the EDIF file is already up-to-date from a previous run.
+        
+        The choice of place-and-route tools changes 3PL in two ways -
+        \begin{enumerate}
+        \item   3PL will create either an NCF constraint file for ISE or an
+                XDC constraint file for Vivado, assuming that constraints
+                have been generated
+        \item   the form of element pins in the EDIF netlist for arrays is
+                different, ISE requiring pin arrays of the form A0, A1, A2,
+                A3 and Vivado A[0:3]
+        \end{enumerate}
+        
+        
+        
+
+        
+        
+
+    \section{Attributes}\label{sec:attributes}
+
+        \index{attributes}
+        Attributes are assigned to variables to 
+        \blist
+        \item   control some aspects of code generation
+        \item   set associated parameters such as clock frequency or queue buffer depth
+        \item   pass constraints to the EDIF netlist generator
+        \blend
+        
+        Case is ignored in attribute name strings. They are converted to lower
+        case when used within 3PL.
+        
+        Attributes are passed by means of a map type. This may be a variable
+        of type "map" or it may be a one-dimensional compound value where every
+        entry has the key=value format, the key being the attribute identifier
+        and the value its associated value.
+        
+        Among the attributes described below the {\bf loc} attribute applies
+        to several variable modes. This attribute is usually an array of
+        strings ("[]str") but where a single location is involved it may also
+        be a string ("str").
+
+        Attributes are usually simply omitted if not required, but they
+        may be given default or inactive values if desired.
+        Where an attribute is boolean (type "log") it must be present and
+        true to take effect.      
+        
+        Attributes are described within the variable creation procedures to
+        which they apply.
+        
+        \subsection{applying attributes}
+        
+            Attributes are applied to a variable in a map. The map
+            keys are the attribute identifiers and the associated values
+            are the attribute values. The entry values are mixed types,
+            the type depending on the individual attribute.
+            
+            The variable creation inbuilt procedures
+            {\bf input()}(\autorefph{sec:ipinput}),
+            {\bf output()}(\autorefph{sec:ipoutput}) and
+            {\bf clock()}(\autorefph{sec:ipclock})
+            have an optional final argument which is an attribute map.
+            The attribute map argument can be a variable of type "map"
+            or it can be a compound value. The following code
+            segments all achieve the same thing -
+
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(cmap, "map");
+               cmap["frequency"] = 100.0e6;
+               cmap["dutycycle"] = 0.25;
+               clock(c);
+               attributes(c, cmap);
+            \end{lstlisting}
+            The {\bf attributes()}(\autorefph{sec:ipattributes}) inbuilt
+            procedure applies an attributes map to a variable.
+            This is very longwinded,
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(cmap, "map", {frequency=100.0e6, dutycycle=0.25});
+               clock(c);
+               attributes(c, cmap);
+            \end{lstlisting}
+            is still rather verbose,
+            \begin{lstlisting}[gobble=12, language=threepl]
+               var(cmap, "map", {frequency=100.0e6, dutycycle=0.25});
+               clock(c, cmap);
+            \end{lstlisting}
+            is shorter.
+            
+            Attributes can instead be passed directly using key=value arguments,
+            e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+               clock(c, frequency=100.0e6, dutycycle=0.25);
+            \end{lstlisting}
+            is the most concise.
+            
+            The {\bf attributes()} inbuilt procedure will accept a bracketed
+            list of variables as the first argument, applying the attributes
+            to every variable in the list.
+            
+            The {\bf attributes()} procedure does not enter a new attributes map in
+            the variable, it adds the entries in the argument map to that in the
+            variable. Thus the attributes() procedure can be called multiple times
+            to add one or more attributes to the variable. If the same attribute is
+            entered again the new value replaces the old value. This can be used to
+            enable and disable 3PL attributes that are used during immediate
+            execution.
+            
+            Netlist attributes can be deleted by assigning the value {\bf null}.
+            3PL attributes cannot be deleted; 3PL attributes either
+            relate to parameters that are mandatory such as clock domains, or are
+            boolean in which case they can be disabled rather than deleted, so
+            there is no reason to delete them.
+
+            Netlist attributes are only used at the termination of immediate
+            execution so changing their values or deleting them during immediate
+            execution is not an error.
+            
+            Attributes {\bf domain}, {\bf readdomain} and {\bf writedomain}
+            can be assigned {\bf null} and this sets the associated
+            domain to the current clock domain.
+            
+            Where a variable is passed as an argument to a module, procedure
+            or function the associated parameter is implemented as an
+            internal pointer to the argument variable (call by reference)
+            and hence if attributes are changed in the parameter they are
+            changed in the argument variable.
+            
+            
+
+        \subsection{examining attributes}
+            
+            The attributes of a variable can be fetched by the
+            inbuilt function {\bf attributes()}(\autorefph{sec:ifattributes})
+            which returns a map. If the second optional argument to the
+            function is true an extended set of attributes is returned. These
+            are -
+            \blist
+            \item    {\bf identifier} - the abbreviated identifier
+            \item    {\bf eidentifier} - the extended identifier
+            \item    {\bf mode} - the mode
+            \item    {\bf type} - the type
+            \item    {\bf typestring} - the type as a string
+            \item    {\bf decloc} - the source file location where created
+            \item    {\bf inputparam} - true if this is an input parameter
+            \item    {\bf outputparam} - true if this is an output parameter
+            \item    {\bf matched} - true if this is a parameter matched by an argument
+            \item    {\bf readonly} - true if read-only
+            \item    {\bf assigned} - true if the variable has been assigned
+            \item    {\bf used} - true if it is a target mode variable and its
+                                value has been used
+            \item    {\bf clk\_srcs} - for a clock variable the number of sources
+            \item    {\bf clk\_sinks} - for a clock variable the number of sinks
+            \item    {\bf clk\_CE} - for a clock variable the number of element
+                                clock inputs driven by this clock. This may be
+                                smaller than {\bf clk\_sinks} as that attribute
+                                includes clock inputs to buffers or clock managers
+                                where the clock is not triggering state changes.
+            \blend
+            The attributes in this list are read-only and cannot be assigned to
+            the variable.
+            
+            A single attribute can be fetched by the inbuilt function
+            {\bf attribute()}(\autorefph{sec:ifattribute}).
+            
+            Attributes can also be fetched for listing purposes as an array of
+            structs by calling {\bf listattributes()} \autorefph{sec:iflistattrs}.
+            The struct contains three string fields, key, the attribute key,
+            mode, the mode of the value, and value which is a string version
+            of the value or is the identifier of a clock domain. This array
+            may be printed to standard output by calling library procedure
+            {\bf printattributes()} \autorefph{sec:lpprintattrs}.
+            
+            Attribute {\bf domain} for a value mode variable has a
+            null value when read back regardless of any assignments to
+            the variable.
+
+            For a selectvalue, static or priority mode variable attributes
+            {\bf domain}, {\bf readdomain} and {\bf writedomain} are the same.
+            These attributes are only added to the variable when it is
+            read or written.
+            
+            For a queue mode variable, attributes {\bf readdomain}, {\bf
+            writedomain} and {\bf domain} are the same if the queue is
+            synchronous. If the queue is asynchronous attributes {\bf readdomain}
+            and {\bf writedomain} differ and attribute {\bf domain} is not
+            present in the attribute map. These attributes are only added to the
+            variable when it is read ({\bf readdomain}), written ({\bf writedomain})
+            or both ({\bf domain} if synchronous).
+            
+            Attribute {\bf identifier} is the variable identifier, i.e. the
+            identifier used when the variable was created.
+
+            Attribute {\bf eidentifier} is the expanded identifier. This is
+            full unambiguous identifier used in the intermediate code. Both
+            scope information and argbitrary appended integers are used to
+            construct a unique identifier.
+            
+            Attribute {\bf mode} is the variable mode as a string.
+            
+            Attribute {\bf type} is the variable type returned as a "type" type.
+
+            Attribute {\bf typestring} is the variable type returned as a string.
+
+            Attribute {\bf decloc} is the source code location where the variable
+            was created.
+            
+            Attribute {\bf inputparam} is a value of type "log" which is true
+            if this variable is an input parameter to a module, procedure or
+            function.
+            
+            Attribute {\bf outputparam} is a value of type "log" which is true
+            if this variable is an output parameter to a module, procedure or
+            function.
+            
+            Attribute {\bf matched} is a value of type "log" which is true
+            if this variable is a parameter to a module, procedure or
+            function and has been passed an argument.
+            
+            Attribute {\bf readonly} is a value of type "log" which is true
+            if this variable has been made read-only.
+            
+            Attribute {\bf assigned} is a value of type "log" which is true if
+            this variable has been assigned. The variable cannot be input mode,
+            cmemory mode or rmemory mode.
+            
+            For an immediate and value mode variables this attribute is true if
+            the variable has been explicitly assigned a value during immediate
+            execution - this does not include any initial value given to the
+            variable on creation.
+
+            For target variables other than value mode this attribute is true
+            if a target assignment statement has been processed during immediate
+            execution where this variable appears on the left hand side - this
+            excludes any initial values given to variables on creation.
+
+            For clock mode variables this attribute is true if -
+            \blist
+            \item   the clock variable was created using inbuilt procedure {\bf
+                    clock()} where external input has been specified by
+                    supplying the location attribute
+            \item   the clock variable is a negative clock that has been created
+                    using inbuilt procedure negclock() and the positive clock from
+                    which it is derived is later assigned or has previously been
+                    assigned
+            \item   the clock variable has been assigned from another clock variable
+                    which is later assigned or has previously been assigned
+            \item   the clock variable is an input parameter to inbuilt
+                    procedure elementoutput() where it is connected to an
+                    output port or a 3-state port
+            \item   the clock variable is an output parameter to inbuilt
+                    procedure clockfromexpr()
+            \blend
+
+            Attribute {\bf clk\_sinks} for a clock variable is the number of
+            places the clock is used to clock logic
+
+            Attribute {\bf clk\_srcs} for a clock variable is the number of
+            places the clock is driven. If this is not 1 either the clock has no
+            source or it has multiple sources; in either case an error.
+
+
+           
+       
+        
+
+
+
+
+    \section{Operators}
+
+        \index{operator}
+        The following operators have been implemented.
+
+        \begin{tabular}{| l | l | l |}
+        \hline
+        \verb'~' & unary prefix & bitwise inversion \\
+        \hline
+        \verb'!' & unary prefix & logical negation \\
+        \hline
+        \verb'-' & unary prefix & arithmetic negation \\
+        \hline
+        \verb'<' & unary prefix & queue read availability \\
+        \hline
+        \verb'>' & unary prefix & queue write availability \\
+        \hline
+        \verb'&' & unary prefix & address \\
+        \hline
+        \verb'++' & unary prefix & increment \\
+        \hline
+        \verb'--' & unary prefix & decrement \\
+        \hline
+        \verb'++' & unary postfix & increment \\
+        \hline
+        \verb'--' & unary postfix & decrement \\
+        \hline
+        \verb'?' & unary prefix & queue examine \\
+        \hline
+        \verb'->' & unary postfix & pointer dereference \\
+        \hline
+        \verb'->>' & unary postfix & pointer dereference \\
+        \hline
+        \verb'*' & binary & multiplication \\
+        \hline
+        \verb'/' & binary & division \\
+        \hline
+        \verb'%' & binary & remainder \\
+        \hline
+        \verb'+' & binary & addition or string concatenation\\
+        \hline
+        \verb'-' & binary & subtraction \\
+        \hline
+        \verb'<<' & binary & left shift \\
+        \hline
+        \verb'>>' & binary & right shift \\
+        \hline
+        \verb'^<<' & binary & left rotate \\
+        \hline
+        \verb'>>^' & binary & right rotate \\
+        \hline
+        \verb'<' & binary & less than  \\
+        \hline
+        \verb'>' & binary & greater than \\
+        \hline
+        \verb'<=' & binary & less than or equal to \\
+        \hline
+        \verb'>=' & binary & greater than or equal to \\
+        \hline
+        \verb'==' & binary & equal to \\
+        \hline
+        \verb'!=' & binary & not equal to \\
+        \hline
+        \verb'&' & binary & bitwise AND \\
+        \hline
+        \verb'^' & binary & bitwise XOR \\
+        \hline
+        \verb'|' & binary & bitwise OR \\
+        \hline
+        \verb'&&' & binary & logical AND \\
+        \hline
+        \verb'||' & binary & logical OR \\
+        \hline
+        \verb'^^' & binary & logical XOR \\
+        \hline
+        \verb'+=' & binary & add or concatenate right to left \\
+        \hline
+        \verb'-=' & binary & subtract right from left \\
+        \hline
+        \verb'*=' & binary & multiply left by right \\
+        \hline
+        \verb'/=' & binary & divide left by right \\
+        \hline
+        \verb'%=' & binary & remainder of left divide by right \\
+        \hline
+        \verb'&=' & binary & bit AND right to right \\
+        \hline
+        \verb'|=' & binary & bit OR right to right \\
+        \hline
+        \verb'^=' & binary & bit XOR right to right \\
+        \hline
+        \verb'&&=' & binary & logical AND right to right \\
+        \hline
+        \verb'||=' & binary & logical OR right to right \\
+        \hline
+        \verb'^^=' & binary & logical XOR right to right \\
+        \hline
+        \verb'<<=' & binary & left shift left by right \\
+        \hline
+        \verb'>>=' & binary & right shift left by right \\
+        \hline
+        \verb'?:' & ternary & conditional \\
+        \hline
+        \end{tabular}
+        
+        Note that the C ',' operator (comma), as sometimes used in {\bf for} statements is
+        not implemented in 3PL.
+
+
+
+
+        \index{operator!precedence}
+        The binary and unary operators are listed in order of decreasing
+        precedence in the following table -
+
+        \begin{tabular}{| l |}
+        \hline
+        \verb'*' \verb'/' \verb'%' \\ \hline
+        \verb'+' \verb'-' \\ \hline
+        \verb'==' \verb'!=' \verb'<' \verb'>' \verb'<=' \verb'>=' \\ \hline
+        \verb'&' \\ \hline
+        \verb'^' \\ \hline
+        \verb'|' \\ \hline
+        \verb'&&' \\ \hline
+        \verb'^^' \\ \hline
+        \verb'||' \\ \hline
+        \verb'?:' \\ \hline
+        \end{tabular}
+
+        Note that the relational operators have higher precedence than the
+        logical operators so that an expression such as \verb'a < 3 && b > 5'
+        does not need parentheses.
+
+        \index{operator!\verb'++' \verb'--'}
+        The {\bf ++} and {\bf --} operators can be used on {\bf immediate}
+        and {\bf static} variables, but not {\bf value}, {\bf selectvalue},
+        {\bf queue} or {\bf priority} variables.
+        
+        For {\bf static} variables these operators can only be used in the form of
+        increment and decrement statements and not in any other context, e.g. in an
+        expression. Thus for example for static variable {\bf t} -
+        \begin{lstlisting}[gobble=8, language=threepl]
+           t++;
+        \end{lstlisting}
+        is allowed but the forms
+        \begin{lstlisting}[gobble=8, language=threepl]
+           a <- t++;       // ERROR!
+           a[t++] <- b;    // ERROR!
+           func(t++);      // ERROR!
+        \end{lstlisting}
+        are not and would result in a fatal immediate execution error.
+        
+        The pre-increment and post-increment forms behave identically since they
+        form a statement and not part of an expression. The same applies to the
+        decrements.
+
+        \index{operator!unary \verb'?'}
+        The {\bf \verb'?'} prefix unary operator allows evaluation of an
+        expression containing queues without removing data from the queues.
+        Unlike a queue read this operation proceeds regardless of queue
+        availability. If an examined queue is not available the data is not
+        valid. Use of this operator would normally be accompanied by an
+        explicit queue availability test using the {\bf \verb'<'} prefix unary
+        operator (next paragraph). The operand may be a single queue variable
+        or any expression containing queues, but need not contain queues at all
+        and may even be immediate. If the operand contains no queue reads then
+        the value is simply returned.
+
+        \index{operator!unary \verb'<'}
+        \index{queue!availability}
+        The {\bf \verb'<'} prefix unary operator examines its expression argument
+        for queue read availability and produces a logical result. This operator does
+        not execute a read, i.e. a datum will not be removed from any queues. The
+        expression may be a single queue variable or may contain a number of queues,
+        but the expression need not contain queues and may even be immediate.
+        Where the operand contains no queues {\bf \verb'<'} will return the constant
+        {\em true}. It would be usual where the argument is an expression rather
+        than a single queue variable for the expression to be passed via a value
+        variable since the expression is presumably used elsewhere for actual
+        evaluation and duplicating the code and then ignoring the result by applying
+        the operator would be silly. Queue references within the operand of the {\bf
+        \verb'<'} operator are ignored by any enclosing {\em sync}. The read
+        availability operator can only be used in a module within which one or more
+        reads of the queue or queues are also executed (read availability of a queue in
+        a module which does not read the queue is not meaningful). The resulting
+        logical value has the output (read) clock domain of the queue variable. If
+        the output (read) clock domain has not yet been established then use of the
+        availability logical value in a clocked context will establish the output
+        (read) clock domain of the queue variable\footnote{If the queue read
+        availability operator is used in an expression assigned to a value mode
+        variable the output clock domain of the associated queue variable will not be
+        established by that assignment. If the value variable is subsequently used
+        on the RHS of an assignment to a clocked variable, or in another context in
+        which a clock domain is required, then that will establish the clock domain
+        of the associated queue variable if it is not already established.}.
+
+        \index{operator!unary \verb'>'}
+        \index{queue!availability}
+        The {\bf \verb'>'} prefix unary operator examines its variable argument for
+        queue write availability and produces a logical result. This operator does
+        not execute a write. Where the variable has one or more target subscripts
+        the {\bf \verb'>'} operator requires them to exhibit read availability as
+        well before it will return true. The resulting logical value has the input
+        (write) clock domain of the queue variable. If
+        the input (write) clock domain has not yet been established then use of the
+        availability logical value in a clocked context will establish the input
+        (write) clock domain of the queue variable.
+
+        Note that the {\bf \verb'>'} operator requires the queue variable
+        assignment clock domain. It must be called in the same clock domain as
+        assignments to the queue and if its use precedes any assignments in the
+        source code it will set the assignment clock domain.
+
+        \index{operator!\verb'->'}
+        \index{indirect}
+        \index{pointer!dereference}
+        The postfix {\bf \verb'->'} and {\bf \verb'->>'} unary operators
+        dereference a pointer. The second form is for use in a module, procedure
+        or function argument where a null pointer results in omission of the
+        argument rather than a fatal error. Note that this differs from its use in
+        C in that if a struct is pointed to a field reference still requires a "."
+        before the field identifier, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           p->.field
+        \end{lstlisting}
+        \index{indirect from string}
+        \index{pointer!dereference from string}
+
+        The {\bf \verb'->'} unary operator will also dereference a string variable
+        where the string is a variable identifier. For example
+        \begin{lstlisting}[gobble=8, language=threepl]
+           str(s, "var1");
+           println(s->);
+        \end{lstlisting}
+        will print the value of variable {\bf var1}. The identifier string
+        may include scope prefices such as "global.".
+        
+        The {\bf \verb'->'} operator may be preceded by fields or subscripts
+        to dereference a pointer or string contained in a compound type.
+
+        The {\bf \verb'->'} operator may be followed by fields or
+        subscripts when the type pointed to is compound.
+
+        The {\bf \verb'->'} unary operator will also dereference an expression
+        in parentheses, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+           int(i, 5);
+           println(("var" + i)->);
+        \end{lstlisting}
+        will print the value of variable {\bf var5}. The expression may include
+        function calls and can be of type "str" or type \verb'"->"'. In the latter
+        case the expression can only be a function returning a pointer since
+        arithmetic cannot be performed on pointers. The expression could be
+        the address of a variable using the \verb'&' operator but that would
+        be singularly pointless.
+
+        \index{operator!ternary \verb'? :'}
+        The {\bf? :} ternary infix operator selects one of two values. The first
+        argument must be type "log". The second and third arguments may be any type
+        but must be the same type. If the test expression is immediate mode the
+        availability of the result is the availability of the selected (2nd or 3rd)
+        operand. If the test expression is target mode the availability of the
+        result is the availability of the test expression ANDed with the logical
+        result of the test expression and the availability of the selected 2nd or
+        3rd operand. Thus as long as the test expression is available and the
+        selected 2nd or 3rd operand is available the result will be available even
+        if the unselected operand is not available. This operator may be nested.
+
+        \index{operator!binary \verb'>>'}
+        \index{operator!binary \verb'<<'}
+        The {\bf\verb'>>'} and {\bf\verb'<<'} binary infix shift operators can
+        only be used on immediate types "uint" or "int" or target types "bits:",
+        "uint:", "int:", "fixed:" or "ufixed:". The second argument may be an
+        immediate variable of type "uint" or "int" (but cannot have a negative
+        value), or a target variable of type "uint:". Right shifts on signed
+        values extend the sign bit.
+
+        \index{operator!binary \verb'>>^'}
+        \index{operator!binary \verb'^<<'}
+        The {\bf\verb'>>^'} and {\bf\verb'^<<'} binary infix rotate operators
+        can only be used on target mode values which can be of any type. The
+        second argument must be an immediate variable of type "uint" or "int"
+        and cannot have a negative value. These operators perform a simple
+        bit rotation and take no account of the data type.
+        
+
+        \index{operator!assignment}
+        The following assignment symbols are not treated as operators, but
+        rather as part of statement syntax.
+        
+        \begin{tabular}{| l | l |}
+        \hline
+        {\bf =}          & immediate mode assignment \\
+        \hline
+        {\bf :=}         & value, priority or clock mode assignment \\
+        \hline
+        {\bf \verb'<-'}  & static mode assignment \\
+        \hline
+        {\bf \verb'<<-'} & queue mode assignment \\
+        \hline
+        {\bf \verb'|-'}  & selectvalue or conditional output mode assignment \\
+        \hline
+        \end{tabular}
+        
+        The {\bf ++} and {\bf --} postfix
+        operators can also be used as a form of assignment (see sections
+        \autorefph{sec:im_ass} and \autorefph{sec:stat_ass}).
+
+        The following C operators have not been included (or in the case of
+        \verb'->' the semantics are different).
+
+        \index{operator!omitted C}
+        \begin{tabular}{| l | l | l |}
+        \hline
+        \verb',' & binary & sequential evaluation \\
+        \hline
+        \verb'->' & binary & field of variable pointed to \\
+        \hline
+        \verb'*' & unary & value of variable pointed to \\
+        \hline
+        \end{tabular}
+
+
+
+    \section{Expressions}
+
+        \index{expression}
+        \index{value!expression}
+        An expression may contain
+        \blist
+        \item   constants
+        \item   variables of primitive type
+        \item   function calls returning primitive type
+        \item   operators
+        \item   parentheses
+        \blend
+        A primitive type may be a simple variable or a field or array member
+        from a compound nested type which is a primitive type. (i.e. not
+        arrays or structures as such). Variables may be {\bf immediate}, {\bf
+        value}, {\bf selectvalue}, {\bf static}, {\bf input} or {\bf queue} mode.
+
+        \subsection{expression evaluation}
+
+            \index{expression!evaluation}
+            All operators are combinatorial. Binary logical operators \verb'&&' and
+            \verb'||' {\bf are} short-circuit evaluated when the first operand is
+            immediate. Binary logical operators \verb'&&' and \verb'||' {\bf are
+            not} short-circuit evaluated when the first operand is a target mode
+            since that would imply sequential evaluation.
+
+            If the first operand of the conditional ternary operator \verb'?:'
+            is immediate mode, only one of the following two operands is
+            evaluated, i.e. this operator is also short-circuit evaluated.
+
+            An expression is available when all queues referenced in the
+            expression are available. Where the ternary operator {\bf \verb'?:'}
+            is used, all three operands must be available.
+
+        \subsection{mixed types}
+
+            \index{expression!variable modes}
+            The arithmetic operators '+', '-', '*', '/' and '\verb"%"' accept
+            the types shown on the axes of the following table, the table
+            entries giving the result type. Types shown with an appended ":" are
+            target types while those without are immediate.
+
+            \begin{tabular}{| l || l | l | l | l | l | l | l | l |}
+            \hline
+                    & uint    & int    & float & str & uint:   & int:   & ufixed: & fixed: \\
+            \hline \hline
+            uint    & uint    & int    & float & str & uint:   & int:   & ufixed: & fixed: \\ \hline
+            int     & int     & int    & float & str & int:    & int:   & fixed:  & fixed: \\ \hline
+            float   & float   & float  & float & str & -       & -      & -       & -      \\ \hline
+            str     & str     & str    & str   & str & -       & -      & -       & -      \\ \hline
+            uint:   & uint:   & int:   & -     & -   & uint:   & int:   & ufixed: & fixed: \\ \hline
+            int:    & int:    & int:   & -     & -   & int:    & int:   & fixed:  & fixed: \\ \hline
+            ufixed: & ufixed: & fixed: & -     & -   & ufixed: & fixed: & ufixed: & fixed: \\ \hline
+            fixed:  & fixed:  & fixed: & -     & -   & fixed:  & fixed: & fixed:  & fixed: \\ \hline
+            \end{tabular}
+
+            The remainder operator '\verb"%"' only accepts types {\bf int}, {\bf
+            uint}, {\bf int:} or {\bf uint:}.
+
+            The addition operator '+' where at least one operand is a string
+            concatenates the operands producing a string result. The other
+            arithmetic operators do not accept string operands.
+
+            Arithmetic operators for target float types are not
+            implemented\footnote{Arithmetic expressions cannot use target
+            floating point values because floating point operations are
+            sufficiently complicated that they must be pipelined to achieve a
+            worthwhile execution rate. By definition expression operators must
+            be able to execute in a single clock cycle if the operands are
+            available. Single cycle target floating point operators could be
+            implemented, but the clock rate at which they were used would have
+            to be very low.}. Target floating point operations are carried out
+            by pipelined library modules.
+            
+            Addition and subtraction of target fixed point operands with
+            immediate floating point values is allowed, the floating point
+            values being converted to fixed point with the same number of
+            fractional bits, lesser significant bits being rounded off.
+
+            Logical operators only accept {\em log} operands. The result type is
+            also {\em log}.
+
+            Relational operators accept {\em int}, {\em uint} and {\em str}
+            operands. The \verb'==' and \verb'!=' operators will also accept
+            {\em log}, {\em bits} and {\em type} operands and can also compare
+            clock mode variables. The result is type {\em log}. Relational
+            operators with arguments of type {\em str} perform a lexical
+            comparison.
+
+            Shift operators accept {\em bits}, {\em int}, {\em uint} {\em
+            fixed} and {\em ufixed} for the left operand but only {\em int} and
+            {\em uint} for the right operand (shift count). The result type is
+            the type of the left operand.
+
+            Bitwise operators accept {\em fixed}, {\em ufixed}, {\em int}, {\em
+            uint}, {\em log} and {\em bits} for the operands. Where the
+            operands are of different size the smaller will be expanded to match
+            the larger, extending the sign bit in the case of signed types. The
+            result width will be the same as that of the larger operand. The
+            result type is determined by the following in order -
+            
+            \blist
+            \item   If either operator is {\em fixed} then the other operator
+                    cannot be {\em fixed} or {\em ufixed} and the result type
+                    will be {\em fixed}.                    
+            \item   If either operator is {\em ufixed} then the other operator
+                    cannot be {\em fixed} or {\em ufixed} and the result type
+                    will be {\em ufixed}.                    
+            \item   If either operand is {\em int} the result is {\em int}.
+            \item   if either operand is {\em uint} the result is {\em uint}.
+            \item   if either operand is {\em bits} the result is {\em bits}.
+            \blend
+
+        \subsection{expression width}
+
+            \index{expression!width}
+            Immediate integer variables and expressions have a 64 bit value.
+            Immediate floating point variables and expressions have a 52.11
+            format (IEEE 754 double precision). Target integer and floating
+            point values may be any size.
+        
+            Where signed and unsigned operands are mixed the unsigned operand is
+            zero padded by one bit to render it signed.
+
+            For mixed immediate and target modes the immediate operand will be
+            converted to a target operand. The width will be the minimum which
+            can contain the value, assuming a sign bit in the case of {\em int}.
+
+            For addition and subtraction the result width is the widest operand
+            width plus one. For fixed point types the result point offset is
+            equal to the largest or only operand point offset.
+
+            For multiplication the result width is the sum of the operand
+            widths. For fixed point types the result point offset is the sum of
+            the operand point offsets (integer types have zero point offset).
+
+            For division the result width is the sum of the operand widths. For
+            fixed point types the result point offset is the first operand point
+            offset plus the second operand width minus the second operand point
+            offset (see example below).
+
+            For remainder the result is the same width and type as the second
+            operand.
+
+            For '\verb'>>'' the result width is the same as the first operand
+            width. For '\verb'<<'' the result width is the first operand width
+            plus the shift count (immediate) or maximum possible shift count
+            (target). For bitwise logical operators the result width is the
+            maximum of the operand widths. The result type is the same as that
+            of the left operand.
+
+            For '?:' the result width is the width of the widest of the other
+            two operands.
+
+            For bitwise logical operators the operands may be any width, the the
+            smaller being padded to the size of the larger (with sign extension
+            if int). The result is the bitwise AND, OR or XOR of each matching
+            pair of bits, one from each operand.
+            
+            Fixed point divider example -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               static(num, "fixed:8.5");
+               static(den, "fixed:10.4");
+               static(quot, "fixed:12.15");
+               quot <- num / den;
+            \end{lstlisting}
+            Note: this code really should use divide(quot <- num, den)\footnote{
+            While division has been included in the set of arithmetic
+            operations, current FPGAs do not provide division hardware elements.
+            As a consequence 3PL implements division as a cascaded series of
+            adder/subtracters resulting in a very great logic depth. For data to
+            propagate through such a divider in one clock cycle would imply a
+            very low clock rate. To avoid this problem stdlib.3pl includes a
+            pipelined divide library divlib.3pl whih contains a pipelined divide
+            module. This module uses the same logic as produced for the divide
+            operator but each stage is pipelined. The compiler itself cannot
+            generate such a module implicitly since the language requires basic
+            operations to be executed in one clock cycle. } 
+            The numerator width is 13 and the denominator width 14 so the result
+            width will be 27. The result fixed point offset will be $5 + 14 - 4$
+            which is 15. Thus the quotient has been given the type
+            "fixed:12.15". The type width and offset could be different to the
+            division result type in which case the result would be truncated or
+            padded/sign-extended as required.
+            
+            For mixed types -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               static(num, "ufixed:6.3");
+               static(den, "int:3");
+               static(quot, "fixed:7.6");
+               quot <- num / den;
+            \end{lstlisting}
+            The numerator width is 9 and the denominator width is 3. Because the
+            denominator is signed the numerator will be converted to
+            "fixed:7.3", making room for the extra sign bit. The result width
+            will be the sum of these which is 13. The result fixed point offset
+            will be $3 + 3 - 0$ which is 6. Thus the result type is "fixed:7.6".
+            
+        
+        \subsection{operand clock domains}
+
+            \index{expression!clock domain}
+            If an operator has two or three operands the operands must either
+            have the same clock domain or have no clock domain.
+            Immediate mode variables and expressions have no clock domain
+            and value variables initialised to a constant have no clock domain.
+
+
+        \subsection{assignment}\label{sec:assignments}
+
+            \index{expression!assignment}
+            The following table shows allowed right-hand-side types for each
+            left-hand-side type. Target types have an appended ':'.
+
+            \begin{tabular}{| l | l r l l l l l l l l l |}
+            \hline
+            uint    & uint & +int &       &     &      &       &       &      &         &        &        \\ \hline
+            int     & uint & int  &       &     &      &       &       &      &         &        &        \\ \hline
+            float   & uint & int  & float &     &      &       &       &      &         &        &        \\ \hline
+            str     &      &      &       & str & type &       &       &      &         &        &        \\ \hline
+            type    &      &      &       & str & type &       &       &      &         &        &        \\ \hline
+            bits:   &      &      &       &     &      & bits: &       &      &         &        &        \\ \hline
+            uint:   & uint & +int &       &     &      &       & uint: &      &         &        &        \\ \hline
+            int:    & uint & int  &       &     &      &       & uint: & int: &         &        &        \\ \hline
+            ufixed: & uint & +int & float &     &      &       & uint: &      & ufixed: &        &        \\ \hline
+            fixed:  & uint & int  & float &     &      &       & uint: & int: & ufixed: & fixed: &        \\ \hline
+            float:  & uint & int  & float &     &      &       &       &      &         &        & float: \\ \hline
+            \end{tabular}
+
+            "+int" indicates that the immediate integer value must not be
+            negative.
+             
+            Fixed point types are truncated at the binary point when assigned
+            to integer types.
+            
+            The LHS and RHS widths, point offsets and floating point mantissa
+            and biased exponent sizes may differ. Where the LHS type width is
+            smaller than that of the RHS the most significant bits are
+            truncated. If the LHS width is greater than that of the RHS the
+            value will be sign extended or zero padded at the most significant
+            end as appropriate.
+            
+            Note that types "str" and "type" can be assigned to each other.
+            Assigning a type to a string variable produces the same string value
+            as calling the nested inbuilt functions {\bf
+            typestring(typeval(t))}, i.e. the type is converted to the type
+            specification string from which it can be generated. Assigning a
+            string to a type variable is equivalent to calling inbuilt function
+            {\bf strtotype()} \autorefph{sec:ifstot}.
+            
+            target type "bits:" can only be assigned type "bits:", however the
+            {\bf cast()} inbuilt function can be used to cast any other type to "bits:".
+            
+            The types allowed for assignment generally apply also to variable
+            initialisation.
+
+        \subsection{expression optimisation}
+
+            \index{expression!optimisation}
+            The following special cases with mixed target mode and constant
+            operands are handled -
+            \blist
+            \item   multiplication by 0 - value is constant 0
+            \item   multiplication by 1 - value is the other operand
+            \item   multiplication by a power of 2 - use a fixed left shift
+                    for a power greater than zero or a fixed right shift
+                    for a power less than zero
+            \item   division by 0 - a fatal error
+            \item   division by 1 - value is the other operand
+            \item   division of 0 - value is constant 0
+            \item   division by a power of 2 - use a fixed right shift for a
+                    power greater than zero or a fixed left shift for a power
+                    less than zero
+            \item   remainder by 0 - a fatal error
+            \item   remainder by 1 - value is constant 0
+            \item   remainder of 0 - value is constant 0
+            \item   remainder by a power of 2 - use an AND with a mask
+            \item   addition of 0 - value is the other operand
+            \item   subtraction of 0 - value is the other operand
+            \item   subtraction from 0 - converted to a unary - of the other
+                    operand
+            \item   logical AND of false - value is constant false
+            \item   logical AND of true - value is the other operand
+            \item   logical OR of false - value is the other operand
+            \item   logical OR of true - value is constant true
+            \item   logical XOR of false - value is the other operand
+            \item   logical XOR of true - converted to a logical NOT of the
+                    other operand
+            \item   int \verb'<' 0 - value determined from the sign bit only
+            \item   int \verb'>= 0' - value determined from the sign bit only
+            \item   0 \verb'<=' int - value determined from the sign bit only
+            \item   0 \verb'>' int - value determined from the sign bit only
+            \blend
+            Bitwise operators with mixed target mode and constant operands are
+            optimised during netlist generation.
+            
+            3PL does no other expression optimisation. Target
+            expressions should be written the way you want them implemented.

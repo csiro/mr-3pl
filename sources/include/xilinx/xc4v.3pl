@@ -1,0 +1,45 @@
+// Include file for Xilinx Virtex 4 (XC4V)
+nosource
+
+presetdirective("postProcessTool", "ise");
+
+// Specify allowed special I/O and clock elements valid for
+// this device.
+// Map "elementMap" is in common.3pl.
+elementMap["BUFG"] = true;
+elementMap["BUFGCE"] = true;
+elementMap["BUFGMUX"] = true;
+elementMap["BUFGCTRL"] = true;
+elementMap["DCM_ADV"] = true;
+elementMap["BUFG"] = true;
+elementMap["BUFGMUX"] = true;
+elementMap["BUFR"] = true;
+elementMap["BUFIO"] = true;
+elementMap["BUFGCTRL"] = true;
+elementMap["IDDR"] = true;
+elementMap["ODDR"] = true;
+elementMap["IDELAY"] = true;
+elementMap["ODELAY"] = true;
+elementMap["IODELAY"] = true;
+elementMap["ISERDES_NODELAY"] = true;
+
+source "xilinx/common.3pl"
+module "xilinx/postprocess.3pl"
+module "stdlib.3pl"
+module "xilinx/clocks.3pl"
+module "xilinx/io.3pl"
+module "xilinx/dsp48.3pl"
+module "xilinx/ppclib.3pl"
+
+leadermodule ("attributes", 100) {
+    attributeprocedure(processPinAttributes);
+}
+
+trailermodule ("constraints", 100) {
+    netlistcommentfromdirs();
+    generateConstraints();
+}
+
+postmodule ("Xilinx postprocessing") {
+    postprocess("xilinx/ise_fpga.cmd", directive("postProcessTool"), 6.3);
+}

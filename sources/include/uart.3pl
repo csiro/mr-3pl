@@ -1,0 +1,455 @@
+// run-time configurable UART and baudrate generator
+nosource
+
+// FIXME this module is out of date! (uses old statemachine construct)
+
+value (
+    {
+        uart_brc16_500000, uart_brc16_460800, uart_brc16_307200,
+        uart_brc16_230400, uart_brc16_153600, uart_brc16_115200,
+        uart_brc16_76800,  uart_brc16_57600,  uart_brc16_38400, 
+        uart_brc16_19200,  uart_brc16_9600,   uart_brc16_4800,
+        uart_brc16_2400,   uart_brc16_1200,   uart_brc16_600,   
+        uart_brc16_300
+    },
+    "log"
+);
+static({uart_brc_us, uart_brc_ms}, "log");
+
+// This procedure should be called once in each UART installation.
+// It generates the global 16 x baud rate clock signals from the
+// given input clock, which must be the same clock given to the
+// calls to uart(){}
+global procedure
+uart_brc16 () {
+    // Top-clock frequency synthesisers. The synthesis factors depend
+    // on whether c100 or c50 is used. The top clocks are a single
+    // clock-length pulse at 16 times the actual baud rate
+    int(tc);
+    switch (identifier(currentclock())) {
+    case "glob.c100":
+	uart_brc16_500000 := uart_ddfs(9,  41);
+	uart_brc16_460800 := uart_ddfs(11, 151);
+	uart_brc16_307200 := uart_ddfs(12, 201);
+        tc = 100;
+    case "glob.c50":
+	uart_brc16_500000 := uart_ddfs(8,  41);
+	uart_brc16_460800 := uart_ddfs(10, 151);
+	uart_brc16_307200 := uart_ddfs(11, 201);
+        tc = 50;
+    case "glob.c16":
+	uart_brc16_500000 := uart_ddfs(1,  1);
+	uart_brc16_460800 := uart_ddfs(10, 472);
+	uart_brc16_307200 := uart_ddfs(11, 629);
+        tc = 50;
+    default:
+        texit("uart_brc16: clock should be c100 or c50\n");
+    }
+    println("uart_brc16: using c" + tc + " parameters");
+
+    // 460k derived clocks. These are a single
+    // clock-length pulse at 16 times the actual baud rate
+    static(c460, "uint:3");
+    when (uart_brc16_460800)
+        c460++;
+    value(c460_bits, "[3]log", cast(c460, "[3]log"));
+    uart_brc16_230400 := to_pulse(c460_bits[0]);
+    uart_brc16_115200 := to_pulse(c460_bits[1]);
+    uart_brc16_57600  := to_pulse(c460_bits[2]);
+
+    // 307k derived clocks.  These are a single
+    // clock-length pulse at 16 times the actual baud rate
+    static(c307, "uint:10");
+    when (uart_brc16_307200)
+        c307++;
+    value(c307_bits, "[10]log", cast(c307, "[10]log"));
+    uart_brc16_153600 := to_pulse(c307_bits[0]);
+    uart_brc16_76800  := to_pulse(c307_bits[1]);
+    uart_brc16_38400  := to_pulse(c307_bits[2]);
+    uart_brc16_19200  := to_pulse(c307_bits[3]);
+    uart_brc16_9600   := to_pulse(c307_bits[4]);
+    uart_brc16_4800   := to_pulse(c307_bits[5]);
+    uart_brc16_2400   := to_pulse(c307_bits[6]);
+    uart_brc16_1200   := to_pulse(c307_bits[7]);
+    uart_brc16_600    := to_pulse(c307_bits[8]);
+    uart_brc16_300    := to_pulse(c307_bits[9]);
+
+    // accurate microsecond and millisecond clocks
+    static(usco, "uint:"+size(tc-1), tc-1);
+    static(msco, "uint:10", 999);
+
+    when (usco == 0) par {
+        reset(usco);
+        uart_brc_us <- true;
+    } else par {
+        usco--;
+        reset(uart_brc_us);
+    }
+    when (usco == 0)
+        when (msco == 0) par {
+            reset(msco);
+            uart_brc_ms <- true;
+        } else par {
+            msco--;
+            reset(uart_brc_ms);
+        }
+}
+
+
+// Parity function. 'd' are the 8 data bits, 'csize' the number
+// of data bits to actually use and 'parodd' means generate
+// odd parity
+function
+uart_parity (value(d, "bits:8"), value(csize, "uint:2"), value(parodd, "false")) {
+    value(b, "[8]log", cast(d, "[8]log"));
+    if (!matched(csize)) {
+	/* default to 8-bits */
+	return( parodd ^^ b[0] ^^ b[1] ^^ b[2] ^^ b[3] ^^
+                b[4] ^^ b[5] ^^ b[6] ^^ b[7]                        );
+    }
+    return( parodd ^^ b[0] ^^ b[1] ^^ b[2] ^^ b[3] ^^ b[4] ^^
+            (b[5] && (CSIZE > 0)) ^^
+            (b[6] && (CSIZE > 1)) ^^
+            (b[7] && (CSIZE > 2))                                   );
+}
+
+function
+uart_nbits (value(csize, "uint:2"), value({cstopb, paren}, "log")) {
+    // Returns the total number of bits per character, including start
+    // bits. This is done with a constant lookup table
+    return(10);
+}
+
+// Character-bit state machine, which is used in both the
+// transmitter and receiver. The state transitions are goverened
+// by the character size parameters 'csize', 'parenb', and 'cstopb'
+// (meanings as per uart_out()).
+//
+// State transitions occur on 'brc'. The sequence is started by the
+// trigger signal being high. trigger is relevant in the idle
+// ('id') state, or on the last stop bit ('s1' or 's2' if 'cstopb'
+// is true), in which case the 'id' state will not be entered.
+//
+// The state bits mean
+//
+//		id      idle
+//		st      start bit
+//		d0-7    data bits (number depends on 'csize')
+//		pa      parity bit (if 'parenb')
+//		sf      first stop bit (if 'cstopb')
+//		sl      last stop bit
+procedure
+_uart_state (
+    static({id, st, d0, d1, d2, d3, d4, d5, d6, d7, pa, sf, sl}, "log")
+    <-
+    value({brc, trigger}, "log"),
+    value(csize, "uint:2", 3),
+    value({parenb, cstopb}, "log")
+) {
+    value(cs5, "log", (csize == 0));
+    value(cs6, "log", (csize == 1));
+    value(cs7, "log", (csize == 2));
+
+    petrinet {
+        initial id;
+	id -> st when (trigger && brc);
+	st -> d0 when (brc);
+	d0 -> d1 when (brc);
+	d1 -> d2 when (brc);
+	d2 -> d3 when (brc);
+	d3 -> d4 when (brc);
+
+	d4 -> d5 when (brc && !cs5);
+	d4 -> pa when (brc && cs5 && parenb);
+	d4 -> sf when (brc && cs5 && !parenb && cstopb);
+	d4 -> sl when (brc && cs5 && !parenb && !cstopb);
+
+	d5 -> d6 when (brc && !cs6);
+	d5 -> pa when (brc && cs6 && parenb);
+	d5 -> sf when (brc && cs6 && !parenb && cstopb);
+	d5 -> sl when (brc && cs6 && !parenb && !cstopb);
+
+	d6 -> d7 when (brc && !cs7);
+	d6 -> pa when (brc && cs7 && parenb);
+	d6 -> sf when (brc && cs7 && !parenb && cstopb);
+	d6 -> sl when (brc && cs7 && !parenb && !cstopb);
+
+	d7 -> pa when (brc && parenb);
+	d7 -> sf when (brc && !parenb && cstopb);
+	d7 -> sl when (brc && !parenb && !cstopb);
+
+	pa -> sf when (brc && cstopb);
+	pa -> sl when (brc && !cstopb);
+
+	sf -> sl when (brc);
+
+	sl -> st when (brc && trigger);
+	sl -> id when (brc && !trigger);
+    };
+}
+
+// A UART output section. 'txd' is the transmit output, usually
+// connected direct to an output pin.
+//
+// 'in' is the input data, always 8 bits.
+//
+// Transmission occurs only if 'txen' and 'cts' (if connected) are asserted.
+// If either go false the transmitter will stop at the end of the
+// current character. 'cts' usually connects to an output pin. 'txbusy'
+// indicates the transmitter is operating.
+//
+// 'brc16' is a clock enable signal at 16 times the output baud rate.
+// 'csize' is the char size (0 = 5 bits, 1 = 6 bits, 2 = 7 bits,
+// 3 = 8 bits). If PARENB is true, an even parity bit is added,
+// odd if 'parodd' is also true. If 'cstopb' is true, a second stop
+// bit is added. It is unsafe to change any of these while 'txbusy'
+// is high.
+//
+// 'brc' is the internal baud clock, 1/16 the rate of 'brc16', and is
+// brought out in case anything wants it
+//
+// The default is 8-bit characters, no parity, 1 stop bit.
+//
+// FIXME Flow-control ('cts') is not yet tested
+// FIXME Cannot produce BREAK
+global module
+uart_tx (
+    value({txd, txbusy}, "log"),
+    value(brc, "log")
+    <-
+    queue(in, "bits:8"),
+    value(brc16, "log"),
+    value(txen, "log", true),
+    value(cts, "log", true),
+    value(csize, "uint:2", 3),
+    value(parenb, "log"),
+    value(parodd, "log", false),
+    value(cstopb, "log")
+) {
+    /* divide 'brc16' by 16 to get baud-rate clock enable ('brc') */
+    static(brc_, "log");
+    static(brc_count, "uint:4");
+    
+    when (brc16)
+        brc_count++;
+    brc_ <- brc16 && (brc_count == 0);
+    brc := brc_;
+
+    static({txd_, txbusy_}, "log", true);
+    static(count, "uint:3", 5);
+    static(pa, "log");
+    txd := txd_;
+    txbusy := txbusy_;
+    
+    // Note: many operations in the following code are done sequentially
+    // when they could be done in parallel. This is because a lot of time
+    // is spent waiting for the baud-rate enable 'brc' and hence the extra
+    // cycles spent executing sequentially do not add to the execution time.
+    // Parallel blocks use more control code than sequential blocks so if
+    // there is no reason to choose one or other then sequential blocks are
+    // simpler.
+    when (<in && txen && cts) seq {
+        // send start bit
+        // latch data
+        // set busy condition
+        wait_while(!brc);
+        sync {
+            data <- in;
+            when (parenb)
+                pa <- uart_parity(in, csize, parodd);
+            txd_ <- false;
+            txbusy_ <- true;
+            reset(count);
+        }
+        // send 1st 5 bits
+        seq while (count != 0) {
+            wait_while(!brc);
+            txd_ <- cast(data, "log");
+            data <- data >> 1;
+            count--;
+        }
+        // optionally send 6th bit
+        when (csize > 0) seq {
+            wait_while(!brc);
+            txd_ <- cast(data, "log");
+            data <- data >> 1;
+        }
+        // optionally send 7th bit
+        when (csize > 1) seq {
+            wait_while(!brc);
+            txd_ <- cast(data, "log");
+            data <- data >> 1;
+        }
+        // optionally send 8th bit
+        when (csize > 2) seq {
+            wait_while(!brc);
+            txd_ <- cast(data, "log");
+            data <- data >> 1;
+        }
+        // optionally send parity bit
+        when (parenb) seq {
+            wait_while(!brc);
+            txd_ <- pa;
+        }
+        // optionally send extra stop bit
+        when (cstopb) seq {
+            wait_while(!brc);
+            reset(txd_);
+        }
+        // send stop bit
+        wait_while(!brc);
+        reset(txd_);
+    } else
+        // clear busy condition
+        reset(txbusy_);
+}
+
+// A UART receiver section. 'rxd' is the receive input, usually
+// connected direct to an input pin.
+//
+// 'oferr' is true if there was a framing error, and 'operr' indicates a
+// parity error (can only occur if 'parenb' is true). 'oferr' and 'operr' are
+// valid whenever out is available.
+//
+// Optional input 'rxen' if false will disable the receiver when the
+// current character is complete. Output 'rts' is true when the receiver
+// will accept a character. It goes false when 'rxen' is false or a
+// received character was not acknowleded before the expected start
+// of the next character.
+// 
+// 'brc16', 'csize', 'parenb', 'parodd' and 'cstopb' have the same meanings
+// as in uart_out().
+//
+// FIXME flow-control ('rts') supported is not tested
+// FIXME should detect BREAK
+global module
+uart_rx (
+    queue(out, "bits:8"), value({oferr, operr, overflow, rts}, "log")
+<-
+    value({rxd, brc16}, "log"),
+    value(rxen, "log", true),
+    value(csize, "uint:2", 3),
+    value(parenb, "log"),
+    value(parodd, "log", true),
+    value(cstopb, "log")
+) {
+    static(data, "bits:8");
+    static(count, "uint:3", 4);
+    static({ferr, perr, oflo}, "log");
+    oferr := ferr;
+    operr := perr;
+    overflow := oflo;
+    rts := !>out;
+    
+    /* resample RXD against 16x baud clock */
+    static({rxd_, rxd__}, "log");
+    
+    when (brc16) par {
+        rxd_ <- rxd;
+        rxd__ <- rxd_;
+    }
+
+    // character start trigger looks for down-transition of rxd
+    // Note: many operations in the following code are done sequentially
+    // when they could be done in parallel. This is because a lot of time
+    // is spent waiting for the baud-rate enable 'brc' and hence the extra
+    // cycles spent executing sequentially do not add to the execution time.
+    // Parallel blocks use more control code than sequential blocks so if
+    // there is no reason to choose one or other then sequential blocks are
+    // simpler.
+    when (!rxd_ && rxd__ && rxen && !>out)
+        oflo <- true;
+  
+    when (!rxd_ && rxd__ && rxen && >out) seq {
+        reset(count);
+        reset(ferr);
+        reset(perr);
+        reset(oflo);
+        // read 1st bit
+        wait8(brc16);
+        data <- cast(rxd, "bits:1");
+        // read next 4 bits
+        seq while (count != 0) {
+            wait16(brc16);
+            data <- data << 1 | cast(rxd, "bits:1");
+            count--;
+        }
+        // optionally read 6th bit
+        when (csize > 0) seq {
+            wait16(brc16);
+            data <- data << 1 | cast(rxd, "bits:1");
+        }
+        // optionally read 7th bit
+        when (csize > 1) seq {
+            wait16(brc16);
+            data <- data << 1 | cast(rxd, "bits:1");
+        }
+        // optionally read 8th bit
+        when (csize > 2) seq {
+            wait16(brc16);
+            data <- data << 1 | cast(rxd, "bits:1");
+        }
+        // optionally read parity bit
+        when (parenb) seq {
+            wait16(brc16);
+            perr <- rxd ^^ uart_parity(data, csize, parodd);
+        }
+        // check optional extra stop bit
+        when (cstopb) seq {
+            wait16(brc16);
+            ferr <- rxd;
+        }
+        // check stop bit
+        wait16(brc16);
+        ferr <- ferr || rxd;
+        out <<- reverse(data);
+        //wait8(brc16);
+    }
+}
+
+// Synthesize a clock-enable pulse at a frequency related to C
+// by the relationship
+//
+//		Fo = Fc * N / 2^k
+//
+// This uses a direct digital frequency synthesis technique as 
+// described in Xcell journal 31, Q1 1999. Fo (the generated
+// frequency) must be less than half Fc, and is subject to jitter
+// of the period of Fc.
+//
+// k is the number of bits of the adder/latch, while N is a
+// constant representable in k bits. The choice of k (and thus
+// N) depends on the frequency accuracy desired.
+function
+uart_ddfs(int({k, n})) {
+    static(l, "uint:"+k);
+    value(out, "log", to_pulse(l >> (k - 1)));
+    [l <- l + n;]
+    return(out);
+}
+
+
+procedure
+wait8 (value(enable, "log")) {
+    static(waitcount8, "uint:8", 8);
+
+    seq {
+        reset(waitcount8);
+        seq while (waitcount8 != 0) {
+            wait_while(!enable);
+            waitcount8--;
+        }
+    }
+}
+
+static(waitcount16, "uint:16", 16);
+procedure
+wait16 (value(enable, "log")) {
+    seq {
+        reset(waitcount16);
+        seq while (waitcount16 != 0) {
+            wait_while(!enable);
+            waitcount16--;
+        }
+    }
+}

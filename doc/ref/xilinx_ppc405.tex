@@ -1,0 +1,126 @@
+\pagebreak
+
+\section{Embedded PowerPC Interface Library - xilinx/ppc405lib.3pl}
+\label{chap:lmppc405lib}
+
+    {\bf This library has never been used in earnest so its functionality has not
+    been tested!}
+
+    \index{library!xilinx/ppc405lib.3pl}
+    {\bf This library provides an instantiation of an embedded PowerPC.}
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "xilinx/ppc405lib.3pl"
+    \end{lstlisting}
+
+
+
+
+    \subsection{library modules}
+    
+    None.
+
+
+
+    \subsection{library procedures}
+
+         \subsubsection{ppc405 - a PPC405}\label{sec:lpppc405}
+
+            {\bf Library: xilinx/ppc405lib.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global procedure
+               ppc405 (
+                   value({ C405CPMCORESLEEPREQ, C405CPMMSRCE, C405CPMMSREE, C405CPMTIMERIRQ,
+                           C405CPMTIMERRESETREQ, C405DBGMSRWE, C405DBGSTOPACK,
+                           C405DBGWBCOMPLETE, C405DBGWBFULL, C405DCRREAD, C405DCRWRITE,
+                           C405JTGCAPTUREDR, C405JTGEXTEST, C405JTGPGMOUT, C405JTGSHIFTDR,
+                           C405JTGTDO, C405JTGTDOEN, C405JTGUPDATEDR, C405PLBDCUABORT,
+                           C405PLBDCUCACHEABLE, C405PLBDCUGUARDED, C405PLBDCUREQUEST,
+                           C405PLBDCURNW, C405PLBDCUSIZE2, C405PLBDCUU0ATTR,
+                           C405PLBDCUWRITETHRU, C405PLBICUABORT, C405PLBICUU0ATTR,
+                           C405RSTCHIPRESETREQ, C405RSTCORERESETREQ, C405RSTSYSRESETREQ,
+                           C405TRCCYCLE, C405PLBICUREQUEST, C405TRCTRIGGEREVENTOUT,
+                           C405XXXMACHINECHECK, DSOCMBRAMEN, DSOCMBUSY, ISOCMBRAMEN,
+                           ISOCMBRAMEVENWRITEEN, ISOCMBRAMODDWRITEEN, C405PLBICUCACHEABLE}, "log"),
+                   value(C405DBGWBIAR, "bits:30"),
+                   value(C405DCRABUS, "bits:10"),
+                   value(C405DCRDBUSOUT, "bits:32"),
+                   value(C405PLBDCUABUS, "bits:32"),
+                   value(C405PLBDCUBE, "bits:8"),
+                   value(C405PLBDCUPRIORITY, "uint:2"),
+                   value(C405PLBDCUWRDBUS, "bits:64"),
+                   value(C405PLBICUABUS, "uint:30"),
+                   value(C405PLBICUPRIORITY, "uint:2"),
+                   value(C405PLBICUSIZE, "uint:2"),
+                   value(C405TRCEVENEXECUTIONSTATUS, "uint:2"),
+                   value(C405TRCODDEXECUTIONSTATUS, "uint:2"),
+                   value(C405TRCTRACESTATUS, "uint:4"),
+                   value(C405TRCTRIGGEREVENTTYPE, "uint:11"),
+                   value(DSOCMBRAMABUS, "uint:22"),
+                   value(DSOCMBRAMBYTEWRITE, "[4]log"),
+                   value(DSOCMBRAMWRDBUS, "bits:32"),
+                   value(ISOCMBRAMRDABUS, "uint:21"),
+                   value(ISOCMBRAMWRABUS, "uint:21"),
+                   value(ISOCMBRAMWRDBUS, "bits:32")
+                   <-
+                   int({XLOC, YLOC}),
+                   clock({ BRAMDSOCMCLK, BRAMISOCMCLK, CPMC405CLOCK, PLBCLK}),
+                   value({ CPMC405CORECLKINACTIVE, CPMC405CPUCLKEN, CPMC405JTAGCLKEN, 
+                           CPMC405TIMERCLKEN, CPMC405TIMERTICK, DBGC405DEBUGHALT,
+                           DBGC405EXTBUSHOLDACK, DBGC405UNCONDDEBUGEVENT, DCRC405ACK, 
+                           EICC405CRITINPUTIRQ, EICC405EXTINPUTIRQ, JTGC405BNDSCANTDO,
+                           JTGC405TCK, JTGC405TDI, JTGC405TMS, JTGC405TRSTNEG,
+                           MCBCPUCLKEN, MCBJTAGEN, MCBTIMEREN, MCPPCRST,
+                           PLBC405DCUADDRACK, PLBC405DCUBUSY, PLBC405DCUERR, 
+                           PLBC405DCURDDACK, PLBC405DCUSSIZE1, PLBC405DCUWRDACK,
+                           PLBC405ICUADDRACK, PLBC405ICUBUSY, PLBC405ICUERR, 
+                           PLBC405ICURDDACK, PLBC405ICUSSIZE1, RSTC405RESETCHIP, 
+                           RSTC405RESETCORE, RSTC405RESETSYS, TIEC405DETERMINISTICMULT,
+                           TIEC405DISOPERANDFWD, TIEC405MMUEN, TRCC405TRACEDISABLE,
+                           TRCC405TRIGGEREVENTIN}, "log"),
+                   value(BRAMDSOCMRDDBUS, "bits:32"),
+                   value(BRAMISOCMRDDBUS, "bits:64"),
+                   value(DCRC405DBUSIN, "bits:32"),
+                   value(DSARCVALUE, "uint:8"),
+                   value(DSCNTLVALUE, "uint:8"),
+                   value(ISARCVALUE, "uint:8"),
+                   value(ISCNTLVALUE, "uint:8"),
+                   value(PLBC405DCURDDBUS, "bits:64"),
+                   value(PLBC405DCURDWDADDR, "uint:3"),
+                   value(PLBC405ICURDDBUS, "bits:64"),
+                   value(PLBC405ICURDWDADDR, "uint:3"),
+                   value(TIEDSOCMDCRADDR, "uint:8"),
+                   value(TIEISOCMDCRADDR, "uint:8")
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            See Xilinx documentation.
+
+            {\bf Input parameters:} \\
+            See Xilinx documentation.
+
+            {\bf description:} \\
+            This procedure creates an instance of a PowerPC 405 core.
+            For a simpler interface see procedure {\bf ppcbr} \autorefph{sec:lpppcbr}
+            above.
+
+
+
+
+
+
+    \subsection{library functions}
+    
+    None.
+
+
+
+
+    \subsection{library classes}
+    
+        None.

@@ -1,0 +1,77 @@
+        These attributes are not case-sensitive but will be converted to
+        lower case.
+         
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf iopins()} \\
+        \hline
+        differential       & netlist    & log  & differential                      \\
+        diff\_term         & constraint & log  & differential input termination    \\
+        drive              & constraint & int  & drive current                     \\
+        dutycycle          & 3PL        & float& clock duty cycle                  \\
+        frequency          & 3PL        & float& clock frequency                   \\
+        ibuf\_delay\_value & constraint & log  & input buffer delay                \\
+        ibufg              & netlist    & log  & use an IBUFG instead of an IBUF   \\
+        ifd\_delay\_value  & constraint & int  & input flip-flop delay             \\
+        iostandard         & constraint & str  & voltage standard                  \\
+        noshadow           & 3PL        & log  & don't duplicate output flip-flop  \\
+        period             & 3PL        & float& clock period                      \\
+        pulldown           & constraint & log  & pulldown                          \\
+        pullup             & constraint & log  & pullup                            \\
+        slew               & constraint & str  & slew rate                         \\
+        tnm                & constraint & str  & timing name                       \\
+        \hline
+        \btabularxend
+
+        {\bf diff\_term} if true indicates that a $100\Omega$ termination
+        resistance be inserted between differential inputs
+        
+        {\bf differential} indicates that the pads are differential.
+        Two locations must be supplied for each data bit.
+        
+        The {\bf drive} attribute is an integer which specifies the output drive
+        current in mA for Xilinx output buffers (see Xilinx documentation).
+        
+        {\bf dutycycle} specifies the duty cycle of a clock input.
+        
+        {\bf frequency} specifies the frequency of a clock input.
+        
+        {\bf ibufdelay} gives the delay, 0 to 16, to be inserted in an input
+        buffer path. The value has no particular units.
+        
+        {\bf ibufg} specifies that an IBUFG be used instead of an IBUF.
+        
+        {\bf ifddelay} gives the delay, 0 to 8, to be inserted in an input
+        flip-flop input path. The value has no particular units.
+        
+        {\bf iostandard} is a string specifying one of the allowed
+        I/O standards (see Xilinx documentation).
+        
+        {\bf noshadow} when true inhibits the duplication of flip-flops
+        whose output is connected to an output buffer. By default any
+        flip-flop whose output is connected to an output buffer is placed
+        in the IO pad containing the buffer. If the output of the flip-flop
+        is used elsewhere then the flip-flop is duplicated in a CLB with
+        all inputs in parallel with the pad flip-flop and the output of the
+        duplicate used for internal logic. If {\bf noshadow} is true then
+        duplication will not be done, the flip-flop will of necessity
+        reside in a CLB and its output will be routed to the output buffer.
+        This will result in much worse clock-to-output time. Setting this
+        attribute ensures that the pad output genuinely reflects the
+        flip-flop state and not that of a duplicate but at the cost of
+        delayed output.
+        
+        {\bf period} specifies the period of a clock input.
+        
+        If {\bf pullup} or {\bf pulldown} are true the output will be given
+        a weak pullup or pulldown. It is not allowed for both these
+        attributes to be true.
+        
+        {\bf pullup}
+        
+        The {\bf slew} attribute is the string "fast" or "slow" and selects
+        one of two slew rates for Xilinx output buffers (see Xilinx documentation).
+        
+        {\bf tnm} is the name of a timing group in which the output pads
+        are to be included for timing constraint purposes.
+        

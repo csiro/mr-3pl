@@ -1,0 +1,10 @@
+//module directive("BOARD")
+module "boards/avnet/microzed_7010.3pl"
+
+class(cpu, cpu_api());
+
+static(s, "uint:5", 21);
+
+cpu.read(s, "SR");
+cpu.write(s <- "SW");
+

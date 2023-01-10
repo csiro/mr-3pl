@@ -1,0 +1,7 @@
+For a C CPU/FPGA interface cpu_serial.c must be compiled for the Zynq ARM CPU
+and linked with the application program. It might be compiled by an ARM
+cross-compiler or compiled on the Zyn1 ARM CPU itself.
+
+For a Python3 interface fpga.py must be imported into the application
+program. fpga_py_extension must have been added to the Python3 library
+by running the mk_setup script on the Zynq ARM CPU.

@@ -1,0 +1,62 @@
+nosource
+
+// 3pl board support for Memec DS-BD-MMB1 Mini Module Carrier
+// with a DS-BD-4VFX12MM1 Mini Module installed
+//
+//---------------------------------------------------------------------//
+// This header file is only partially completed.                       //
+// There are still many board devices without pinouts or interfaces.   //
+//---------------------------------------------------------------------//
+
+part("XC4VFX12SF363-10");
+module "xilinx/xc4v.3pl"
+
+str(lvcmos25, "LVCMOS25");
+str(lvcmos33, "LVCMOS33");
+
+// clock generator 100MHz
+iopins(global.c100_pin, "str", "B13",
+    iostandard=lvcmos25, frequency=100.0e6, ibufg=true
+);
+
+// user interaction
+iopins(global.user_led_pin, "str", "M5", iostandard=lvcmos33);
+iopins(global.led_pins, "[3]str", {
+	"G5", "F5", "E5"
+    }, iostandard=lvcmos33
+);
+iopins(global.button_pins, "[3]str", {
+	"H4", "H3", "C6"
+    }, iostandard=lvcmos33
+);
+iopins(global.dip_switch_pins, "[4]str", {
+	"D5", "C5", "D4", "C4"
+    }, iostandard=lvcmos33
+);
+
+// LCD connections
+// NOTE: these pins were erroneously reversed in the documentation!
+iopins(global.lcd_data_pins, "[8]str", {
+	"B6", "A6", "G4", "F3", "F4", "E3", "C3", "D3"
+    }, iostandard=lvcmos33
+);
+iopins(global.lcd_en_pin, "str", "A5", iostandard=lvcmos33);
+iopins(global.lcd_rs_pin, "str", "B5", iostandard=lvcmos33);
+
+// RS-232C serial interface
+iopins(global.serial_txd_pin, "str", "H2", iostandard=lvcmos33);
+iopins(global.serial_rxd_pin, "str", "G1", iostandard=lvcmos33);
+
+// User header J22
+// NOTE: j22[0] and j22[1] pins seem to be reversed in the documentation!
+iopins(global.j22_pins, "[20]str", {
+	"V4",  "V3",  "T6",  "U6", "R15", "R16", "U16", "U17",
+	"V17", "V18", "U18", "U19", "Y17", "W17", "W18", "W19",
+	"V19", "V20", "R19", "R20"
+    }, iostandard=lvcmos33
+);
+
+// create default 100MHz clock
+clock(global.c100_in, loc=c100_pin);
+simpleclock(global.c100, c100_in);
+useclock(c100);

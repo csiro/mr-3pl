@@ -1,0 +1,183 @@
+\pagebreak
+
+\chapter{Setting up an FPGA board}\label{chap:boardsetup}
+    
+    The Gadget Factory papilio board provides a good example of
+    the way 3PL is set up for a specific board.
+    
+    The following is a very simple 3PL application program for the papilio -
+    
+    \begin{lstlisting}[gobble=8, language=threepl]
+        module "boards/gadget_factory/papilio_one_500.3pl"
+
+        static(t, "log");
+
+        seq {
+            wait(0.5);
+            t <- !t;
+        }
+
+        output(,, t, loc=A_pins[0]);
+    \end{lstlisting}
+    
+    This trivial program outputs a 1Hz square wave on connector A pin 0 (P18).
+    The only requirement in setting up the platform is the first statement
+    which imports a file module specific to the papilio one 500.
+    A 32MHz clock is established by default and is the current clock domain.
+    
+    The imported file looks as follows -
+
+    \begin{lstlisting}[gobble=8, language=threepl]
+        nosource
+
+        // 3pl board support for GadgetFactory Papilio One 500k board
+
+        part("XC3S500EVQ100-4");
+
+        module "xilinx/xc3s.3pl"
+
+        // all IO is 3.3V on this board
+        str(lvcmos33, "LVCMOS33");
+
+        // clock generator 32MHz
+        iopins(c32_pin, "str", "P89", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+
+        // 48 I/O pins across A (wing 1A), B (wing 1B), C (wing 2A)
+        iopins(global.A_pins, "[16]str", {
+	        "P18", "P23", "P26", "P33", "P35", "P40", "P53", "P57",
+	        "P60", "P62", "P65", "P67", "P70", "P79", "P84", "P86"
+            }, iostandard=lvcmos33
+        );
+        iopins(global.B_pins, "[16]str", {
+        .
+        .
+        .
+        .
+
+        iopins(global.flash_cs_pin, "str", "P24", iostandard=lvcmos33);
+        iopins(global.flash_clk_pin, "str", "P50", iostandard=lvcmos33);
+        iopins(global.flash_mosi_pin, "str", "P27", iostandard=lvcmos33);
+        iopins(global.flash_miso_pin, "str", "P44", iostandard=lvcmos33);
+
+        // FTDI USB channel B serial receive and transmit
+        // Labelling is reversed to schematic!
+        // 'tx' should be an FPGA output, 'rx' an input
+        iopins(global.serial_rxd_pin, "str", "P88", iostandard=lvcmos33);
+        iopins(global.serial_txd_pin, "str", "P90", iostandard=lvcmos33);
+
+        // create 32MHz clock
+        clock(c32_in, loc=c32_pin);
+        simpleclock(global.c32, c32_in);
+        useclock(c32);
+
+        directive("comms_baud_rate", 115200); // define default serial device baud rate
+        module "xilinx/uart_cpu.3pl"
+
+
+        trailermodule ("create uart bus interface") {
+            create_bus_interfaces();
+        }
+    \end{lstlisting}
+    Some of the pin definitions have been omitted ... to shorten the listing.
+    
+    This file module specifies parameters for this particular board.
+    
+    The call to inbuilt procedure part() specifies the Xilinx FPGA part number.
+    
+    The next statement imports the file module xilinx/xc3s.3pl, described later.
+    That file module specifies parameters appropriate for the particular FPGA.
+    
+    The calls to iopins() build a map of all input and output FPGA pins and
+    attributes associated with them, such as the FPGA pin name and the I/O
+    standard. Additional attributes can be specified when the pins are
+    passed to an input(), output() or clock() inbuilt procedure.
+    
+    The first call to iopins() specifies the clock input pin (P89), the clock
+    frequency, (32MHz), specifies that an IBUFG should be used and that the I/O
+    standard is LVCMOS.
+    
+    A call to clock() creates a clock mode variable, \verb'c32_in'. The call to
+    simpleclock() in xilinx/clocks.3pl creates a global clock mode variable c32,
+    a clock manager (DCM) and a clock buffer. c32 is then made the current clock.
+    
+    Module \verb'xilinx/uart_cpu()' is imported to provide a CPU interface
+    to the FPGA using the serial link. That interface is set up at the end
+    by a trailer module which calls \verb'create_bus_interfaces()'
+    
+    Finally a trailer module is created to call \verb'create_bus_interfaces()'
+    after the source code exits to build the logic required to flesh out
+    the CPU/FPGA interface. Calls to the interface routines are made throughout
+    the source code and this logic is required at the end to tie it all
+    together.
+    
+    
+    
+    
+    
+    
+    
+    
+    The file module xilinx/xc3s.3pl, while specific to the Spartan 3S, also
+    imports libraries relevant to all Xilinx FPGAs.
+    
+    \begin{lstlisting}[gobble=8, language=threepl]
+        // Include file for Xilinx Spartan 3 (XC3S) elements
+        nosource
+
+        presetdirective("postProcessTool", "ise");  // ISE will be used
+
+        source "xilinx/common.3pl"      // xilinx common library
+        module "xilinx/postprocess.3pl" // code to run ISE or Vivado
+        module "stdlib.3pl"             // standard 3PL generic library
+        module "xilinx/clocks.3pl"      // xilinx clock managers
+        module "xilinx/io.3pl"          // xilinx I/O facilities
+
+        // Specify allowed special I/O and clock elements valid for
+        // this device.
+        // Map "elementMap" is in common.3pl.
+        elementMap["BUFG"] = true;
+        elementMap["BUFGMUX"] = true;
+        elementMap["BUFGCTRL"] = true;
+        elementMap["DCM"] = true;
+
+        leadermodule ("attributes", 100) {
+            attributeprocedure(processPinAttributes);
+        }
+
+        trailermodule ("constraints", 100) {
+            netlistcommentfromdirs();
+            generateConstraints();
+        }
+
+        postmodule ("Xilinx postprocessing") {
+            postprocess("xilinx/ise_fpga.cmd", directive("postProcessTool"), 9.1);
+        }
+    \end{lstlisting}
+
+    This sets a directive to select the place-and-route tools to be used ("ise"
+    or "vivado") and imports several appropriate libraries that might be needed.
+    
+    A leader module, which is executed prior to other source code, calls
+    inbuilt procedure attributeprocedure() to notify 3PL that the library
+    procedure processPinAttributes() in xilinx/common.3pl is to be called
+    whenever an input() output() or clock() inbuilt procedure is called
+    with I/O pins. This procedure is called for each pin and processes associated
+    attributes and constraints for the pin.
+    
+    A trailer module, which is executed after the source program exits, calls two
+    procedures, netlistcommentfromdirs() in stdlib.3pl and generateConstraints()
+    in xilinx/common.3pl. The first of these simply copies all directives and
+    their values as comments to the netlist (EDIF) file . The second generates
+    constraints from information gathered during immediate execution.
+
+    Finally a post-processing module is created which calls postprocess() in
+    xilinx/postprocess.3pl.  (Note that post processing by the Xilinx tools can
+    be supressed by the -s option when running 3pl. This might be done if the
+    tools are to be run manually or perhaps on another computer. For example if
+    3pl is executed on Apple OSX the Xilinx tools have to be executed on a Linux
+    or Windows emulator such as Virtualbox or else run on another computer since
+    Xilinx do not support OSX).
+
+
+
+

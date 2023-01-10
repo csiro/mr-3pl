@@ -1,0 +1,186 @@
+\pagebreak
+
+\section{SPI Library File - spi.3pl}
+
+    \index{library!spi.3pl}
+    SPI is a simple, synchronous serial protocol used to control peripheral
+    chips through a four-wire bus, at typical speeds of 1Mbit/s. SPI is more
+    or less defined in Section 8 of the Motorola MC68HC11 Reference Manual.
+    A subset of SPI is known as Microwire.
+
+    This implementation provides separate modules for SPI master and slave. Each
+    module can receive and transmit, although in many cases it will only do one or
+    the other. The SPI master is the initiator of all transfers. It generates the
+    synchronous clock ({\bf SCK}) and chip select ({\bf \_nSS}) signals, and drives
+    the master-out-slave-in ({\bf MOSI}) data line. The slave drives the
+    master-in-slave-out ({\bf MISO}) data line. 
+
+    Often there will be one master and one slave. However, single-master,
+    multi-slave situations are common. In this case, the master drives multiple
+    chip-select signals ({\bf \_nSS}), one per slave, and {\bf SCK}, {\bf MOSI} and
+    {\bf MISO} are common. Slaves must in these cases use tri-state or
+    open-collector logic to drive MISO. Multi-master operation is possible, but
+    requires separate arbitration arrangements between masters, usually performed
+    at a software level.
+
+    Peripheral chip manufacturers often alter aspects of the interface, for
+    example, inverting signals, using wired-or or tri-state logic, omitting {\bf
+    \_nSS}, using a common wire for {\bf MOSI}/{\bf MISO}, and so on. This
+    implementation should still be useful in these cases, using some additional
+    glue logic  to account for the differences.
+    
+    This library must be incorporated by using a {\bf module} statement -
+    \begin{lstlisting}[gobble=4, language=threepl]
+       module "spi.3pl"
+    \end{lstlisting}
+    
+
+
+    \subsection{library modules}
+
+        \subsubsection{spi\_master - SPI master transmitter/receiver}\label{sec:lmspimaster}
+
+            {\bf Library: spi.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module spi_master(
+                   static(SCK, "log"),
+                   static(MOSI, "log"),
+                   static(_NSS, "log"),
+                   queue(rx)
+               <-
+                   queue(tx),
+                   value(MISO, "log", false),
+                   value(timebase, "log", true),
+                   log(chpa, false)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf SCK} is the output data clock.\\
+            {\bf MOSI} is the master data output to a slave. \\
+            {\bf \_NSS} is a slave chip select. \\
+            {\bf rx} is the data output queue for the input data from MISO.
+
+            {\bf Input parameters:} \\
+            {\bf tx} is the data input queue for the output data to MOSI.\\
+            {\bf MISO} is the master data input from a slave.\\
+            {\bf timebase} is the .\\
+            {\bf chpa} controls the clock sense.
+
+            {\bf description:} \\
+            SPI master transmitter/receiver. Data written to the tx queue is
+            serialised and clocked out to the {\bf MOSI} (master-out slave-in)
+            output in synchronism with the generated {\bf SCK} output.
+            Simultaneously, input data on {\bf MISO} is sampled, deserialised and
+            written to the {\bf rx} queue. {\bf \_NSS} goes low for the duration of
+            the transmission. {\bf SCK}, {\bf MOSI}, {\bf MISO} and {\bf \_NSS} are
+            normally routed to FPGA pins for connection to SPI peripherals.
+
+            The data word size is the larger of that of the rx and tx queues.
+            Generally these will be the same. Where the receive size is larger, 
+            transmit words will be zero-padded at trailing end. Where the transmit
+            size is larger, the only the trailing receive bits will be returned.
+
+            Timing is regulated by the {\bf timebase} signal. Normally this is a stream
+            of single-clock pulses at twice the SPI baud rate; SPI peripheral chips
+            normally run at 1Mbaud or lower. If the timebase signal is tied true,
+            the baud rate will be one quarter the prevailing clock rate, and if the
+            timebase parameter is omitted, it will be one half. Note that SPI
+            slaves may not work reliably at high speeds.
+
+            Input {\bf chpa} is an immediate input which controls the phase of {\bf
+            SCK}. When false (the default), data will be sampled on the rising edge
+            of of {\bf SCK}. When true, the falling edge is used. (Note this is not
+            the same as inverting {\bf SCK}).
+
+            The master may be configured transmitter-only by omitting the {\bf rx}
+            queue and {\bf MISO} input. This is a common situation. Similarly, the 
+            master may be configured receiver-only by making the type of the {\bf
+            tx} queue null. In this case (empty) writes to the {\bf tx} queue initiate
+            receives.
+
+            If, following a receive, the {\bf rx} queue is not available, the received
+            data word is silently discarded.
+
+
+
+        \subsubsection{spi\_slave - SPI slave transmitter/receiver}\label{sec:lmspislave}
+
+            {\bf Library: spi.3pl}
+
+            {\bf Prototype:} \\
+            \vsp
+            \begin{lstlisting}[gobble=12, language=threepl]
+               global module spi_slave(
+                   value(MISO, "log"),
+                   queue(rx),
+                   static(SOSI, "log")
+               <-
+                   value(tx),
+                   value(SCK, "log", false),
+                   value(MOSI, "log", false),
+                   value(_NSS, "log", true),
+                   log(chpa, false)
+               ) {}
+            \end{lstlisting}
+
+            {\bf Output parameters:} \\
+            {\bf MISO} is the data output to the master.\\
+            {\bf rx} is the output queue for data received from the master.\\
+            {\bf SOSI} is an optional output to a daisy-chained slave.
+
+            {\bf Input parameters:} \\
+            {\bf tx} is the data input for transmission to the master.\\
+            {\bf SCK} is the input clock from the master.\\
+            {\bf MOSI} is the data input from the master.\\
+            {\bf \_NSS} is the slave chip select from the master.\\
+            {\bf chpa} controls the clock sense.
+
+            {\bf description:} \\
+            SPI slave transmitter/receiver. When the connected SPI master initiates
+            a transfer, the value of input {\bf tx} is sampled, serialised and
+            clocked out to the {\bf MISO} (master-out slave-in) output in
+            synchronism with the received SCK input. Simultaneously, input data on
+            {\bf MOSI} is sampled, deserialised and written to the {\bf rx} queue.
+            {\bf \_NSS} must be low throughout the operation.
+
+            Input {\bf chpa} controls the phase of the expected {\bf SCK}. The meaning is
+            as described in module spi\_master() ({\bf not implemented yet}).
+
+            The data word length is determined by the connected SPI master, although
+            generally the slave will match. However, the word length may be dynamic,
+            especially in a multi-master system.
+
+            The slave may be configured as a transmitter only by omitting the {\bf
+            rx} queue and {\bf MOSI} input. Similarly, the slave may be configured
+            as a receiver only by omitting the the {\bf tx} parameter.
+
+            If, during a receive, the {\bf rx} queue is not available (i.e., full),
+            the received data word is silently discarded.
+
+            In the unlikely event slave daisy-chaining is desired, the {\bf SOSI}
+            output can be connected to the {\bf MOSI} input of subsequent slaves.
+            {\bf SOSI} is the  output of the recieve shift-register, and so is the
+            same as the slave's {\bf MOSI} input but delayed by the bit-width of
+            the receiver. {\bf This feature is untested.}
+
+
+
+
+    \subsection{library procedures}
+    
+        None.
+        
+
+
+    \subsection{library functions}
+    
+        None.
+
+
+    \subsection{library classes}
+    
+        None.

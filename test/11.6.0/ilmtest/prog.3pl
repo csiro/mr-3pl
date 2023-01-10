@@ -1,0 +1,13 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+setdirective("excludeinfo", true);
+
+
+for (int(i) ; i<2 ; i++)
+    [
+        static(s, "log");
+        s <- !s;;
+        output(,, s, loc=j6_pins[i]);
+    ]
+
+

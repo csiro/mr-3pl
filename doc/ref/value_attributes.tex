@@ -1,0 +1,30 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf value mode attributes} \\
+        \hline
+        domain   & 3PL     & clock   & resolve the clock domains of assigned values \\     
+        readonly & 3PL     & boolean & set to read only \\     
+%        maxdelay & netlist & log     & maximum delay    \\     
+        \hline
+        \btabularxend
+        
+        {\bf These attributes are case-insensitive.}
+
+        {\bf domain} resolves the clock domains of any values assigned to the value
+        variable to the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the values are already resolved their clock
+        domains are compared with the intended domain. If the assigned clock domain
+        agrees with that within the values then there is no further action,
+        otherwise a fatal error occurs. If a value has not been assigned, the clock
+        domain will be set and a future assignment must have the same clock domain.
+        The attribute will affect all variables contained in the value expression.
+        Setting the clock domain has a particular use for value variables which are
+        outputs of an {\bf import()} \autorefph{sec:ipimport} procedure. Note that if
+        this attribute is read back a null is returned.
+        
+        {\bf readonly} true specifies that from now on this variable cannot
+        be assigned to. This attribute cannot be assigned false.
+        
+%        {\bf maxdelay} is a place-and-route constraint. This places an
+%        upper limit on the propagation time through the signal net or nets
+%        comprising this value.

@@ -1,0 +1,16 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+presetdirective("excludeinfo", true);
+
+class(cpu, cpu_api());
+
+struct(st,
+    f1, "uint:9",
+    f2, "int:12",
+    f3, "log",
+    f4, "uint:16"
+);
+
+static(s, st, {511, 2047, true, 0x7fff});
+
+cpu.write(s <- "SW");
+cpu.read(s, "SR");

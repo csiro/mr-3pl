@@ -1,0 +1,154 @@
+            In the case of Zynq the interface uses AXI bus GP0.            
+            The size of the output data type must not exceed 256 bits as the CPU
+            interface software limits burst transfers to 8 32-bit words.
+            
+            Boards having a serial interface to the CPU use that interface.
+            The size of the output data type is not limited.
+
+            The queue must be read somewhere in the program (queues without
+            sinks result in a fatal error on completion of immediate execution).
+            When the module is created the argument queue must have an established
+            read clock domain or a fatal error is generated.
+
+            If the output queue is written anywhere else in the program (i.e. other
+            than in this module) then it must be written in the bus clock domain
+            (c100) since that is the clock domain in which it is written in this
+            module.
+
+            If the argument to {\bf freecount} is true the number of free entries in
+            the queue buffer can be interrogated by the CPU. The output queue may
+            have any of the allowed buffer sizes. If the queue is asynchronous, i.e.
+            the write domain is not the bus clock domain (c100), the count will not
+            be exact but will be a guaranteed minimum number of writable spaces.
+
+            If the argument to {\bf freecount} is false the data returned from
+            reading the number of free spaces in the buffer is 0 or 1 instead of a
+            count. A return of 1 means the queue buffer is not full, i.e. can be
+            written. This option is provided to simplify the logic where a simple
+            full/non-full status is required.
+
+            If {\bf freecount} has no argument then there will no interface to
+            directly read the space remaining in the queue buffer, however an
+            interrupt may be used instead.            
+
+            Arguments to parameter {\bf ilevel} control provision of a level
+            interrupt on queue buffer status as follows -
+
+            If there is no argument then no interrupt is provided.
+
+            If the argument is type "log" with value false then the interrupt will
+            be asserted when the queue buffer is not full.
+
+            If the argument is type "log" with value true then the interrupt will be
+            asserted when the number of free spaces in the buffer equals or exceeds
+            a level which has been written to the interface from the CPU. The
+            initial value of this level is 1. A level value of 0 should not be
+            written to the interface as that will result in a continuous level
+            interrupt regardless of queue state.
+
+            If the argument is type "uint" or "int" then the interrupt will be
+            asserted when the number of free spaces in the buffer equals or exceeds
+            the fixed value specified by the integer argument. Again this should not
+            be 0.
+
+            If parameter {\bf reset} has an argument it provides a means of
+            resetting (clearing) the output queue. The argument may have a
+            different clock domain to that of the write side of the queue and hence
+            this may be more convenient than directly resetting the queue where a
+            change of clock domain may need to be explicitly provided.
+
+            Note that a write to a queue variable from {\bf cpu\_api.write\_queue()} (or
+            indeed from anywhere) can be detected within the FPGA by means of the
+            inbuilt function {\bf waswritten()} \autorefph{sec:ifwaswritten}. When
+            using this function the clock domain must be the same as that of the
+            queue write, i.e. {\bf bus\_clk}.
+            Parameter {\bf out} is the queue-mode output variable.
+            
+            On running info2c on the .json file the following C functions will have
+            been defined for interface {\em name} -
+            
+            \begin{tabular}{| l | l | l |}
+            \hline
+            function                                 & when                   &                            \\ \hline \hline
+            fpga\_{\em name}\_write()                & always                 & write a datum              \\ \hline
+            fpga\_{\em name}\_avail\_read()          & freecount has argument & read number of spaces free \\ \hline
+            fpga\_{\em name}\_avail\_thresh\_write() & ilevel "log" true      & set interrupt threshold    \\ \hline
+            fpga\_{\em name}\_enable()               & ilevel has argument    & enable interrupt           \\ \hline
+            fpga\_{\em name}\_disable()              & ilevel has argument    & disable interrupt          \\ \hline 
+            fpga\_{\em name}\_wait()                 & ilevel has argument    & wait on interrupt          \\ \hline  
+            \end{tabular}
+
+
+            
+            Example: \\
+            If 3PL source file prog.3pl contains the following \\
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class(cpu, cpu_api());
+               queue(p, "uint:16");
+               .
+               .
+               cpu.write_queue(p <- "P2",, true);
+               .
+               .
+            \end{lstlisting}
+            then for zynq the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog_fpga.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   int     d[...];
+                   int     i = 0;
+                   int     n = sizeof(d) / sizeof int;
+                   .
+                   .
+                   fpga_open(portName, INTERRUPTS);
+                   .
+                   .
+                   fpga_P2_avail_thresh_write(fpga, n); // set interrupt level
+                   fpga_P2_wait(fpga);                  // wait for interrupt
+                   for (i=0 ; i<n ; i++) {              // transmit data block
+                       fpga_P2_write(fpga, d[i]);       // write item
+                   fpga_P2_enable(fpga);                // enable interrupt
+                   .
+            \end{lstlisting}
+            
+            or perhaps -
+            \begin{lstlisting}[gobble=12, language=threepl]
+               class(cpu, cpu_api());
+               queue(p, "uint:16");
+               .
+               .
+               cpu.write_queue(p <- "P2", false);
+               .
+               .
+            \end{lstlisting}
+            then for zynq the CPU code should contain something like \\
+            \begin{lstlisting}[gobble=12, language=C]
+                   #include "prog_fpga.h"
+                   .
+                   .
+                   fpga_t *fpga = NULL;
+                   int     d[...];
+                   int     i = 0;
+                   int     n = sizeof(d) / sizeof int;
+                   .
+                   .
+                   fpga_open(portName, INTERRUPTS);
+                   .
+                   .
+                   for ( i=0 ; i<n ; i++) {                // transmit data block
+                       while (fpga_P2_avail(fpga) == 0)    // poll until not full
+                           ;
+                       fpga_P2_write(fpga, d[i]);          // write item
+                   }
+                   .
+            \end{lstlisting}
+
+            This procedure creates no in-line target code so the current clock domain
+            when this procedure is called is not relevant. The clock domain is not
+            changed by this procedure,
+            
+            {\bf The support CPU software for the UART CPU interface is still
+            under development, but application code wil be similar to the
+            above.}

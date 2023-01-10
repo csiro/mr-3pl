@@ -1,0 +1,857 @@
+nosource
+
+module "jsontype.3pl"   // converter for type to JSON string
+module "uarts.3pl"      // serial input and output ports
+
+
+// Setting this directive changes the interface address interpretation
+// slightly in class CPU_CODEGEN to favour the restricted serial
+// interface cf a proper bus interface such as for the Zynq.
+directive("uart_cpu");
+// read/write transfer limit
+directive("tlimit", 1016);
+
+//
+// CPU API code.
+//
+// An instance of class CPU_API is created when this current file module
+// is executed and is assigned to local variable 'cpu'. This class instance
+// is used within this current file module and is also passed back to the
+// application program by means of function cpu_api().
+// The local use is to create interfaces for the stored copy of the .info
+// JSON file (see 'infoword' and 'inforead' a few lines below).
+//
+source "xilinx/cpu.3pl"         // CPU API classes file
+class(cpu, CPU_API());          // Create API class here as used below
+
+// Make the API class available to application code via this function.
+// Assign pointers to DMA modules and interrupt module
+// to the cpu class so that the appropriate serial modules
+// can be called indirectly.
+//
+global function cpu_api () {
+    cpu.dma_read_ptr = &dma_read;
+    cpu.dma_write_ptr = &dma_write;
+    cpu.sigint_ptr = &sigint;
+    return(cpu);
+}
+
+// Read and write addresses start at 1.
+// Write address 0 is used for data returned to the FPGA
+// from a DMA transfer from CPU to FPGA (dma_read()).
+var(read_addr, "uint", 1);  // start read addresses at 1, not 0
+var(write_addr, "uint", 1); // start write addresses at 1, not 0
+log({rd_used, wr_used});
+log(dma_read_used);
+log(dma_write_used);
+static(file.idle, "log", true);
+
+var(interface_list, "list");
+
+
+// CPU interface for reading the compressed .info file
+// from block RAM. The read and write addresses will both be 1.
+// If subsequently not connected this interface will be deleted.
+// The .info file is compressed and stored in block RAM (rmemory)
+// so that it can be read and uncompressed by CPU code.
+// The compressed .info data is read from 'infoword' packed in 32 bit
+// words. The interface must be initialised by writing to 'inforeset'
+// (a zero width write).
+//
+// These interfaces are created here, prior to any others, to ensure that
+// the GP0 read and write addresses are both 1, i.e. the interfaces are
+// first in the GP0 list. If the interfaces are not used then the first two
+// list entries are removed later prior to generating the interface logic
+// and .info information.
+value(file.infoword, "uint:32");
+static({file.inforeset, file.inforead}, "log");
+cpu.read(access=inforead <- infoword, "infoword");
+cpu.write(, access=inforeset <- "inforeset");
+queue(file.rx, "bits:8", mindepth=16, ignoremodules=true);
+queue(file.tx, "bits:8", mindepth=16);
+
+// Interrupt list.
+var(interrupt_list, "list");
+
+//
+// This file implements a CPU/FPGA interface via a bi-directional serial link.
+// The application interface is specified by calls to procedures in class
+// CPU_API in xilinx/cpu.3pl and a list of these specifications is constructed. Common high-level implementation modules
+// are later created from the specification list by modules in class CPU_CODEGEN
+// also in file xilinx/cpu.3pl.
+// The low-level implementation is contained in this present file.
+//
+// Note that when the interface is generated a name.info JSON file is
+// produced from which matching CPU code can be created. Thus the 3PL
+// program specifies the interface and the CPU code is made to match
+// via data in the name.info file.
+//
+//
+// Commands are initiated by the CPU.
+// Interrupts are initiated by the FPGA.
+//
+//------------------------------------------------------------------------------
+// Commands -
+//    read queue
+//    read value
+//  __________________
+//  | com  |  addr   |
+//  ------------------
+//     2        6
+//
+//  a 7-bit count and one or more data bytes returned
+//   ________________   ________________
+//   |0 |  count    |   |    data      |  ---------
+//   ----------------   ----------------
+//    1       7                8
+//
+// A byte count is returned to the CPU, the top bit being zero to distinguish
+// it from an interrupt byte or DMA transfer. The count ensures that the data
+// in the burst will not be interpretted in any way. The CPU input data
+// handler passes on data bursts to a pipe from which procedures initiating a
+// read receive their data. A byte with top bit set (not within a burst)
+// initiates an interrupt via the input data handler.
+//
+//------------------------------------------------------------------------------
+// Commands -
+//    write queue       |
+//    write static      | zero or more data bytes
+//  __________________  ________________
+//  |  com  |  addr  |  |    data      |  ---------
+//  ------------------  ----------------
+//     2         6              8
+//
+// cpu_write_static() with no static output parameter but with an access
+// parameter can be used as a CPU to FPGA event trigger. In that case the command
+// will send no data.
+// 
+//
+//------------------------------------------------------------------------------
+// Command -
+//    read memory                   
+//  __________________  ____________________________________  
+//  |  com   | addr  |  |         .....   |  .....memaddr  |  
+//  ------------------  ------------------------------------  
+//     2         6               16 bit memory address
+//
+//  a 7-bit count and one or more data bytes returned
+//   ________________   ________________
+//   |0 | count     |   |    data      |  ---------
+//   ----------------   ----------------
+//          8                  8
+//
+//
+//
+//
+//------------------------------------------------------------------------------
+// Command -  
+//    write memory                                           one or more data bytes
+//  __________________  ____________________________________ ________________
+//  |  com   | addr  |  |         .....   |  .....memaddr  | |    data      |  ---------
+//  ------------------  ------------------------------------ ----------------
+//     2         6                 16 bit memory address8
+//
+//
+//------------------------------------------------------------------------------
+// Command bytes -
+// 00   read value, read queue
+// 10   write static, write queue
+// 01   read memory
+// 11   write memory
+//
+//
+// READS OR WRITES TO NON-EXISTENT ADDRESSES WILL HANG THE INTERFACE!
+// With this protocol read and write data lengths are known in advance
+// of execution and are agreed between the CPU and the FPGA. With an unknown
+// address the FPGA cannot know how many bytes to receive or transmit to complete
+// the transfer. The data length could be transmitted with each command but that
+// would add an extra byte to every command, an overhead best avoided with
+// 'low speed' serial transmission. This byte count could be added and default
+// readers and writers could then be implemented to terminate transfers involving
+// unknown addresses.
+//
+//
+//------------------------------------------------------------------------------
+// Interrupts
+//-----------
+// When an interrupt occurs a single byte consisting of 0x80 | n is transmitted
+// to the CPU where n is the interrupt event number, 0 to 15.
+//   ________________ 
+//   |1 0 0|0|   n  | 
+//   ---------------- 
+//     3    1    4
+//
+// An interrupt byte will not be transmitted while a read, write or DMA
+// command is in progress.
+//
+//
+//------------------------------------------------------------------------------
+// DMA - FPGA -> CPU
+//------------------
+// The first byte is 0xA0 | n where n is the DMA byte count. A 16 bit (2 byte)
+// address into the DMA buffer in the CPU and the data bytes follow.
+// 
+//   ________________  ____________________________________ ________________
+//   |1 0 1|    n   |  |         .....   |  .....DMAaddr  | |    data      |  ---------
+//   ----------------  ------------------------------------ ----------------
+//      3       5                16 bit DMA address                 8
+//
+//
+//------------------------------------------------------------------------------
+// DMA - CPU -> FPGA
+//------------------
+// The first byte is 0xC0 | n where n is the DMA byte count. A 16 bit (2 byte)
+// address into the DMA buffer in the CPU and the data bytes follow.
+// 
+//   ________________  ____________________________________
+//   |1 1 0|   n    |  |         .....   |  .....DMAaddr  |
+//   ----------------  ------------------------------------
+//      3      5                 16 bit DMA address
+//
+//  a 7-bit count and one or more data bytes returned
+//   ________________   ________________
+//   |0 | count     |   |    data      |  ---------
+//   ----------------   ----------------
+//          8                  8
+//
+
+clock(bus_clk);
+bus_clk := currentclock();
+
+//
+// This module controls the serial interface.
+// When a command byte is received static variable 'idle is
+// cleared, the command is decoded and one of static variables
+// 'rval', 'wstat', 'rmem' and 'wmem' are set.
+// If rmem or wmem are true a further two bytes are received to form
+// a 16 bit memory address.
+//
+// If the command is a read then code within procedure 'read()' performs
+// the data read from the FPGA variable or value and writes it to queue
+// 'tx' which is then transmtted to the CPU.
+//
+// If the command is a write then code within procedure 'write()' receives
+// the serial data from queue 'rx' and then writes it to the FPGA destination
+// variable.
+//
+
+
+// Priority variable to arbitrate exclusive access to link between handling
+// CPU master commands. FPGA interrupt and FPGA DMA.
+// 
+priority(pv);
+static({rval, wstat, rmem, wmem, dmar, dmaw}, "log");
+queue(iq, "uint:7", mindepth=16);
+
+
+module
+cpu_interface () {
+     if (!wr_used && !rd_used)
+        return;
+   
+
+    // UART input
+    //-----------
+    input(rx_in, "log", loc=serial_rxd_pin);
+    uart_rx(rx <- rxd=rx_in, br=directive("comms_baud_rate"));
+
+    if (rd_used || interrupt_n > 0 || dma_write_used || !direxists("excludeinfo")) {
+        // UART output
+        //------------
+        value(tx_out, "log");
+        output(,, tx_out, loc=serial_txd_pin);
+        uart_tx(tx_out <- in=tx, br=directive("comms_baud_rate"), cstopb=true);
+    }
+
+    struct(ctype,
+        addr,   "uint:6",   // device address
+        com,    "uint:2"    // command
+    );
+
+    static(file.command, ctype);
+    static(file.memaddr, "uint:16");
+
+    when (idle && <rx) {        // enter when idle and input byte from from CPU
+        seq {
+            waitprilock(pv, 1)              // Get exclusive access to link
+                command <- cast(rx, ctype); // read command byte
+            branch (command.com) {          // decode 4 command types
+            case 0:
+                rval <- true;
+            case 2:
+                wstat <- true;
+            case 1:
+                rmem <- true;
+            case 3:
+                wmem <- true;
+            }
+            when (rmem || wmem) seq {   // for memory, get 16 bit memory address
+                memaddr <- cast(rx, "uint:8");
+                memaddr <- memaddr | cast(rx, "uint:8") << 8;
+            }
+            idle <- false;
+        }
+    }
+}
+
+//
+// Add a new interface to the appropriate bus interface list.
+//
+procedure
+add_interface (var(v, "->")) {
+    switch (v->.interface_type) {
+    case itype.read_val:
+        v->.addr = read_addr++;
+    case itype.write_stat:
+        v->.addr = write_addr++;
+    case itype.read_q:
+        v->.addr = read_addr++;
+        if (v->.caddr < 0)
+            v->.caddr = read_addr++;
+        if (v->.ilevel < 0)
+            v->.laddr = write_addr++;
+    case itype.write_q:
+        // If the interface name is "DMA_RETURN" then the address
+        // is to be 0 (default for the unassigned field .addr),
+        // so skip the rest.
+        // A user call to this interface will not be generated.
+        if (v->.object_name != "DMA_RETURN") {
+            v->.addr = write_addr++;
+            if (v->.caddr < 0)
+                v->.caddr = read_addr++;
+            if (v->.ilevel < 0)
+                v->.laddr = write_addr++;
+        }
+    case itype.read_mem:
+        v->.addr = read_addr++;
+    case itype.write_mem:
+        v->.addr = write_addr++;
+    }
+    append(interface_list,, v);
+}
+
+//------------------------------------------------------------------
+// Create modules for -
+//  cpu_read_value()
+//  cpu_write_static()
+//  cpu_read_queue()
+//  cpu_write_queue()
+//  cpu_read_memory()
+//  cpu_write_memory()
+//
+// This is delayed until the end of immediate execution (it is called
+// from a trailer module) so that the variable clock domains have been
+// established.
+//
+module
+create_bus_interfaces () {    
+    rd_used = read_addr > 2;    // reads other than info register
+    wr_used = write_addr > 2;   // writes other than info register
+    if (!rd_used && !wr_used && interrupt_n == 0)
+        return;
+
+    useclock(bus_clk);
+
+    str(od, directive("outputDirectory"));
+    str(info_temp_file_name, od + "__temp__.info");
+    str(info_file_name, od + directive("designName") + ".info");
+    file(df, info_temp_file_name);
+    open(df, "w");
+    int(indent);
+    int(lsize);    
+
+    str(infostring);
+
+    // Address 1 is used to access the stored .info data in block RAM
+    // and has both a read and a write interface. These interfaces have
+    // been created by default. If they are not used, i.e. the directive
+    // "excludeinfo" exists, then these interfaces are removed here.
+    // Because these interfaces (one read and one write) are created first
+    // they will be the first two entries in the GP0 interface list.
+    // Note that read and write address 1 still remains allocated to these
+    // interfaces even though they have been removed.
+    if (direxists("excludeinfo")) {
+        remove(interface_list, 0);   // remove the .info read interface
+        remove(interface_list, 0);   // remove the .info write interface
+    }
+    
+    // Create the input and output serial ports if these are required
+    cpu_interface();   
+
+    //
+    // Create interface modules for serial CPU communications.
+    //
+    if (rd_used || wr_used) {
+        lsize = entries(interface_list);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, interface_list[i]->);
+            v.genproc->(v);
+            if (v.addr == 0) {
+                // Receive DMA data from CPU - not called from source
+                // so remove from list.
+                remove(interface_list, i);
+                lsize--;
+            }
+        }
+        //if (rd_used)
+        //    read_default(); // NOT DEFINED - ?
+        //if (wr_used)
+        //    write_default();// NOT DEFINED - ?
+    }
+
+    //
+    // Create interrupt logic.
+    // Queue depth is 16. If queue is full further interrupts
+    // are ignored.
+    //
+    if (interrupt_n != 0) {
+        multiplext(iq <- interrupt_list);
+        sync when (idle && <iq) {
+            waitpri(pv, 2)
+                tx <<- 0x80 | iq;
+        }
+    }
+    
+    rpt("\n\tCPU interfaces");
+    rpt("\t--------------\n");
+    
+    winfo("{");
+
+    // relates to the format of the JSON
+    //   -- bump major number for incompatible changes
+    //   -- bump minor number of compatible changes (like additions)
+    winfo("\"version\": {");
+    winfo("\"major\": 1,");
+    winfo("\"minor\": 0");
+    winfo("},");
+
+    winfo("\"directives\": {");
+    var(dirs, "map", directives());
+    int(dn, entries(dirs));
+    if (dn != 0) {
+        for (int(i) ; i<dn ; i++) {
+            str(key, dirs[i]);
+            str(val, dirs[key]);
+            str(comma, ",");
+            if (i == dn - 1)
+                comma = "";
+            winfo("\"" + key + "\": \"" + val + "\"" + comma);
+        }
+    }
+    winfo("},");
+    winfo("\"spaces\": {");
+    
+    // Write description of register, queue and memory bus interfaces to .info file.
+    if (rd_used || wr_used) {
+        winfo("\"reg\": {");
+        winfo("\"bus\": \"serial\",");
+        if (rd_used)
+            winfo("\"read_addr_bits\": 6,");
+        if (wr_used)
+            winfo("\"write_addr_bits\": 6,");
+
+        winfo("\"interfaces\": {");
+        lsize = entries(interface_list);
+        for (int(i) ; i<lsize ; i++) {
+            class(v, interface_list[i]->);
+            str(s, "\t" + v.object_name + "_" + v.interface_name);
+            int(sl, strlen(s));
+            
+            if (v.write)
+                rpt(s + head(spaces, 40-sl)+ v.typestring);
+            else
+                rpt(s + head(spaces, 40-sl) + v.typestring);
+            winfo("\"" + v.object_name + "\": {");
+            winfo("\"interface\": \"" + v.interface_name + "\",");
+            winfo("\"write\": " + v.write + ",");
+            if (v.var != null && mode(v.var->) == "queue")
+                winfo("\"data_depth\": " + queuedepth(v.var->) + ",");
+            winfo("\"data_addr\": " + v.addr + ",");
+            if (v.caddr > 0) {
+                winfo("\"avail_addr\": " + v.caddr + ",");
+                rpt("\t" + v.object_name + "_avail_read()");
+            }
+            if (v.laddr > 0) {
+                winfo("\"avail_thresh_addr\": " + v.laddr + ",");
+                rpt("\t" + v.object_name + "_avail_thresh_write()");
+            } else if (v.iev >= 0)
+                winfo("\"fixed_thresh\": " + -v.laddr + ",");
+            if (v.iev >= 0)
+                winfo("\"avail_thresh_intr\": " + v.iev + ",");
+            if (v.var != null) {
+                if (mode(v.var->) == "queue")
+                    winfo("\"check\": " + v.check + ",");
+                if (mode(v.var->) == "cmemory" || mode(v.var->) == "rmemory" ) {
+                    type(mdtype, memorydatatype(v.var->));
+                    winfo("\"port\": " + v.port + ",");
+                    winfo("\"data_bits\": " + size(mdtype) + ",");
+                    winfo("\"data_type\": {");
+                    if (v.qdepth != 0)
+                        winfo("\"queue_depth\": " + v.qdepth + ",");
+                    infostring = infostring + jsontype(mdtype, indent) + "\n";
+                } else {
+                    winfo("\"data_bits\": " + size(v.var->) + ",");
+                    winfo("\"data_type\": {");
+                    infostring = infostring + jsontype(type(v.var->), indent) + "\n";
+                }
+                winfo("}");
+            } else
+                winfo("\"data_bits\": 0");
+            if (i == lsize - 1)
+                winfo("}");
+            else
+                winfo("},");
+        }
+        winfo("}");
+        winfo("}");
+    }
+        
+    winfo("},");    
+    rpt("\n\tCPU interrupts");
+    rpt("\t--------------\n");
+
+    // CPU interrupts.
+    winfo("\"events\": {");
+    lsize = entries(interrupt_map);
+    for (int(i) ; i<lsize ; i++) {
+        str(id, interrupt_map[i]);
+        int(ev, interrupt_map[id]);
+        winfo("\"" + id + "\": {");
+        winfo("\"intr\": " + ev);
+        if (i == lsize - 1)
+            winfo("}");
+        else
+            winfo("},");
+        rpt("\t"+ id + "_WAIT");
+    }
+    
+    rpt("\n\n");   
+    winfo("}");
+    winfo("}");
+
+    // Write to the .info file.
+    writeln(df, infostring);
+    
+    close(df);
+    if (!filerename(info_temp_file_name, info_file_name))
+        println(".info file could not be moved from '" + info_temp_file_name +
+        "' to '" + info_file_name + "'");
+    
+    // Optionally create a compressed version of the .info file in block RAM.
+    if (!direxists("excludeinfo"))
+        if (!compressInfo(info_file_name))
+            println("embedded .info file not created");
+    
+    // Copy directives into a comment in the netlist file.
+    netlistcommentfromdirs();
+    
+    // Append an indented line to the information file string.
+    procedure
+    winfo (str(s)) {
+        // Adjust indenting on closing brackets or braces.
+        if (strpos(s, "}") >= 0 || strpos(s, "]") >= 0)
+            calling.indent--;
+        
+        calling.infostring = calling.infostring + lspace(calling.indent) + s + "\n";
+        
+        // Adjust indenting on opening brackets or braces.
+        if (strpos("{[", tail(s, 1)) >= 0)
+            calling.indent++;
+    }
+    
+    //
+    // Create a compressed version of the .info string and load into a
+    // registered output memory that can be read by the CPU.
+    // The data is packed into 32 bit memory words. This requires
+    // command 'gzip' to be available on the host.
+    //
+    function compressInfo (str(ifname)) {
+        var(iminit, "[]uint", deflate(calling.infostring));
+        int(words, dimension(iminit));
+        if (words > 32767) {
+            printf(".info file too large to incorporate into FPGA block RAM\n");
+            return(false);
+        }
+        
+        [
+            //
+            // Note that this interface has been kept very simple to minimise
+            // the use of logic resources. The CPU reads the output of the
+            // rmemory (block RAM) using cpu_read_value(), i.e. a queue is
+            // not used! Each CPU read triggers an address increment and a
+            // new rmemory read.
+            //
+            // Before reading the packed .info data, a write to GP0 bus
+            // address 1 must be done to initialise the read address and
+            // perform the first read. That write has zero data width.
+            // Four bytes at a time can then be read from 'address'
+            // which is incremented after each read.
+            //
+            int(addrwidth, size(words));
+            type(addrtype, "uint:"+addrwidth);
+            int(maxaddr, (1 << addrwidth) - 1);
+            rmemory(im, 1, addrtype, "uint:32", iminit);
+            static(address, addrtype);
+            value(next, "log");
+
+            infoword := rmemoryout(im, 0);
+            when (inforead)
+                assert(next <-);
+            when (inforeset) seq {
+                address <- 0;
+                assert(next <- true);
+            }
+            when (next) par {
+                rmemoryread(im, 0, address);
+                when (address != maxaddr)
+                    address++;
+            }
+        ]
+
+        return(true);
+    }
+
+    // Create an indenting space string whose length is n * 4.
+    function
+    lspace (int(n)) {
+        str(space_string, "                                                                    ");
+        return(head(space_string, n*4));
+    }
+}
+
+// Handle a bus read burst.
+//
+// Note that this is a procedure so that the instantiations are not
+// separate queue sources. The addressing mechanism enforces mutually
+// exclusive reading of the read address queues, i.e.
+// only one instance of this procedure will read a queue though all
+// examine the read address queue. This saves the logic normally necessary
+// to ensure that reads from separate modules are all completed before
+// queue output becomes available with the next datum. That logic can become
+// a problem with meeting time constraints if there are a large number of
+// readers. Ensuring that all readers are in a single module, as is the case
+// here, avoids the problem as long as the readers look after their own
+// exclusive access.
+procedure
+cpu_read (
+    value(access, "log"),
+    value(init, "log"),
+    queue(out)
+    <-
+    int(bus),
+    int(addr),
+    value(data_in),
+    value(contin, "log")
+) {
+    int(data_width, size(data_in));
+    int(bytes, (data_width + 7) /8);
+    static(data, "bits:"+(bytes*8));
+    value(rav, "log", <data_in); // always true for static mode
+    static(empty, "log");
+    static(i, "uint:"+size(bytes));
+
+    when (!idle && (rval || rmem) && command.addr == addr) seq {
+        if (matched(contin)) {
+            assert(init <-);
+            wait_until(contin);
+        }
+        par {
+            when (rav) par {
+                data <- cast(data_in, type(data));
+                if (matched(out))
+                    when (>out)
+                        out <<- data_in;
+            }
+            reset(i);
+            empty <- !rav;
+        }
+        tx <<- bytes;   // number of bytes sent
+        sync while (i != bytes) {
+            tx <<- empty ? 0xff : data;
+            i++;
+            data <- data >> 8;
+        }
+        par {
+            assert(access <-);
+            reset(idle, rval, rmem);
+            priunlock(pv);
+        }
+    }
+}
+
+
+// Handle a bus write burst.
+//
+// Note that this is a procedure so that the instantiations are not
+// separate queue sinks. The addressing mechanism enforces mutually
+// exclusive reading of the write address and write data queues, i.e.
+// only one instance of this procedure will read the queues though all
+// examine the write address queue. This saves the logic normally necessary
+// to ensure that reads from separate modules are all completed before
+// queue output becomes available with the next datum. That logic can become
+// a problem with meeting time constraints if there are a large number of
+// readers. Ensuring that all readers are in a single module, as is the case
+// here, avoids the problem as long as the readers look after their own
+// exclusive access.
+procedure
+cpu_write (
+    var(out),
+    value(access, "log")
+    <-
+    int(bus),
+    int(addr)
+) {
+    log(out_used, matched(out));
+    if (out_used) {
+        int(data_width, size(out));
+        int(local.bytes, (data_width + 7) /8);
+        static(local.data, "bits:"+ (bytes * 8));
+        static(local.i, "uint:"+size(bytes));
+    }
+    
+    // The following 'sync' should not be necessary (though is harmless)
+    // but the code does not work if it is omitted! Why?
+    sync when (!idle && (wstat || wmem) && command.addr == addr) {
+        seq {
+            if (out_used) {
+                reset(i, data);
+                seq while (i != bytes) {
+                    par {
+                        data <- data | rx;
+                        i++;
+                    }
+                    data <- data >>^ 8;
+                }
+                if (mode(out) == "static")
+                    out <- cast(data, type(out));      // output is static
+                else
+                    when (>out)
+                        out <<- cast(data, type(out)); // output is queue
+            }
+            par {
+                assert(access <-);
+                reset(idle, wstat, wmem);
+                priunlock(pv);
+            }
+        }
+    }
+}
+
+// DMA from CPU RAM to PL.
+// A datum on queue 'address' and space on queue 'data' will trigger
+// the DMA transfer. The number of bytes necessary for the data size will
+// be transmitted,
+// The address is relative to a base address assigned via set_dma_address()
+// in the CPU.
+// This can only be called once!
+module
+dma_read (
+    queue(data)
+    <-
+    queue(address, "uint:16")   // relative memory address
+) {
+    useclock(bus_clk);
+    
+    static(addr, "uint:16");
+    
+    if (dma_read_used)
+        texit("dma_read() - dma_read() already called");
+    dma_read_used = true;
+    int(bytes, (size(data) - 1) / 8 + 1);
+    
+    when (idle && <address) seq {
+        waitprilock(pv, 3) sync {
+            tx <<- 0xc0 | bytes;
+            idle <- false;
+            dmar <- true;
+            addr <- address;
+        }
+        tx <<- addr & 0xff;
+        tx <<- addr >> 8;
+        par {
+            priunlock(pv);
+            reset(idle, dmar);
+        }
+    }
+    
+    // Interface for returned DMA data.
+    attributes(data, writedomain=null);
+    cpu.write(data <- "DMA_RETURN");
+    
+    useclock();
+}
+
+// DMA from PL to CPU RAM.
+// A datum on each of queues 'data' and 'address' will trigger
+// the DMA transfer. The number of bytes necessary for the data size will
+// be transmitted,
+// The address is relative to a base address assigned via set_dma_address()
+// in the CPU.
+// This can only be called once!
+module
+dma_write (
+    queue(data),
+    queue(address, "uint:16")   // relative memory address
+) {
+    useclock(bus_clk);
+    
+    if (dma_write_used)
+        texit("dma_read() - dma_write() already called");
+    dma_write_used = true;
+    int(bytes, (size(data) - 1) / 8 + 1);
+    static(count, "uint:5");
+    static(d, type(data));
+    static(addr, "uint:16");
+
+    when (idle && <data && <address) seq {
+        waitprilock(pv, 4) sync {
+            dmaw <- true;
+            idle <- false;
+            count <- bytes;
+            d <- data;
+            addr <- address;
+        }
+        tx <<- 0xa0 | bytes;
+        tx <<- addr & 0xff;
+        tx <<- addr >> 8;
+        sync while (count != 0) {
+            tx <<- d & 0xff;
+            d <- d >> 8;
+            count--;
+        }
+        par {
+            priunlock(pv);
+            reset(idle, dmaw);
+        }
+    }
+    
+    useclock();
+    
+}
+
+module
+sigint(int(n), value(sig, "log")) {
+    queue(q, "uint:5");
+    if (currentclock() == bus_clk)
+        sync when (sig) {
+            seq {
+                q <<- n;
+                wait_while(sig);
+            }
+        }
+    else {
+        value(v, "log");
+        useclock(bus_clk);
+        resync(v <- sig);
+        sync when (sig) {
+            seq {
+                q <<- n;
+                wait_while(sig);
+            }
+        }
+        useclock();
+    }
+    append(interrupt_list,, &q);
+}
+
+str(spaces, "                                                                   ");

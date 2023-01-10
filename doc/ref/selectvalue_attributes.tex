@@ -1,0 +1,70 @@
+        \btabularx
+        \hline
+        \multicolumn{4}{|l|}{\bf selectvalue mode attributes} \\
+        \hline
+        domain     & 3PL & clock   & force the clock domain                    \\     
+        direct     & 3PL & boolean & enable direct from test                   \\     
+        readonly   & 3PL & boolean & set to read only                          \\     
+        alu        & 3P  & boolean & use an ALU if appropriate                 \\        
+        dsp        & 3PL & boolean & use a DSP block                           \\
+        threestate & 3PL & boolean & use 3-state buffers rather than CLB logic \\
+        \hline
+        \btabularxend
+
+        {\bf domain} forces the clock domain (both input and output) to
+        the specified clock domain. If assigned {\bf null} the current
+        clock domain is selected. If the variable already has a clock domain
+        as a result of having been assigned or evaluated then that clock domain
+        is compared with the intended domain. If the assigned clock domain
+        agrees with that already in place then there is no further action,
+        otherwise a fatal error occurs.
+
+        {\bf direct} true specifies that if possible the output enable will be
+        driven directly from a conditional signal, not through an execution
+        thread and WHEN block. This can significantly simplify the logic and
+        reduce the probability of failing to meet timing constraints locally.
+        Note that when this attribute is in effect the selectvalue is operative
+        following configuration loading regardless of any 3PL startup mechanisms
+        - see {\bf start()}(\autorefph{sec:ipstart}).
+        
+        {\bf readonly} true specifies that from now on this variable cannot
+        be assigned to. This attribute cannot be assigned false.
+        
+        {\bf alu} specifies that assignments of expressions containing
+        arithmetic operators '+' and '-' as the final or only operation can be
+        combined into a single common adder/subtracter using CLBs. If the {\bf alu}
+        attribute is false it can override the global directive {\bf ALU} to
+        suppress the use of an ALU for an individual static variable.
+        
+        The {\bf alu} attribute can save logic and incurs no time penalty for the
+        operations drawn in to the adder/subtracter, but all other assignments
+        suffer an increase in propagation time since assigned values must now
+        traverse the shared adder/subtracter. This tradeoff must be considered
+        in each case.
+        
+        The {\bf alu} attribute is only used at completion of immediate execution.
+        
+        The behaviour of the {\bf dsp} attribute depends on the FPGA -
+        \blist
+        \item   For Virtex-5 and Virtex-6 it has a similar effect to the
+                {\bf alu} attribute in that it draws arithmetic and bitwise logic
+                operations in assignments to the variable into a single ALU,
+                but using a DSP block rather than CLBs.
+        \item   For other FPGAs the attribute has no effect.
+        \blend
+        
+        The {\bf dsp} attribute will not use a Virtex-5 or Virtex-6 DSP block as an
+        ALU if the word width exceed 48 bits (multiplier operands are restricted
+        to 25 by 18 bits).
+        
+        Note that for Virtex-5 or Virtex-6 if the {\bf alu} attribute is true but not
+        the {\bf dsp} attribute then arithmetic operators '+' and '-' as the final or
+        only operation will be combined into a single common adder/subtracter
+        using CLBs.
+        
+        {\bf threestate} true specifies that three state buffers are to be used
+        rather than CLB logic. If the device family does not support three state
+        drivers then CLB logic will be used regardless of this attribute.
+        Devices which have internal three-state buffers are Spartan-II, Spartan
+        IIE, Virtex, Virtex-E, virtex-II, Virtex-II Pro, XC9500, XC9500XV and
+        XC9500XL.

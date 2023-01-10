@@ -1,0 +1,24 @@
+module "boards/avnet/aes_sp3a_eval400.3pl"
+
+class(cpu, cpu_api());
+
+
+// DMA write
+
+queue(wd, "bits:32");
+queue(wa, "uint:16");
+
+cpu.dma_write(wd, wa);
+
+cpu.write(wa <- "WA");
+cpu.write(wd <- "WD");
+
+// DMA read
+
+queue(rd, "bits:32");
+queue(ra, "uint:16");
+
+cpu.write(ra <- "RA");
+cpu.read(rd, "RD");
+
+cpu.dma_read(rd <- ra);

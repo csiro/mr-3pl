@@ -1,0 +1,268 @@
+\documentclass[10pt,a4paper,twoside,fleqn]{book}
+\usepackage{inchmargins,fancyhdr,amsmath,graphicx,moreverb,listings,color,crtitle}
+\usepackage{makeidx}
+\usepackage{tocloft}
+\usepackage{graphicx}
+%\usepackage{pgf}
+%\usepackage{tikz}
+\usepackage{verbatim}
+\usepackage[
+    colorlinks=true,
+    linkcolor=red,
+    pdfpagemode=UseOutlines,
+    pdfdisplaydoctitle=true,
+    pdfpagelayout=SinglePage
+]{hyperref}
+\pagestyle{fancy}
+
+\input{version}
+
+\setcounter{secnumdepth}{3}
+
+
+\newcommand{\htitle}{\bf The 3PL Language\\Version \Version}
+\newcommand{\hauthor}{Paul Dunn}
+\newcommand{\hdate}{\BuildDate}
+\newcommand{\hreport}{Open report - CSIRO Mineral Resources}
+\newcommand{\hhead}{Version \Version}
+\newcommand{\hfoot}{Open report - CSIRO Mineral Resources}
+
+\newcommand{\heading}[1]{\vspace{20pt} {\large \bf #1}}
+
+
+
+%\documentclass[12pt,a4paper,fleqn]{article}
+%\usepackage{inchmargins,fancyhdr,epsfig,html}
+%\pagestyle{fancyplain}
+ 
+\def\fps@table{htbp}
+%\def\topfraction{.9}
+%\def\bottomfraction{.9}
+%\def\textfraction{.1}
+%\def\floatpagefraction{.9}
+\renewcommand{\topfraction}{.95}
+\renewcommand{\bottomfraction}{.95}
+\renewcommand{\textfraction}{.05}
+\renewcommand{\floatpagefraction}{.95}
+\setlength{\mathindent}{2cm}
+\setcounter{topnumber}{5}
+\setcounter{bottomnumber}{5}
+\setcounter{totalnumber}{10}
+\setcounter{tocdepth}{1}
+\newcommand{\vsp}{\vspace{-10pt}}
+\newcommand{\vsptf}{\vspace{25pt}}
+\newcommand{\blist}{\begin{list}{$\bullet$}{\setlength{\itemsep}{-5pt}\setlength{\topsep}{-5pt}}}
+\newcommand{\blend}{\end{list}}
+\newcommand{\Index}[1]{#1\index{#1}}
+\newcommand{\refp}[1]{\ref*{#1} p\pageref*{#1}}
+\newcommand{\autorefph}[1]{\autoref{#1} p\pageref*{#1}}
+\newcommand{\btabularx}{\begin{tabular}{| p{2.2cm} | p{2.3cm} | p{3.3cm} | p{6.4cm} |}}
+\newcommand{\btabularxend}{\end{tabular}}
+
+\setlength{\cftsecnumwidth}{3.2em}
+
+%\renewcommand{\section}{\@startsection
+%                           {section}
+%                           {1}
+%                           {0mm}
+%                           {-\baselineskip}
+%                           {0.5\baselineskip}
+%                           {\Large\bfseries}
+%                       }
+%\renewcommand{\subsection}{\@startsection
+%                           {subsection}
+%                           {2}
+%                           {0mm}
+%                           {-\baselineskip}
+%                           {0.5\baselineskip}
+%                           {\large\bfseries}
+%                       }
+
+\definecolor{orangered}{rgb}{0.99,0.27,0}
+\definecolor{brown}{rgb}{0.64,0.16,0.16}
+\definecolor{limegreen}{rgb}{0.19,0.76,0.19}
+\definecolor{darkorchid}{rgb}{0.6,0.19,0.8}
+\definecolor{darkviolet}{rgb}{0.58,0,0.82}
+\definecolor{electricindigo}{rgb}{0.44, 0.0, 1.0}
+\definecolor{myrtle}{rgb}{0.13, 0.26, 0.12}
+\definecolor{napiergreen}{rgb}{0.16, 0.5, 0.0}
+%            \color{darkviolet} {\bf darkviolet} \normalcolor \\
+%            \color{limegreen} {\bf limegreen X} \normalcolor \\
+%            \color{darkorchid} {\bf darkorchid} \normalcolor \\
+%            \color{electricindigo} {\bf electricindigo X} \normalcolor \\
+%            \color{myrtle} {\bf myrtle} \normalcolor \\
+%            \color{napiergreen} {\bf napiergreen} \normalcolor \\
+%            \color{magenta} {\bf magenta} \normalcolor \\
+%            \color{cyan} {\bf cyan} \normalcolor
+
+
+\lstloadlanguages{C}
+\lstloadlanguages{Python}
+\lstset{
+    basicstyle=\small\ttfamily,
+    basewidth={0.5em},
+    frame=single,
+    keywordstyle=\color{limegreen},
+    commentstyle=\color{darkorchid},
+    stringstyle=\color{darkviolet},
+    showstringspaces=false
+}
+\lstdefinelanguage{threepl} {
+    morekeywords=[1]{value,selectvalue,queue,static,input,output,priority,clock,var,struct,int,float,str,log,cmemory,rmemory,type,enum,input,output,useclock},
+    morekeywords=[2]{source,nosource,class,module,nomodule,private,procedure,function,global,local,calling,file,if,else,case,default,switch,while,do,for,seq,par,sync,when,break,return,unless},
+    otherkeywords={<,>,=,<=,>=,\!=,<-,<<-,|-,:=,->},
+    sensitive=true,
+    keywordstyle=\color{orangered},
+    keywordstyle=[1]\color{brown},
+    keywordstyle=[2]\color{limegreen},
+    commentstyle=\color{darkorchid},
+    stringstyle=\color{darkviolet},
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]"
+}
+\lstdefinelanguage{make} {
+    basicstyle=\small\ttfamily\color{blue},
+    basewidth={0.5em}
+}
+
+\newcommand{\kwd}[1]{{\bf #1}} % keyword
+\newcommand{\var}[1]{{\bf #1}} % variable identifier
+
+% xfig diagrams -
+% Helvetica-Narrow-Bold, size 8
+% arrow type solid (3rd in menu), thickness 1.0, width 3.0, height 6.0
+
+
+
+%\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+%%\renewcommand{\sectionmark}[1]{\markright{#1}}
+   
+\setlength{\parskip}{3ex}
+\setlength{\parindent}{0pt}
+    
+\raggedbottom
+
+
+\makeindex
+
+
+\begin{document}
+  
+
+\makecsirotitle
+  
+\pagenumbering{roman}
+
+\setlength{\parskip}{0pt}
+\phantomsection
+\pdfbookmark[0]{Contents}{\contentsname}
+\tableofcontents
+\setlength{\parskip}{0.6pc plus 0.2pc minus 0.2pc}
+
+\cleardoublepage
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+
+
+\input{introduction}
+
+\input{overview}
+
+\input{variables_etc}
+
+\input{source_structure}
+
+\input{immediate_statements}
+
+\input{target_statements}
+            
+\input{memory_etc}
+
+\input{inbuilt_modules}
+
+\input{inbuilt_procedures}
+
+\input{inbuilt_functions}
+
+\input{libraries}
+
+\input{tools}
+
+\input{code_structure}
+
+\input{coding_rec}
+
+\input{code_examples}
+
+\input{limitations}
+
+\input{CPLDs}
+
+\input{board_example}
+
+\input{running_compiler}
+            
+\input{zynq_CPU_comm}
+
+\input{serial_CPU_comm}
+
+\input{EDIF_cores}
+
+\input{FPGA_hardware}
+
+
+\input{constraints_etc}
+
+
+
+
+\appendix
+
+
+\input{file_system}
+
+\input{regular_expressions}
+
+\input{syntax}
+
+\input{compiler_versions}
+
+\input{intermediate_code}
+
+\input{cpu_serial}
+
+\input{Zynq_device_tree}
+
+
+
+\chapter{Alphabetic List of all Inbuilt and Library Modules, Procedures and
+Functions}
+
+    \input{alist}
+
+
+
+
+\chapter{List of all Inbuilt and Library Modules, Procedures and
+Functions Arranged by Group}
+
+    \input{glist}
+
+
+
+
+
+
+\pagebreak
+
+\phantomsection
+\addcontentsline{toc}{chapter}{\indexname}
+\printindex
+    
+\end{document}
+
+
+

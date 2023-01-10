@@ -1,0 +1,13 @@
+module "dummy.3pl"
+
+class(c);
+int(j);
+
+c = cl(j <- 22);
+println(j);
+
+class
+cl (int(j) <- int(i)) {
+    int(k, 99);
+    j = i + k + 1;
+}

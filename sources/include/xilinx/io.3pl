@@ -1,0 +1,886 @@
+nosource
+
+/*
+ * A table of some shared elements created in io.3pl.
+ *
+                 xc95 xc2c xc2s xc3s xc6s xcv xc2v xc2vp xc4v xc5v xc6v xc7?
+
+  IDDR                                                     Y    Y    Y    Y
+
+  ODDR                                                     Y    Y    Y    Y
+
+  IODELAY2                             Y
+  ISERDES2                             Y
+  OSERDES2                             Y
+
+  IDELAY                                                   Y    Y
+  IODELAY                                                  Y    Y
+  ISERDES_NODELAY                                          Y    Y
+  OSERDES                                                  Y    Y
+
+  IODELAYE1                                                          Y
+  ISERDESE1                                                          Y
+  OSERDESE1                                                          Y
+
+  IDELAYE2                                                                Y
+  ODELAYE2                                                                Y
+  ISERDESE2                                                               Y
+  OSERDESE2                                                               Y
+
+ */
+
+int(PINFMT, 1);
+int(ARRAYFMT, 2);
+
+// Create DDR input registers.
+// Arguments:
+//  value       -   o1       +ve clock edge data output
+//  value       -   o2       -ve clock edge data output
+//  value       -   d        data input
+//  clock       -   c        clock; if missing use current clock
+//  clock       -   cb       clock; optional second clock
+//  immediate "str" mode     operating mode -
+//                   "nfirst"  -ve edge to o2 then +ve edge to o1
+//                               o1 and o2 in clock domain
+//                   "pfirst"  +ve edge to o1 then -ve edge to o2
+//                               o1 and o2 in clock domain
+//                               has an additional cycle
+//                   "split"   +ve edge to o1 then -ve edge to o2
+//                               o1 in clock domain, o2 in negative clock domain
+//  value     "log" ce       optional clock enable
+//  value     "log" r        optional reset
+//  value     "log" s        optional set
+global procedure
+iddr (
+    value(o1),
+    value(o2)
+    <-
+    value(d),
+    clock({c, cb}),
+    str(mode),
+    value({ce, r, s}, "log")
+) {
+    elementCheck("IDDR", "iddr");    
+    if (hasqueuereads())
+        texit("iddr() - one or more input parameters have queue reads");
+    if (type(o1) != type(d))
+        texit("iddr() - o1 type does not match input type");
+    if (type(o2) != type(d))
+        texit("iddr() - o2 type does not match input type");
+    value({o1_, o2_, d_}, "["+size(d)+"]log");
+    d_ := forcecast(d, type(d_));
+    switch (mode) {
+    case "split":
+        mode = "OPPOSITE_EDGE";
+    case "nfirst":
+        mode = "SAME_EDGE";
+    case "pfirst":
+        mode = "SAME_EDGE_PIPELINED";
+    default:
+        texit("iddr() - invalid mode argument (\"" + mode + "\")");
+    }
+    for (int(i) ; i<size(d) ; i++) {
+        if (matched(cb))
+            element("IDDR_2CLK");
+        else
+            element("IDDR");
+        elementoutput(o1_[i] <- , "Q1");
+        elementoutput(o2_[i] <- , "Q2");
+        elementinput(, "D", d_[i]);
+        if (matched(c)) {
+            elementclockinput(, "C", c);
+            attributes({o1, o2}, domain=c);
+        } else {
+            elementclockinput(, "C", currentclock());
+            attributes({o1, o2}, domain=currentclock());
+        }
+        if (matched(cb))
+            elementclockinput(, "CB", cb);
+        elementinput(, "CE", matched(ce) ? ce : true);
+        elementinput(, "R", matched(r) ? r : false);
+        elementinput(, "S", matched(s) ? s : false);
+        elementStrProperty(, "DDR_CLK_EDGE", mode);
+        elementend();
+    }
+    o1 := forcecast(o1_, type(d));
+    o2 := forcecast(o2_, type(d));
+}
+
+// Create DDR output registers.
+// Arguments:
+//  value       -   o        data output
+//  value       -   i1       -ve clock edge data input
+//  value       -   i2       +ve clock edge data input
+//  value     "log" ce       optional clock enable
+//  value     "log" r        optional reset
+//  value     "log" s        optional set
+global procedure
+oddr (
+    value(o)
+    <-
+    value(i1),
+    value(i2),
+    value({ce, s, r}, "log")
+) {
+    elementCheck("ODDR", "oddr");
+    if (hasqueuereads())
+        texit("oddr() - one or more input parameters have queue reads");
+    if (type(i1) != type(o))
+        texit("oddr() - i1 type does not match output type");
+    if (type(i2) != type(o))
+        texit("oddr() - i2 type does not match output type");
+    if (hasqueuereads(i1))
+        texit("oddr() - i1 has queue reads");
+    if (hasqueuereads(i2))
+        texit("oddr() - i2 has queue reads");
+    value({i1_, i2_, o_}, "["+size(i1)+"]log");
+    i1_ := forcecast(i1, type(i1_));
+    i2_ := forcecast(i2, type(i2_));
+    for (int(i) ; i<size(o) ; i++) {
+        element("ODDR");
+        elementoutput(o_[i] <- , "Q");
+        elementinput(, "D1", i1_[i]);
+        elementinput(, "D2", i2_[i]);
+        elementclockinput(, "C", currentclock());
+        elementinput(, "CE", matched(ce) ? ce : true);
+        elementinput(, "R", matched(r) ? r : false);
+        elementinput(, "S", matched(s) ? s : false);
+        elementStrProperty(, "DDR_CLK_EDGE", "SAME_EDGE");
+        elementend();
+    }
+    o := forcecast(o_, type(o));
+}
+
+// Create an IDELAY block.
+//
+//     Pins
+// 
+//     IDELAY       IDELAYE2
+//     xc4v, xc5v   xc7?
+//
+//     I            IDATAIN
+//                  DATAIN
+//     CE           CE
+//     C            C
+//     INC          INC
+//     RST          LD
+//                  REGRST
+//                  CINVCTRL
+//                  CNTVALUEIN[4:0]
+//                  LDPIPEEN
+//
+//     O            DATAOUT
+//                  CNTVALUEOUT[4:0]
+//
+//
+// Arguments:
+//  value       -    o        single bit data output
+//  value       -    d        single bit data input
+//  immediate "int"  delay    fixed or initial delay, 0 to 63
+//  clock            refclk   reference clock for delay control
+//  value     "log"  ce       enable for 'inc'
+//  value     "log"  inc      true to increment delay, false to decrement delay
+//  value     "log"  rst      reset delay to initial value
+//  immediate "log"  isclock  true if a clock signal, false for data
+//  immediate "str"  loc      optional location
+// If parameters 'ce' or 'delay' are supplied an argument then a reference
+// clock in the range 190.0MHz to 210.0MHz must be supplied to parameter
+// 'refclk' and all other calls to idelay() or iodelay() must supply that
+// same clock to the 'refclk' parameter! The clock is used to time the delay.
+// If the application does not have a clock in that frequency range then a
+// clock must be created specifically for this purpose.
+// Arguments to 'ce', 'inc' and 'rst' must be in the current clock domain.
+global procedure
+idelay (
+    value(o)
+    <-
+    value(d),
+    int(delay),
+    clock(refclk),
+    value({ce, inc, rst}, "log"),
+    log(isclock),
+    str(loc)
+) {
+    str({ename, inport, outport, ldport});
+    log(e2);
+    if (elementCheck("IDELAY")) {
+        ename = "IDELAY";
+        inport = "I";
+        outport = "O";
+        ldport = "RST";
+        
+    } else if (elementCheck("IDELAYE2")) {
+        e2 = true;
+        ename = "IDELAYE2";
+        inport = "IDATAIN";
+        outport = "DATAOUT";
+        ldport = "LD";
+    } else
+        texit("procedure idelay cannot be used with " + directive("family"));
+    
+    if (hasqueuereads())
+        texit("idelay() - one or more input parameters have queue reads");
+    if (type(o) != type(d))
+        texit("idelay() - output type does not match input type");
+    log(varmode, matched(ce) && (!istargconst(ce) || targconsttoimmed(ce) != false));
+    value({o_, d_}, "log");
+    d_ := cast(d, type(d_));
+    if (matched(ce) || matched(delay)) {
+        float(local.refclkfreq_MHz, frequency(refclk)/1.0e6);
+        if (refclkfreq_MHz > 210.0)
+            texit("idelay() - reference clock (current clock) frequency > 210MHz");
+        if (refclkfreq_MHz < 190.0)
+            texit("idelay() - reference clock (current clock) frequency < 190MHz");
+        if (matched(delay)) {
+            if (delay < 0 || delay > 63)
+                texit("idelay() - delay argument out of range 0 to 63 (" + delay + ")");
+        }
+    }
+
+    element(ename);
+    elementoutput(o_ <- , outport);
+    elementinput(, inport, d_);
+    if (varmode) {
+        elementclockinput(, "C", currentclock());
+        elementinput(, "CE", ce);
+        elementinput(, "INC", matched(inc) ? inc : false);
+        elementinput(, ldport, matched(rst) ? rst : false);
+    } else {
+        elementclockinput(, "C", false);
+        elementinput(, "CE", false);
+        elementinput(, "INC", false);
+        elementinput(, ldport, false);
+    }
+    if (e2) {
+        elementinput(, "REGRST", false);
+        elementinput(, "CINVCTRL", false);
+        elementinput(, "DATAIN", false);
+        elementinput(, "LDPIPEEN", false);
+        //elementinput(, "CNTVALUEIN", false, 5, ARRAYFMT);
+    }
+    
+    if (varmode)
+        elementStrProperty(, e2 ? "IDELAY_TYPE" : "IOBDELAY_TYPE", "VARIABLE");
+    else if (matched(delay))
+        elementStrProperty(, e2 ? "IDELAY_TYPE" : "IOBDELAY_TYPE", "FIXED");
+    else
+        elementStrProperty(, e2 ? "IDELAY_TYPE" : "IOBDELAY_TYPE", "DEFAULT");
+
+    if (matched(ce) || matched(delay))
+        elementIntProperty(, e2 ? "IDELAY_VALUE" : "IOBDELAY_VALUE", delay, 0, 63);
+    if (matched(loc))
+        elementStrProperty(, loc, "LOC");        
+    if (e2) {
+        elementFloatProperty(, "REFCLK_FREQUENCY", refclkfreq_MHz, 190.0, 210.0, 1);
+        elementStrProperty(, "SIGNAL_PATTERN", (isclock ? "CLOCK" : "DATA"));
+    }  
+
+    elementend();
+
+    // On the first call where delay is variable or non-zero an
+    // IDELAYCTRL block must be created.
+    // See the comments for that module below.
+    if ((matched(ce) || matched(delay)) && !direxists("idelayctrl_exists")) {
+        setdirective("idelayctrl_exists", true);
+        idelayctrl(refclk);
+        // ngdbuild complains about the following -
+        //elementaddncf(, "REFCLK_FREQUENCY", refclkfreq_MHz);
+    }
+    
+    o := cast(o_, type(o));
+    attributes(o, domain=currentclock());
+}
+
+// Create an ODELAY block.
+//
+//     Pins
+// 
+//     ODELAYE2
+//     xc7?
+//
+//     ODATAIN
+//     CE
+//     C
+//     CLKIN
+//     INC
+//     LD
+//     CINVCTRL
+//     CNTVALUEIN[4:0]
+//     LDPIPEEN
+//     REGRST
+//
+//     DATAOUT
+//     CNTVALUEOUT[4:0]
+//
+//
+// Arguments:
+//  value       -    o        data output
+//  value       -    d        data input
+//  immediate "int"  delay    fixed or initial delay, 0 to 63
+//  clock            refclk   reference clock for delay control
+//  value     "log"  ce       enable for 'inc'
+//  value     "log"  inc      true to increment delay, false to decrement delay
+//  value     "log"  rst      reset delay to initial value
+//  immediate "log"  isclock  true if a clock signal, false for data
+//  immediate "str"  loc      optional location
+// If parameters 'ce' or 'delay' are supplied an argument then a reference
+// clock in the range 190.0MHz to 210.0MHz must be supplied to parameter
+// 'refclk' and all other calls to idelay() or iodelay() must supply that
+// same clock to the 'refclk' parameter! The clock is used to time the delay.
+// If the application does not have a clock in that frequency range then a
+// clock must be created specifically for this purpose.
+// Arguments to 'ce', 'inc' and 'rst' must be in the current clock domain.
+global procedure
+odelay (
+    value(o)
+    <-
+    value(d),
+    int(delay),
+    clock(refclk),
+    value({ce, inc, rst}, "log"),
+    log(isclock),
+    str(loc)
+) {
+}
+
+// Create an IODELAY block.
+//
+//     Pins
+// 
+//     IODELAY       IODELAY2   IODELAYE1
+//     xc4v, xc5v    xc6s       xc6v
+//
+//     DATAIN                   DATAIN
+//     IDATAIN       IDATAIN    IDATAIN
+//     ODATAIN       ODATAIN    ODATAIN
+//     T             T          T
+//     INC           INC        INC
+//     C             CLK        C
+//                   IOCLK0
+//                   IOCLK1
+//     CE            CE         CE
+//     RST           RST        RST
+//                   CAL
+//                              CINVCTRL
+//                              CNTVALUEIN[4:0]
+//                              CLKIN
+//
+//     DATAOUT       DATAOUT    DATAOUT
+//                   DATAOUT2
+//                   DOUT
+//                   TOUT
+//                   BUSY
+//                              CNTVALUEOUT[4:0]
+//
+// Arguments:
+//  value       -    dataout  data output to OBUF and ILOGIC
+//  value       -    idatain  data input from IBUF
+//  value       -    odatain  data input from OLOGIC
+//  value     "log"  variable true for variable delay, false for fixed delay
+//                            omit argument for default (0 hold time) delay
+//  immediate "int"  idelay   fixed or initial input delay, 0 to 63
+//  immediate "int"  odelay   fixed output delay, 0 to 63
+//  clock            refclk   reference clock for delay control
+//  value     "log"  t        three-state control
+//  value     "log"  ce       enable for 'inc'
+//  value     "log"  inc      true to increment delay, false to decrement delay
+//  value     "log"  rst      reset delay to initial value
+// A reference clock in the range 190.0MHz to 210.0MHz must be supplied
+// to parameter 'refclk' and all other calls to idelay() or iodelay()
+// must supply that same clock to the 'refclk' parameter! The clock is
+// used to time the delay. If the application does not have a clock in
+// that frequency range then a clock must be created specifically for
+// this purpose.
+// If the argument to parameter 'variable' is true then arguments must be
+// given to parameters 'ce' and 'inc'. An argument to 'rst' is optional.
+// Signals to 't', 'ce', 'inc' and 'rst' must be in the current clock domain.
+global procedure
+iodelay (
+    value(dataout)
+    <-
+    input(idatain),
+    value(odatain),
+    log(variable),
+    int({idelay, odelay}),
+    clock(refclk),
+    value({t, ce, inc, rst}, "log")
+) {
+    str(ename);
+    if (elementCheck("IODELAY"))
+        ename = "IODELAY";
+    else if (elementCheck("IODELAY2"))
+        ename = "IODELAY2";
+    else
+        texit("procedure iodelay cannot be used with " + directive("family"));
+    if (hasqueuereads())
+        texit("iodelay() - one or more input parameters have queue reads");
+    if (type(dataout) != type(idatain))
+        texit("iodelay() - output type does not match idatain type");
+    if (type(dataout) != type(odatain))
+        texit("iodelay() - output type does not match odatain type");
+    value({o_, idi_, odi_}, "log");
+    idi_ := cast(idatain, type(idi_));
+    odi_ := cast(odatain, type(odi_));
+    element(ename);
+    elementoutput(o_ <- , "DATAOUT");
+    elementinput(, "IDATAIN", idi_);
+    elementinput(, "ODATAIN", odi_);
+    elementinput(, "DATAIN", false);
+    elementinput(, "T", matched(t) ? t : false);
+    if (matched(variable) && variable) {
+        if (!matched(ce))
+            texit("iodelay() - no argument to parameter 'ce'");
+        if (!matched(inc))
+            texit("iodelay() - no argument to parameter 'inc'");
+        elementclockinput(, "C", currentclock());
+        elementinput(, "CE", ce);
+        elementinput(, "INC", inc);
+        elementinput(, "RST", matched(rst) ? rst : false);
+    }
+    elementStrProperty(, "DELAY_SRC", "IO");
+    if (matched(odelay))
+        elementIntProperty(id, "ODELAY_VALUE", odelay, 0, 63); 
+    if (matched(variable)) {
+        float(refclkfreq_MHz, frequency(refclk)/1.0e6);
+        if (refclkfreq_MHz > 210.0)
+            texit("iodelay() - reference clock (current clock) frequency > 210MHz");
+        if (refclkfreq_MHz < 190.0)
+            texit("iodelay() - reference clock (current clock) frequency < 190MHz");
+        if (matched(idelay))
+            elementIntProperty(id, "IDELAY_VALUE", idelay, 0, 63); 
+        if (variable)
+            elementStrProperty(, "IOBDELAY_TYPE", "VARIABLE");
+        else
+            elementStrProperty(, "IOBDELAY_TYPE", "FIXED");
+        // On the first call where 'variable' is matched an
+        // IDELAYCTRL block must be created.
+        // See the comments for that module below.
+        if (!direxists("idelayctrl_exists")) {
+            setdirective("global.idelayctrl_exists", true);
+            idelayctrl(refclk);
+        }
+    }
+    elementend();
+    dataout := forcecast(o_, type(idatain));
+}
+
+// Create an IDELAYCTRL.
+// Arguments:
+//  clock       -   refclk  reference clock - 190.0MHz to 210.0MHz
+//  immediate "str" loc     optional location
+// This need be created once only to control all IDELAY and IODELAY blocks.
+// In that case the Xilinx software will duplicate this across all
+// locations where they are required and will AND all RDY outputs to a
+// common RDY signal which appears in this single instance.
+// Xilinx recommend explicitly creating an IDELAYCTRL for each I/O region,
+// in which case the location argument is required. This seems like hard work
+// requiring a detailed floor plan and it is not clear why they suggest doing
+// so.
+procedure
+idelayctrl (clock(refclk), str(loc)) {
+    useclock(refclk);
+    value(rdy, "log");
+    static(rst, "log", true);
+    element("IDELAYCTRL");
+    elementoutput(rdy <- , "RDY");
+    elementclockinput(, "REFCLK", refclk);
+    elementinput(, "RST", rst);
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    elementend();
+    
+    seq {
+        wait(12);   // >50nS (refclk approx 200MHz)
+        rst <- false;
+        wait_until(rdy);
+        wait_while(rdy);
+        rst <- true;
+    }
+    useclock();
+}
+
+// Create a single bit stream input serial to parallel converter.
+//
+// Pins
+//
+//  ISERDES_NODELAY  ISERDES2   ISERDESE1     ISERDESE2
+//  xc4v, xc5v       xc6s       xc6v          xc7?
+//
+//  D                D          D             D
+//                              DDLY          DDLY
+//  CLK              CLK0       CLK           CLK 
+//                   CLK1       CLKB          CLKB      
+//  OCLK             IOCE       OCLK          OCLK
+//                                            OCLKB
+//  CLKDIV           CLKDIV     CLKDIV        CLKDIV
+//                                            CLKDIVP
+//  CE1              CE0        CE1           CE1
+//  CE2                         CE2           CE2       
+//  RST              RST        RST           RST
+//  BITSLIP          BITSLIP    BITSLIP       BITSLIP
+//  SHIFTIN1         SHIFTIN    SHIFTIN1      SHIFTIN1
+//  SHIFTIN2                    SHIFTIN2      SHIFTIN2
+//                              OFB           OFB
+//                              DYNCLKSEL     DYNCLKSEL
+//                              DYNCLKDIVSEL  DYNCLKDIVSEL
+//                                         
+//  Q1               Q1         Q1            Q1
+//  Q2               Q2         Q2            Q2
+//  Q3               Q3         Q3            Q3
+//  Q4               Q4         Q4            Q4
+//  Q5                          Q5            Q5
+//  Q6                          Q6            Q6
+//                                            Q7
+//                                            Q8
+//
+//                   FABRICOUT  O             O
+//  SHIFTOUT1        SHIFTOUT   SHIFTOUT1     SHIFTOUT1
+//  SHIFTOUT2                   SHIFTOUT2    SHIFTOUT2
+//                   VALID
+//                              CFB0
+//                              CFB1
+//                              DFB
+//                              INCDEC
+//
+//
+// Arguments:
+//
+global procedure
+iserdes (
+    value(q),
+    value({shiftout1,shiftout2}, "log")
+    <-
+    str(interface, "MEMORY"), log(master, true), log(ddr, true), str(iobdelay),
+    int(width),
+    clock({clk, clkb, oclk, oclkb, clkdiv}), value(din), value(ddlyin),
+    value(bitslip, "log", false),
+    value({ce1, ce2}, "log"),
+    value({shiftin1, shiftin2, rst}, "log", false),
+    str(loc)
+) {
+    log(e2);
+    str(ename);
+    if (elementCheck("ISERDES_NODELAY"))
+        ename = "ISERDES_NODELAY";
+    else if (elementCheck("ISERDES2")) {
+        e2 = true;
+        ename = "ISERDES2";
+    } else if (elementCheck("ISERDESE2")) {
+        e2 = true;
+        ename = "ISERDESE2";
+    } else
+        texit("procedure iserdes cannot be used with " + directive("family"));
+    element(ename);
+    
+    switch (width) {
+        case {2, 4, 6, 8}:
+        case {3, 5, 7}:
+            if (ddr)
+                texit("iserdes() - width argument cannot be odd for DDR mode");
+        case {10, 14}:
+            if(!ddr)
+            texit("iserdes() - width argument 10 or 14 but is not DDR mode");
+        default:
+            texit("iserdes() - width argument not 2, 3, 4, 5, 6, 7, 8, 10 or 14");
+    }
+    
+    if (matched(din)) {
+        if (size(din) != 1)
+            texit("iserdes() - input wider than 1 bit");
+        elementinput(, "D", din);
+    }
+    if (matched(ddlyin)) {
+        if (size(ddlyin) != 1)
+            texit("iserdes() - delayed input wider than 1 bit");
+        elementinput(, "DDLY", ddlyin);
+    }
+    elementinput(, "BITSLIP", bitslip);
+    if (matched(ce1)) {
+        elementinput(, "CE1", ce1);
+        if (matched(ce2))
+            elementinput(, "CE2", ce2);
+    } else {
+        if (matched(ce2))
+            texit("ce2 used but ce1 not used");
+        elementinput(, "CE1", true);
+    }
+    elementclockinput(, "CLK", clk);
+    if (matched(clkb))
+        elementclockinput(, "CLKB", clkb);
+    if (matched(clkdiv))
+        elementclockinput(, "CLKDIV", clkdiv);
+    else
+        elementclockinput(, "CLKDIV", false);
+    if (e2)
+        elementclockinput(, "CLKDIVP", false);
+    if (matched(oclk))
+        elementclockinput(, "OCLK", oclk);
+    else
+        elementclockinput(, "OCLK", false);
+    if (e2) {
+        if (matched(oclk) != matched(oclkb))
+            texit("only one of oclk and oclkb used");
+        if (matched(oclkb))
+            elementclockinput(, "OCLKB", oclkb);
+        else
+            elementclockinput(, "OCLKB", false);
+        }
+    if (matched(shiftin1)) {
+        if (master)
+            texit("iserdes() - master ISERDES cannot have SHIFTIN pins connected");
+        if (!matched(shiftin2))
+            texit("iserdes() - SHIFTIN1 supplied but not SHIFTIN2");
+    } else {
+        if (matched(shiftin2)) {
+            if (master)
+                texit("iserdes() - master ISERDES cannot have SHIFTIN pins connected");
+            texit("iserdes() - SHIFTIN2 supplied but not SHIFTIN1");
+        }
+    }
+    elementinput(, "SHIFTIN1", shiftin1);
+    elementinput(, "SHIFTIN2", shiftin2);
+    elementinput(, "RST", rst);
+    int(qw, dimension(q));
+    int(offset, master ? 1 : 3);
+    switch (interface) {
+    case "MEMORY":
+        if (!ddr)
+            texit("iserdes() - for SDR mode not allowed for network interface type");
+        if (width != 4)
+            texit("iserdes() - for DDR mode output data width " + width + " not allowed");
+    case "NETWORKING":
+        if (ddr) {
+            switch (width) {
+            case {4, 6, 8, 10, 14}:
+            default:
+                texit("iserdes() - for DDR mode output data width " + width + " not allowed for memory interface type");
+            }
+            if (width == 14 && ename == "ISERDES_NODELAY")
+                texit("iserdes() - XC5V ISERDES_NODELAY cannot have data width 14");
+        } else {
+            switch (width) {
+            case {2, 3, 4, 5, 6, 7, 8}:
+            default:
+                texit("iserdes() - for SDR mode output data width " + width + " not allowed");
+            }
+        }
+    }
+    for (int(i) ; i<qw ; i++)
+        elementoutput(q[i] <- , "Q"+(i+offset));
+
+    if (matched(shiftout1)) {
+        if (!master)
+            texit("iserdes() - slave ISERDES cannot have SHIFTOUT pins connected");
+        elementoutput(shiftout1 <- , "SHIFTOUT1");
+        if (!matched(shiftout2))
+            texit("iserdes() - SHIFTOUT1 supplied but not SHIFTOUT2");
+        elementoutput(shiftout2 <- , "SHIFTOUT2");
+    } else {
+        if (matched(shiftout2)) {
+            if (!master)
+                texit("iserdes() - slave ISERDES cannot have SHIFTOUT pins connected");
+            texit("iserdes() - SHIFTOUT2 supplied but not SHIFTOUT1");
+        }
+    }
+    if (ename != "ISERDES_NODELAY") {
+        elementinput(, "OFB", false);   // unused - connected to stop Vivado warnings
+        elementinput(, "OCLKB", false); // unused - connected to stop Vivado warnings
+    }
+    if (ename == "ISERDESE2") {
+        elementinput(, "DYNCLKSEL", false);    // unused - connected to stop Vivado warnings
+        elementinput(, "DYNCLKDIVSEL", false); // unused - connected to stop Vivado warnings
+    }
+        
+    elementStrProperty(, "BITSLIP_ENABLE", (matched(bitslip) ? "TRUE" : "FALSE"));
+    if (matched(ce1))
+        elementStrProperty(, "NUM_CE", matched(ce2) ? "2" : "1");
+    else
+        elementStrProperty(, "NUM_CE", "1");
+    elementStrProperty(, "DATA_RATE", (ddr ? "DDR" : "SDR"));
+    elementIntProperty(, "DATA_WIDTH", width, 2, 14);
+    elementStrProperty(, "INTERFACE_TYPE", interface);
+    elementStrProperty(, "SERDES_MODE", (master ? "MASTER" : "SLAVE"));
+    if (matched(iobdelay)) {
+        if (ename == "ISERDES_NODELAY")
+            texit("iserdes() - IOBDELAY attribute not valid for ISERDES_NODELAY");
+        elementStrProperty(, "IOBDELAY", iobdelay, "NONE", "IBUF", "IFD", "BOTH");
+    }
+    if (matched(loc)) elementStrProperty(, "LOC", loc);
+    
+    elementend();
+}
+
+
+// Create a single bit stream output parallel to serial converter.
+//
+// Pins
+//
+//  OSERDES_NODELAY  OSERDES2   OSERDESE1     OSERDESE2
+//  xc4v, xc5v       xc6s       xc6v          xc7?
+//
+//
+//
+// Arguments:
+global procedure
+oserdes (
+) {
+    texit("Sorry, OSERDES not yet implemented");
+}
+
+
+global module
+crc32 (
+    value(out, "bits:32")
+    <-
+    value(in),
+    value(valid, "log"),
+    clock(clk),
+    value(reset, "log")
+) {
+    int(inwidth, size(in));
+    value(crcdatawidth, "uint:2");
+    value(crcin, "bits:32");
+    if (inwidth <= 8) {
+        crcdatawidth := 0;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:8") << 24;
+    } else if (inwidth <= 16) {
+        crcdatawidth := 1;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:16") << 16;
+    } else if (inwidth <= 24) {
+        crcdatawidth := 2;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:24") << 8;
+    } else if (inwidth <= 32) {
+        crcdatawidth := 3;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:32");
+    } else
+        texit("crc32() - input data > 32 bits");
+    element("CRC32");
+    elementinput(, "CRCIN", crcin,   32, ARRAYFMT);
+    elementinput(, "CRCDATAVALID", valid);
+    elementinput(, "CRCDATAWIDTH", crcdatawidth);
+    elementclockinput(, "CRCCLK", clk);
+    elementinput(, "CRCRESET", reset);
+    elementoutput(out <- , "CRCOUT", 32, ARRAYFMT);
+    elementend();
+}
+
+global module
+crc64 (
+    value(out, "bits:64")
+    <-
+    value(in),
+    value(valid, "log"),
+    clock(clk),
+    value(reset, "log")
+) {
+    int(inwidth, size(in));
+    value(crcdatawidth, "uint:3");
+    value(crcin, "bits:64");
+    if (inwidth <= 8) {
+        crcdatawidth := 0;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:8") << 56;
+    } else if (inwidth <= 16) {
+        crcdatawidth := 1;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:16") << 48;
+    } else if (inwidth <= 24) {
+        crcdatawidth := 2;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:24") << 40;
+    } else if (inwidth <= 32) {
+        crcdatawidth := 3;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:32") << 32;
+    } else if (inwidth <= 40) {
+        crcdatawidth := 4;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:40") << 24;
+    } else if (inwidth <= 48) {
+        crcdatawidth := 5;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:48") << 16;
+    } else if (inwidth <= 56) {
+        crcdatawidth := 6;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:56") << 8;
+    } else if (inwidth <= 64) {
+        crcdatawidth := 7;
+        crcin := cast(cast(in, "bits:"+inwidth), "bits:64");
+    } else
+        texit("crc64() - input data > 64 bits");
+    element("CRC64");
+    elementinput(, "CRCIN", crcin);
+    elementinput(, "CRCDATAVALID", valid);
+    elementinput(, "CRCDATAWIDTH", crcdatawidth);
+    elementclockinput(, "CRCCLK", clk);
+    elementinput(, "CRCRESET", reset);
+    elementoutput(out <- , "CRCOUT");
+    elementend();
+}
+
+global module
+sysmon (
+        value(dout, "bits:16"),
+        value(drdy, "log"),
+        value(alm, "[3]log"),
+        value(ot, "log"),
+        value(channel, "uint:5"),
+        value({eoc, eos, busy, jtaglocked, jtagmodified, jtagbusy}, "log")
+        <-
+        value(din, "bits:16"),
+        value(daddr, "uint:7"),
+        clock(dclk),
+        value({den, dwe, reset, convst, convstclk}, "log"),
+        int({   init_40, init_41, init_42,
+                init_48, init_49, init_4a, init_4b,
+                init_4c, init_4d, init_4e, init_4f,
+                init_50, init_51, init_52, init_53,
+                init_54, init_55, init_56, init_57 })
+) {
+    int(arrayformat, PINFMT);
+    struct(pin,
+        name,       "str",
+        iotype,     "int",
+        param,      "->",
+        width,      "int",
+        arrayfmt,   "int"
+    );
+    var(pins, "[]pin", {
+                        {"DI",              0, &din          , 16, arrayformat},
+                        {"DADDR",           0, &daddr        ,  7, arrayformat},
+                        {"DCLK",            0, &dclk         ,  0, 0},
+                        {"DEN",             0, &den          ,  0, 0},
+                        {"DWE",             0, &dwe          ,  0, 0},
+                        {"RESET",           0, &reset        ,  0, 0},
+                        {"CONVST",          0, &convst       ,  0, 0},
+                        {"CONVSTCLK",       0, &convstclk    ,  0, 0},
+                        {"DO",              1, &dout         , 16, arrayformat},
+                        {"DRDY",            1, &drdy         ,  0, 0},
+                        {"ALM",             1, &alm          ,  3, arrayformat},
+                        {"OT",              1, &ot           ,  0, 0},
+                        {"CHANNEL",         1, &channel      ,  5, arrayformat},
+                        {"EOC",             1, &eoc          ,  0, 0},
+                        {"EOS",             1, &eos          ,  0, 0},
+                        {"BUSY",            1, &busy         ,  0, 0},
+                        {"JTAGLOCKED",      1, &jtaglocked   ,  0, 0},
+                        {"JTAGMODIFIED",    1, &jtagmodified ,  0, 0},
+                        {"JTAGBUSY",        1, &jtagbusy     ,  0, 0}
+    });
+    var(inits, "[]->", {    &init_40, &init_41, &init_42,
+                            &init_48, &init_49, &init_4a, &init_4b,
+                            &init_4c, &init_4d, &init_4e, &init_4f,
+                            &init_50, &init_51, &init_52, &init_53,
+                            &init_54, &init_55, &init_56, &init_57 });
+    element("SYSMON");
+    for (int(i) ; i<dimension(pins) ; i++)
+        if (matched(pins[i].param->)) {
+            if (pins[i].iotype == 0)
+                elementinput(, pins[i].name, pins[i].param->, pins[i].arrayfmt);
+            else
+                elementoutput(pins[i].param-> <- , pins[i].name,  pins[i].arrayfmt);
+        }
+    for (int(i) ; i<dimension(inits) ; i++)
+        if (matched(inits[i]->))
+            elementStrProperty(, toupper(identifier(inits[i]->)), inttohexstring(inits[i]->, 4));
+    elementend();
+}
+
+global module
+dcireset (value(locked, "log") <- value(rst, "log")) {
+    element("DCIRESET");
+    elementoutput(locked <- , "LOCKED");
+    elementinput(, "RST", rst);
+}

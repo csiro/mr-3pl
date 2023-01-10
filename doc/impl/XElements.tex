@@ -1,0 +1,91 @@
+XElements extends GenFunctions to vendor-specific elements. The methods generate
+basic elements such as gates and flip-flops.
+
+The IBUF Element provides a simple example -
+\begin{lstlisting}[gobble=0, language=java]
+    public Element IBUF (Net o, Net i) {
+        Element c = new Element("IBUF");
+        c.addInput("I", i);
+        c.addOutput("O", o);
+        return(c);
+    }
+\end{lstlisting}
+The new Element is created by a constructor, the element name
+string being passed as an argument to the constructor. The input
+and output Nets are added paired with the port name strings. The
+Element is returned.
+
+Where an Element may be subject to later optimisation a gate type
+is added, e.g. the XORCY Element -
+\begin{lstlisting}[gobble=0, language=java]
+    public Net XORCY (Net li, Net ci) {
+        Element c = new Element("XORCY", Gtype.XORCY);
+        Net     o = new Net();
+        c.addInput("LI", li);
+        c.addInput("CI", ci);
+        c.addOutput("O", o);
+        return(o);
+    }
+\end{lstlisting}
+In this case the output Net is returned.
+
+The following basic Elements are constructed directly -
+
+\blist
+\item   LUT - a 1 to n input look-up table
+\item   INV - inverter
+\item   AND - 1 to n input AND gate
+\item   OR - 1 to n input OR gate
+\item   XOR - 1 to n input XOR gate
+\item   XNOR - 1 to n input XNOR gate
+\item   SRL16E - 16 bit CLB shift register
+\item   SRL32E - 32 bit CLB shift register
+\item   FDRS - reset/set flip-flop
+\item   FDCP - clear/preset flip-flop
+\item   MULT\_AND - multiplier AND
+\item   MUXCY - carry multiplexer
+\item   MUXF5 - CLB multiplexer
+\item   MUXF6 - CLB multiplexer
+\item   XORCY - carry XOR
+\item   BUFG - global clock buffer
+\item   IPAD - input pad
+\item   OPAD - output pad
+\item   IOPAD - bi-directional pad
+\item   BUFE - internal 3-state buffer, +ve enable
+\item   BUFT - internal 3-state buffer, -ve enable
+\item   IBUF - input buffer
+\item   IBUFDS - differential input buffer
+\item   IBUFG - input global clock buffer
+\item   IBUFGDS - differential input global clock buffer
+\item   OBUF - output buffer
+\item   OBUFDS - differential output buffer
+\item   PULLDOWN - internal longline pulldown
+\item   PULLUP - internal longline pullup
+\item   RAM\_1 - single port CLB RAM
+\item   ROM\_1 - single port CLB ROM
+\item   RAM\_2 - dual port CLB RAM
+\blend
+
+Other Elements available in some Xilinx FPGA families but not others
+have methods which must be overridden in subclasses -
+
+\blist
+\item   MULT18X18 - 18 x 18 bit multiplier
+\item   MULT18X18S - 18 x 18 bit multiplier with output register
+\item   MULT25X18 - 25 x 18 bit multiplier
+\item   MULT25X18S - 25 x 18 bit multiplier with output register
+\item   MULREG - multiplier used as register only
+\item   ramallocate - block RAM
+\item   fifoallocate - block RAM as FIFO
+\item   FIFO - FIFO using dual port block RAM
+\item   Mult- multiplier
+\item   dsp48\_alu - an ALU using a DSP block
+\blend
+These are overridden in subclasses XC2V, XC2VP etc. where appropriate.
+
+This subdivision is somewhat arbitrary; some Elements in the first
+group are not available in some FPGAs or CPLDs and conditional code
+ensures that these are not called is such cases. For consistency some
+of these should be moved to the second group and the methods moved
+into subclasses.
+

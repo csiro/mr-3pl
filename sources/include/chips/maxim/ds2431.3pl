@@ -1,0 +1,145 @@
+nosource
+
+// Module to read and write the DS2431 single wire EPROM chip.
+//
+// Queue 'data' is the data output queue. A read command copies the
+// data bit to this queue and a reset command copies the presence bit
+// to this queue.
+//
+// Queue 'com' is the command input queue. There are 5 commands -
+//  reset       - initialise the chip and read the presence bit and write
+//                it to output queue 'data'
+//  write0      - write a 0 bit
+//  write1      - write a 1 bit
+//  read        - read a bit to output queue 'data'
+//  cspcomplete - delay for 12.5ms while a copy from scratchpad to memory
+//                completes
+//
+// String 'pin' is the FPGA pin to which the DS2431 is connected.
+//
+// The output queue 'data' must not block on write as that will perturb the
+// timing and will probably cause the current operation to fail.
+//
+
+enum(global.DS2431command, reset, write0, write1, read, cspcomplete);
+
+global module
+DS2431 (queue(data, "log") <- queue(com, DS2431command), str(pin)) {
+    static(s, "log", true);
+    static(drive, "log", true);
+    output(p, "log",, loc=pin, pullup=true, drive=2);
+    input(i, "log", loc=pin);
+
+    when (drive)
+        p |- s;
+
+
+    // Wait on a command and then branch.
+    branch (com) {
+    case DS2431command.reset:
+        // Initialise the chip and write the presence bit to data output queue.
+        seq {
+            s <- false;
+            uswait(550);    // delay 550us
+            s <- true;
+            uswait(5);      // delay 5us
+            drive <- false; // output high Z
+            uswait(57);     // delay 57us
+            data <<- i;     // sample the presence bit
+            uswait(180);    // delay 180us
+            drive <- true;  // output low Z
+        }
+    case DS2431command.write0:
+        // Write a '0' bit.
+        seq {
+            s <- false;
+            uswait(100);    // delay 100us - line low for 100us to write a '0'
+            s <- true;
+            uswait(5);      // delay 5us
+        }
+    case DS2431command.write1:
+        // Write a '1' bit.
+        seq {
+            s <- false;
+            uswait(10);     // delay 10us - line low for 10us to write a '1'
+            s <- true;
+            uswait(95);     // delay 95us
+        }
+    case DS2431command.read:
+        // Read a data bit and write it to the data output queue.
+        seq {
+            s <- false;
+            uswait(10);     // delay 10us
+            s <- true;
+            uswait(3);      // delay 3us
+            drive <- false; // output high Z
+            uswait(10);     // delay 10us
+            data <<- i;     // sample the data bit
+            uswait(180);    // delay 180us
+            drive <- true;  // output low Z
+        }
+    case DS2431command.cspcomplete:
+        // Wait for completion of the write from the scratchpad to the
+        // memory. The line continues being held high by the FPGA.
+        // The output should be left to float during this time but
+        // the pullup is too weak and the line level sinks below the
+        // critical 2.8V causing the write to fail!
+        // The documentation says that the line is toggled by the chip
+        // during this period so holding it high seems a bit brutal, but
+        // it seems to work.
+        uswait(12500);      // delay 12.5ms - data transfer maximum time
+    }
+    
+    // Wait for the number of microsecond specified by the integer argument.
+    procedure
+    uswait (int(us)) {
+        if (!varexists(swait))
+            static(file.swait, "int:15", -1);
+        seq {
+            swait <- us - 1;
+            wait_until(swait < 0);
+        }
+    }
+    
+    [
+        when (swait >= 0) seq {
+            wait(1e-6); // microsecond delay
+            swait--;
+        }
+    ]
+
+    
+    /*
+     * More elegant method of variable waits.
+     * The multiple queue writes are more difficult to place and route
+     * within timing constraints.
+     *
+    // Wait for the number of microsecond specified by the integer argument.
+    procedure
+    uswait (int(us)) {
+        // Queue 'pwait' is an unbuffered queue. A write to it of an integer
+        // will pause for that number of microsecond before continuing.
+        if (!varexists(pwait))
+            queue(file.pwait, "uint:14"); attributes(pwait, depth=0);
+        pwait <<- us;
+    }
+
+    // Module to cause writes to queue 'pwait' to hang for the number
+    // of microsecond specified by the integer written to the queue.
+    [
+        static(wcount, "uint:14");
+        int(n);
+
+        when (<pwait) seq { // wait for queue 'pwait' available
+            seq {
+                wcount <- ?pwait;   // examine queue 'pwait', don't read!
+                par while (wcount != 1) {   // loop on count from queue 'pwait'
+                    wcount--;
+                    wait(1e-6); // microsecond delay
+                }
+            }
+            null <<- pwait; // read queue 'pwait' to release the writer
+        }
+    ]
+    */
+}

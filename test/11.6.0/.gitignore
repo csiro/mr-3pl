@@ -1,6 +1,7 @@
 netlist.lst
 xlnx_auto_0_xdb
 xlnx_auto_0.ise
+*.edn
 *.xrpt
 *.xml
 *.csv

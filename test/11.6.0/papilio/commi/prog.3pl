@@ -28,6 +28,8 @@ cpu.read(out=qo, access=acc, count=count <- q, "RQ", wordcount=true, ilevel=true
 cpu.receive_event(waswritten(q), "EVQ");
 cpu.read(q, "RQO");
 
+null <<- qo;
+
 var(minit, "[256]int");
 for (int(i) ; i<256 ; i++)
     minit[i] = i * 3;

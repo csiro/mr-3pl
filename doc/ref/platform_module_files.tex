@@ -13,7 +13,7 @@
     
     Each of these module files includes other module files appropriate
     to the platform device. This avoids the necessity to include these
-    files in the source code.
+    files explicitly in the source code.
     
     Note that libraries exist for MGT and GTP serial channels, but not yet
     for GTX, GTH or GTZ. Also the GT11 element for Virtex4 has not been
@@ -64,13 +64,18 @@
                      &                                 & xilinx/dsp48.3pl \\
                      &                                 & xilinx/ppclib.3pl \\
                      &                                 & xilinx/gtp\_dual.3pl \\ \hline
-    xilinx/xc7.3pl   & Artix7 Kintex7 Virtex7 Zynq7000 & stdlib.3pl \\
+    xilinx/xc7.3pl   & Artix7 Kintex7 Virtex7          & stdlib.3pl \\
                      &                                 & xilinx/common.3pl \\
                      &                                 & xilinx/clocks.3pl \\
                      &                                 & xilinx/io.3pl \\
                      &                                 & xilinx/dsp48.3pl \\
                      &                                 & xilinx/gtp\_dual.3pl \\ \hline
-    xilinx/zynq\_axi.3pl & Zynq7000 & \\ \hline
+    xilinx/zynq\_axi.3pl & Zynq7000                    & stdlib.3pl \\
+                     &                                 & xilinx/common.3pl \\
+                     &                                 & xilinx/clocks.3pl \\
+                     &                                 & xilinx/io.3pl \\
+                     &                                 & xilinx/dsp48.3pl \\
+                     &                                 & xilinx/gtp\_dual.3pl \\ \hline
     
     \end{tabular}
     

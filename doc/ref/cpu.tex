@@ -715,15 +715,15 @@
             \vsp
             \begin{lstlisting}[gobble=12, language=threepl]
                global procedure
-               cpu_receive_event (name, value(sig, "log")) {}
+               cpu_receive_event (value(sig, "log"), name) {}
             \end{lstlisting}
 
             {\bf Output parameters:} \\
             none
 
             {\bf Input parameters:} \\            
+            {\bf sig} is an interrupt signal \\
             {\bf name} is the interrupt event identifier string. \\
-            {\bf sig} is an interrupt signal
         
             {\bf In-line target execution:} \\
             no

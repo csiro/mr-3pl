@@ -22,7 +22,7 @@
     \item   platform-specific
     \blend
     
-    Our libraries are arranged in the following directory structure -
+    Libraries are arranged in the following directory structure -
     \begin{verbatim}
         boards/
             avnet/
@@ -133,17 +133,13 @@
     \item   zynq\_axi.3pl - Zynq PL instance and AXI interface to CPU
     \blend
 
-    Directory {\bf boards} contains header files for a variety of FPGA
-    boards. Some of these are (or were) commercially available and the
-    others were developed in-house by our CSIRO group or by our collaborators.
-    These non-commercial boards are included for two reasons - firstly
-    we use this documentation ourselves for reference and secondly these files
-    illustrate 3PL coding techniques that will be applicable to other FPGA
-    platforms.
-    
-    The {\bf boards} directory contains header files for commercial
-    Xilinx boards. There are four subdirectories, avnet, xilinx, memec and
-    gadgetfactory.
+    Directory {\bf boards} contains header files for a limited number of
+    commercial FPGA boards. There are not very many included as most of our work
+    in CSIRO has been on substantial applications implemented on large in-house
+    FPGA platforms. The libraries for these have not been included in this
+    distribution as they would not be of general interest.
+
+    There are four subdirectories, avnet, xilinx, memec and gadgetfactory.
     
     The {\bf avnet} directory contains header files for Xilinx boards supplied
     by AVNET. At the moment there are four -
@@ -190,31 +186,60 @@
     since they define FPGA pinouts and establish clocks as well as defining
     modules, procedures and functions.
 
-    For an embedded Virtex2 PRO FPGA the program must begin as
-    follows -
+    As an example the header file for a GadgetFactory Papilio 250 is -
     \begin{lstlisting}[gobble=8, language=threepl]
-       part("XC2VP4FG456-6");      // for example Virtex2 Pro               
-    \end{lstlisting}
-    but this is usually inclyded in the header file for the device, e.g.
-    \begin{lstlisting}[gobble=8, language=threepl]
-       module "xilinx/xc2vp.3pl"   // Virtex2 PRO 3PL library
-    \end{lstlisting}
-    There are matching files for each platform, e.g. xc2s.3pl, xc3s.3pl,
-    xcv.3pl, xc7a.3pl etc. It is then useful to inlude the libraries -
-    \begin{lstlisting}[gobble=8, language=threepl]
-       module "xilinx/common.3pl"  // common Xilinx 3PL library
-       module "stdlib.3pl"         // standard 3PL library
-    \end{lstlisting}
-    Other libraries to be included may be - \\
-    xilinx/mgt.3pl\\
-    xilinx/gtp\_dual.3pl\\
-    xilinx/ppclib.3pl\\
-    ctypes.3pl\\
-    mutex.3pl\\
-    and others.
+        nosource
 
-    The program must include code for establishing clocks and applying
-    timing constraints appropriate to those clocks.
+        // 3pl board support for GadgetFactory Papilio One 250k
+
+        // Initial setup
+        part("XC3S250EVQ100-4");    // FPGA part number
+        module "xilinx/xc3s.3pl"    // include file for Spartan 3
+
+        // default IO is 3.3V on this board
+        str(lvcmos33, "LVCMOS33");
+
+        // 32MHz clock input pin
+        iopins(c32_pin, "str", "P89", frequency=32.0e6, ibufg=true, iostandard=lvcmos33);
+
+        // 48 I/O pins across A (wing 1A), B (wing 1B), C (wing 2A)
+        iopins(global.A_pins, "[16]str", {
+	        "P18", "P23", "P26", "P33", "P35", "P40", "P53", "P57",
+	        "P60", "P62", "P65", "P67", "P70", "P79", "P84", "P86"
+            }, iostandard=lvcmos33
+        );
+        iopins(global.B_pins, "[16]str", {
+	        "P85", "P83", "P78", "P71", "P68", "P66", "P63", "P61",
+	        "P58", "P54", "P41", "P36", "P34", "P32", "P25", "P22"
+            }, iostandard=lvcmos33
+        );
+        iopins(global.C_pins, "[16]str", {
+	        "P91", "P92", "P94", "P95", "P98", "P2",  "P3",  "P4",
+	        "P5",  "P9",  "P10", "P11", "P12", "P15", "P16", "P17"
+            }, iostandard=lvcmos33
+        );
+
+        // FTDI USB channel B serial receive and transmit.
+        // Labelling is reversed to schematic!
+        // 'tx' should be an FPGA output, 'rx' an input
+        iopins(global.serial_rxd_pin, "str", "P88", iostandard=lvcmos33);
+        iopins(global.serial_txd_pin, "str", "P90", iostandard=lvcmos33);
+
+        // create 32MHz clock
+        clock(global.c32_in, loc=c32_pin);
+        simpleclock(global.c32, c32_in);
+        useclock(c32);
+
+        directive("comms_baud_rate", 115200);   // define default serial device baud rate
+        module "xilinx/uart_cpu.3pl"            // include serial interface
+    \end{lstlisting}
+
+    An application program using this board simply has to begin with -
+    \begin{lstlisting}[gobble=8, language=threepl]
+        module "boards/gadget_factory/papilio_one_250.3pl"
+    \end{lstlisting}
+    (for example see \autorefph{ch:serialcpu}
+
     
     
 \input{platform_module_files}

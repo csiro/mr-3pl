@@ -3,8 +3,16 @@
 \chapter{Zynq Communication Between the CPU and the FPGA}\label{ch:zynqcpu}
 
     The following assumes the use of a Linux kernel on the Zynq platform and a
-    Linux, Unix or OSX operating system on a host computer for CPU code
-    cross-compilation and execution of some of the support programs.
+    Linux, Unix or OSX operating system on a host computer for execution of some
+    of the support programs (and optional CPU code cross-compilation if a
+    cross-compile is available).   
+    
+    {\bf Note that the version of Linux on the Zynq CPU for which this software
+    was developed provided device /dev/xdevcfg, to which the configuration file
+    could be copied. Versions of Petalinux have now dispensed with this device
+    and instead provide an FPGA manager to perform the configuration loading.
+    This manual and the associated software tools presume the former arrangement
+    and have not been updated to accomodate the FPGA manager.}
     
     This interface is very similar to the serial CPU interface described in the
     previous chapter (\autorefph{ch:serialcpu}). Much of the code is common to

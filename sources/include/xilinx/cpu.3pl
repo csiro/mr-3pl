@@ -543,34 +543,38 @@ CPU_API () {
     // Target procedure to execute a CPU interrupt.
     //
     procedure
-    interrupt (str(event)) {
+    interrupt (str(eventname)) {
         value(event_sig, "log");
-        if (!matched(event))
-            texit("cpu_receive_event() - event identifier not supplied");
+        if (!matched(eventname))
+            texit("interrupt() - event identifier not supplied");
 
         assert(event_sig <-);
 
-        signal_interrupt(event, event_sig);
+        receive_event(event_sig, eventname);
     }
 
     //
     // Module to link an interrupt to a signal.
     //
     module
-    signal_interrupt(str(event), value(sig, "log")) {
+    receive_event(value(sig, "log"), str(eventname)) {
         if (hasqueuereads(sig)) {
             println(args.trace);
-            texit("sigint() - input value has queue reads");
+            texit("recieve_event() - input value has queue reads");
         }
-        if (gp_names[event] != null) {
-            println("sigint() - name '" + event + "' already used");
+        if (gp_names[eventname] != null) {
+            println("recieve_event() - name '" + eventname + "' already used");
             println("previous use -");
-            println(gp_names[name]);
+            println(gp_names[eventname]);
             texit();
         }
-        if (interrupt_n == num_interrupts)
-            texit("sigint() - no free interrupt addresses - " + event);
-        interrupt_map[event] = interrupt_n++;
+        if (interrupt_map[eventname] != null) {
+            println("recieve_event() - name '" + eventname + "' already used");
+            println("previous use -");
+            println(interrupt_map[eventname]);
+            texit();
+        }
+        interrupt_map[eventname] = interrupt_n++;
         sigint_ptr->(interrupt_n, sig);
     }
 
@@ -817,10 +821,10 @@ CPU_CODEGEN () {
                     // Interrupt level setable from the CPU
                     static(ilevel, "uint:"+pdepthbits, 1);  // initial level 1
                     cpu_write(ilevel <- 0, args.laddr);
-                    sigint(args.iev, count >= ilevel, args.interface_name);
+                    sigint(args.iev, count >= ilevel);
                 } else {
                     // level fixed 
-                    sigint(args.iev, count >= args.ilevel, args.interface_name);
+                    sigint(args.iev, count >= args.ilevel);
                 }
 
             }
@@ -885,7 +889,7 @@ CPU_CODEGEN () {
             if (args.laddr == 0)
                 // No interrupt level set -
                 // interrupt simply on write availability.
-                sigint(args.iev, >args.var->, args.interface_name);
+                sigint(args.iev, >args.var->);
             else {
                 if (!is_sync) {
                     println(args.trace);
@@ -895,10 +899,10 @@ CPU_CODEGEN () {
                     // Interrupt level setable from the CPU
                     static(ilevel, "uint:"+pdepthbits, 1);  // initial level 1
                     cpu_write(ilevel <- 0, args.laddr);
-                    sigint(args.iev, count >= ilevel, args.interface_name);
+                    sigint(args.iev, count >= ilevel);
                 } else {
                     // fixed level
-                    sigint(args.iev, count >= args.ilevel, args.interface_name);
+                    sigint(args.iev, count >= args.ilevel);
                 }
 
             }
@@ -1031,7 +1035,7 @@ CPU_CODEGEN () {
     write_memory_gen (class(args)) {
         clock(arg_domain);
         log(is_cmem, head(mode(args.var->), 1) == "c");
-        var(mptr, "->", (head(mode(args.var->), 1) == "c") ? procptr(cmemorywrite) : procptr(rmemorywrite));
+        var(mptr, "->", (head(mode(args.var->), 1) == "c") ? &(cmemorywrite) : &(rmemorywrite));
         type(mdtype, memorydatatype(args.var->));
 
         if (portdomain(args.var->, args.port) != null)

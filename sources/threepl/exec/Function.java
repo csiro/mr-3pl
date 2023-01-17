@@ -114,6 +114,7 @@ public class Function extends Body implements Constant {
      * Set a 'used' value for the function call, i.e. function used() has been called.
      * On first use of this function instance generate a new Val usedval.
      * On further calls to used() return the established Val usedval.
+     * @return  a target value which is true when the function is executed in the FPGA
      */
     public Val setUsedFunc () {
         if (usedval == null) {

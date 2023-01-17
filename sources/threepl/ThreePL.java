@@ -2685,8 +2685,8 @@ public class ThreePL implements TDEConstants {
     }
 
     /**
-     * Push a class scope onto the class  stack.
-     * @param   s is a class scope
+     * Push a class body onto the class stack.
+     * @param   b is a class body
      */
     public static void pushClassBody (Body b) {
         class_body_stack.addFirst(b);
@@ -2905,7 +2905,7 @@ public class ThreePL implements TDEConstants {
      * This stack is only used to check if a caller is an inbuilt module/procedure/function.
      * At the moment it is only used to ensure that function arglist() is not called as
      * a parameter function for an inbuilt.
-     * @param   name is the identifier of the group (3PL class), module,
+     * @param   id is the identifier of the group (3PL class), module,
      *          procedure or function to be pushed
      */
     public static void pushCallName (String id) {
@@ -3146,7 +3146,7 @@ public class ThreePL implements TDEConstants {
      * @param m is the module
      * @param s is the scope for a 3PL class trailermodule
      * @param ident is an identifier for the module
-     * @param t is a literal constant token from which an ordering integer
+     * @param token is a literal constant token from which an ordering integer
      * can be determined. It may be null.
      */
     public static void addTrailerModule (Module m, Scope s, Token ident, Token token) {
@@ -3167,8 +3167,7 @@ public class ThreePL implements TDEConstants {
      * @param m is the module
      * @param s is the scope for a 3PL class trailermodule
      * @param name is an identifier for the module
-     * @param t is a literal string constant from which an ordering integer
-     * can be determined. It may be null.
+     * @param n is an ordering integer.
      */
     public static void addTrailerModule (Module m, Scope s, String name, int n) {
         m.order = n;

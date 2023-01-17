@@ -47,7 +47,7 @@ public final class ProcModCallNode extends Node implements Constant {
     
     /**
      * Construct a module or procedure call code tree node.
-     * @param   'n' is the module/procedure identifier node.
+     * @param   n is the module/procedure identifier node.
      *          If it is a VarNode and has SubFields it is a class module or procedure call,
      *          the last SubField is the module/procedure identifier and the
      *          remainder of the SubFieldList appended to the variable supplies

@@ -150,7 +150,7 @@ public abstract class Body implements Constant {
      * If it is a class group add it to the group map in the associated Scope class.
      * Otherwise add it to the module map in this Body class.
      * 3PL class names must be distinct from function names.
-     * @param   module is the module
+     * @param   group is the group (3PL class)
      */
     public void addGroup (Group group) {
         String  name = group.getName();

@@ -363,7 +363,7 @@ public final class Value extends Var implements Constant, TDEConstants {
      * information provided by a variable reference (see getRef()).
      * It returns the TDEVar. The <B>varnode</B> argument is used to get any flags
      * associated with the variable occurrence, but it may be null. For value mode
-     * if <B<varnode</B> has a ++ or -- flag that is an error.
+     * if <B>varnode</B> has a ++ or -- flag that is an error.
      * A pointer variable returns a reference to the ultimate variable to which it points.
      * @param   varnode is the code tree node, may be null (used to
      *          detect variable node flags)

@@ -293,8 +293,9 @@ public class Scope implements Constant {
     }
 
     /**
-     * Get a group group from this scope.
-     * @return  the group module
+     * Get a group (3PL class) from this scope.
+     * @param   name is the 3PL class name
+     * @return  the group (3PL class)
      */
     public Group findGroup (String name) {
         if (groups.containsKey(name)) {
@@ -306,8 +307,9 @@ public class Scope implements Constant {
     }
 
     /**
-     * Get a group module from this scope.
-     * @return  the group module
+     * Get a module from this scope.
+     * @param   name is the module name
+     * @return  the module
      */
     public Module findMod (String name) {
         if (modules.containsKey(name)) {
@@ -319,8 +321,9 @@ public class Scope implements Constant {
     }
     
     /**
-     * Get a group procedure from this scope.
-     * @return  the group procedure
+     * Get a procedure from this scope.
+     * @param   name is the procedure name
+     * @return  the procedure
      */
     public Procedure findProc (String name) {
         if (procedures.containsKey(name)) {
@@ -332,8 +335,9 @@ public class Scope implements Constant {
     }
     
     /**
-     * Get a group function from this scope.
-     * @return  the group function
+     * Get a function from this scope.
+     * @param   name is the function name
+     * @return  the function
      */
     public Function findFunc (String name) {
         if (functions.containsKey(name)) {

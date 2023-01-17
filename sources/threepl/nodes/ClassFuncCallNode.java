@@ -36,14 +36,14 @@ public final class ClassFuncCallNode extends Node implements Constant {
     protected Flag          flag;       // may have a ++, --
     /**
      * Construct a function call code tree node.
-     * @param   'n' is the function identifier node.
+     * @param   n is the function identifier node.
      *          If it is a VarNode and has SubFields it is a class function call,
      *          the last SubField is the function identifier and the
      *          remainder of the SubFieldList appended to the variable supplies
      *          the class (Scope).
      *          Otherwise the VarNode simply supplies the function identifier
      *          'n' also provides the source file location of the definition
-s     */
+     */
     public ClassFuncCallNode (Node n) {
         super(n.getSrcLoc());
         name_node = n;

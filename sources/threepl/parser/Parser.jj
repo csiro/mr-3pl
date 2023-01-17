@@ -762,7 +762,6 @@ FuncDef (
 /**
  * Module, procedure or function output or input parameters grammar production.
  * @param   body is the module, procedure or function
- * @param   arrow indicates if an &lt;- is allowed as a parameter separator
  * @throws  ParseException on a parsing error
  */
 void

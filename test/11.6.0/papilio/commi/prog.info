@@ -1,0 +1,212 @@
+{
+    "version": {
+        "major": 1,
+        "minor": 0
+    },
+    "directives": {
+        "ALU": "false",
+        "FIFO": "false",
+        "OS": "mac os x",
+        "QUEUEREG": "false",
+        "arch": "x86_64",
+        "comms_baud_rate": "115200",
+        "compileOnly": "false",
+        "compilerMakeDate": "2022-11-25 11:59:13 +1100",
+        "continuous": "false",
+        "currentDirectory": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi",
+        "date": "2023-01-13 15:27:50 +1100",
+        "designName": "prog",
+        "family": "XC3S",
+        "filePath": "false",
+        "forceExec": "true",
+        "gatesNotLuts": "false",
+        "intTruncWarning": "false",
+        "intermediateOnly": "false",
+        "listNets": "true",
+        "listTDEs": "true",
+        "listTDEsSel": "0",
+        "locations": "false",
+        "netFile": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi/prog.net",
+        "netlistDisplay": "false",
+        "netlistFile": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi/prog.edn",
+        "optimiseConnect": "true",
+        "outputDirectory": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi/",
+        "parentDirectory": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi/",
+        "part": "xc3s500evq100-4",
+        "postProcessTool": "ise",
+        "reportFile": "/Users/dun202/src/mine/3PL_distr/3pl/test/11.6.0/papilio/commi/prog.rpt",
+        "rptToFile": "true",
+        "sigList": "false",
+        "skipPostProc": "true",
+        "sourceFile": "prog.3pl",
+        "srlAddrWidth": "4",
+        "tlimit": "1016",
+        "uart_cpu": "true",
+        "unassOut": "fatal",
+        "version": "11.7.0M (devel svn 10083:10182M, dun202)"
+    },
+    "spaces": {
+        "reg": {
+            "bus": "serial",
+            "read_addr_bits": 6,
+            "write_addr_bits": 6,
+            "interfaces": {
+                "infoword": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 1,
+                    "data_bits": 32,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 32
+                    }
+                },
+                "inforeset": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 1,
+                    "data_bits": 0
+                },
+                "W": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 2,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "R": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 2,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "WW": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 3,
+                    "data_bits": 35,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 35
+                    }
+                },
+                "RR": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 3,
+                    "data_bits": 35,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 35
+                    }
+                },
+                "WWW": {
+                    "interface": "write_static",
+                    "write": true,
+                    "data_addr": 4,
+                    "data_bits": 6,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 6
+                    }
+                },
+                "RRR": {
+                    "interface": "read_value",
+                    "write": false,
+                    "data_addr": 4,
+                    "data_bits": 6,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 6
+                    }
+                },
+                "WQ": {
+                    "interface": "write_queue",
+                    "write": true,
+                    "data_depth": 16,
+                    "data_addr": 5,
+                    "avail_addr": 5,
+                    "avail_thresh_addr": 6,
+                    "avail_thresh_intr": 1,
+                    "check": false,
+                    "data_bits": 14,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 14
+                    }
+                },
+                "RQ": {
+                    "interface": "read_queue",
+                    "write": false,
+                    "data_depth": 16,
+                    "data_addr": 6,
+                    "avail_addr": 7,
+                    "avail_thresh_addr": 7,
+                    "avail_thresh_intr": 2,
+                    "check": false,
+                    "data_bits": 14,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 14
+                    }
+                },
+                "RQO": {
+                    "interface": "read_queue",
+                    "write": false,
+                    "data_depth": 16,
+                    "data_addr": 8,
+                    "check": false,
+                    "data_bits": 14,
+                    "data_type": {
+                            "type": "int",
+                            "bits": 14
+                    }
+                },
+                "MW": {
+                    "interface": "write_memory",
+                    "write": true,
+                    "data_addr": 8,
+                    "port": 0,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                },
+                "MR": {
+                    "interface": "read_memory",
+                    "write": false,
+                    "data_addr": 9,
+                    "port": 0,
+                    "data_bits": 16,
+                    "data_type": {
+                            "type": "uint",
+                            "bits": 16
+                    }
+                }
+            }
+        }
+    },
+    "events": {
+        "EVQ": {
+            "intr": 3
+        },
+        "EVR": {
+            "intr": 0
+        },
+        "RQ": {
+            "intr": 2
+        },
+        "WQ": {
+            "intr": 1
+        }
+    }
+}
+

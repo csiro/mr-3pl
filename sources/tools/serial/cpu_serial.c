@@ -62,7 +62,7 @@ fpga_close() {
 }
 
 // Set the DMA base address.
-// DMA addresses in the FPGA are relativ to this base address.
+// DMA addresses in the FPGA are relative to this base address.
 void
 set_dma_address (char* addr) {
     dma_addr = addr;

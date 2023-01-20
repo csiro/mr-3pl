@@ -3,16 +3,8 @@
 \chapter{Zynq Communication Between the CPU and the FPGA}\label{ch:zynqcpu}
 
     The following assumes the use of a Linux kernel on the Zynq platform and a
-    Linux, Unix or OSX operating system on a host computer for execution of some
-    of the support programs (and optional CPU code cross-compilation if a
-    cross-compile is available).   
-    
-    {\bf Note that the version of Linux on the Zynq CPU for which this software
-    was developed provided device /dev/xdevcfg, to which the configuration file
-    could be copied. Versions of Petalinux have now dispensed with this device
-    and instead provide an FPGA manager to perform the configuration loading.
-    This manual and the associated software tools presume the former arrangement
-    and have not been updated to accomodate the FPGA manager.}
+    Linux, Unix or OSX operating system on a host computer for CPU code
+    cross-compilation and execution of some of the support programs.
     
     This interface is very similar to the serial CPU interface described in the
     previous chapter (\autorefph{ch:serialcpu}). Much of the code is common to
@@ -321,6 +313,8 @@
         
 
         \includegraphics{c_zynq}
+        
+        For details see (\autorefph{ch:tools_c_zynq}).
 
         The following C program includes the above file. Note that in the case of
         a Python3 program the interface information can be read from the FPGA and
@@ -489,6 +483,8 @@
 
         
         \includegraphics{py_zynq}
+        
+        For details see (\autorefph{ch:tools_python_zynq}).
 
 
     
@@ -525,7 +521,7 @@
         
         {\bf fpga\_configfile\_load("prog.bit")}. This
         line could be omitted if the configuration was manually preloaded
-        by executing {\bf cat prog.bit >/dev/xdevcfg}.
+        by executing {\bf cat prog.bit \verb'>'/dev/xdevcfg}.
 
         \begin{lstlisting}[gobble=4, language=Python]
             import sys

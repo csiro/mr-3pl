@@ -22,7 +22,7 @@ queue(wd, "bits:64"); attributes(wd, mindepth=8192); // buffer
 queue(wa, "uint:32");
 queue(wl, "uint:4");
 
-dma_write(0, wd, wa, wl);
+cpu.dma_write(wd, wa, wl, 0);
 
 cpu.write(wa <- "WA");
 cpu.write(wl <- "WL");
@@ -34,7 +34,7 @@ queue(rd, "bits:64"); attributes(rd, mindepth=8192); // buffer
 queue(ra, "uint:32");
 queue(rl, "uint:4");
 
-dma_read(rd <- 1, ra, rl);
+cpu.dma_read(rd <- ra, rl, 1);
 
 cpu.write(ra <- "RA", freecount=true, ilevel=true);
 cpu.write(rl <- "RL");

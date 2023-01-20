@@ -179,7 +179,7 @@
             {\bf data} is the queue to which data from the transfer is returned.\\
 
             {\bf Input parameters:} \\
-            {\bf address} is a queue supplying the read address.\\
+            {\bf address} is a queue supplying the CPU memory physical read address.\\
             {\bf burstlen} is a queue giving the burst length in the case of Zynq.\\
             {\bf bus} is the HP bus, 0 to 3, in the case of Zynq.\\
         
@@ -188,20 +188,26 @@
 
             {\bf description:} \\
             This procedure generates a module which reads data from the CPU
-            memory.
+            memory. For platforms with serial communications between the
+            FPGA and the CPU this is not really DMA but instead data is transferred
+            from CPU memory by a software thread.
             
             In the case of a platform with a serial interface only one input
             argument, {\bf address}, is valid - {\bf burstlen} and {\bf bus} must
-            not be given arguments. When an address becomes available on the
-            {\bf address} input queue and the output {\bf data} queue is not
-            full a DMA transfer (read) will take place. For a serial interface
-            platform this is not a real DMA transfer but is carried out in
-            software by a separate CPU thread.
+            not be given arguments. \bf{This address is relative to a base address
+            set by calling} {\bf set\_dma\_address()} \autorefph{tools_c_serial}.
+            
+            When an address becomes available on the {\bf address} input queue
+            and the output {\bf data} queue is not full a DMA transfer (read)
+            will take place. For a serial interface platform this is not a real
+            DMA transfer but is carried out in software by a separate CPU
+            thread.
 
-            For the Zynq When an address and a burstlength become available on
-            the {\bf address} and {\bf burstlen} input queues and the output
-            {\bf data} queue is not full, a DMA transfer (read) will take place.
-            The HP bus selected cannot be used for any other interfaces.
+            For the Zynq the address is a physical address. When an address and
+            a burstlength become available on the {\bf address} and {\bf
+            burstlen} input queues and the output {\bf data} queue is not full,
+            a DMA transfer (read) will take place. The HP bus selected cannot be
+            used for any other interfaces.
 
             See also class module {\bf CPU\_API.dma\_write()}
             \autorefph{sec:lpcpudmaw} which generates a DMA write module.
@@ -230,7 +236,7 @@
 
             {\bf Input parameters:} \\
             {\bf data} is a queue supplying data for the transfer.\\
-            {\bf address} is a queue supplying the read address.\\
+            {\bf address} is a queue supplying the CPU memory physical write address.\\
             {\bf burstlen} is a queue giving the burst length in the case of Zynq.\\
             {\bf bus} is the HP bus, 0 to 3, in the case of Zynq.\\
         
@@ -239,17 +245,22 @@
 
             {\bf description:} \\
             This procedure generates a module which writes data to the CPU
-            memory.
+            memory. For platforms with serial communications between the
+            FPGA and the CPU this is not really DMA but instead data is transferred
+            to CPU memory by a software thread.
             
             In the case of a platform with a serial interface only two input
             arguments, {\bf data} and {\bf address}, are valid - {\bf burstlen}
-            and {\bf bus} must not be given arguments. When data and an address
-            become available on the {\bf data} and {\bf address} input queues a
-            DMA transfer (read) will take place. For a serial interface platform
-            this is not a real DMA transfer but is carried out in software by a
-            separate CPU thread.
+            and {\bf bus} must not be given arguments. \bf{This address is
+            relative to a base address set by calling} {\bf set\_dma\_address()}
+            \autorefph{tools_c_serial}.
+            
+            When data and an address become available on the {\bf data} and {\bf
+            address} input queues a DMA transfer (read) will take place. For a
+            serial interface platform this is not a real DMA transfer but is
+            carried out in software by a separate CPU thread.
 
-            For the Zynq When data an address and a burstlength become available
+            For the Zynq When data, an address and a burstlength become available
             on the {\bf data}, {\bf address} and {\bf burstlen} input queues a
             DMA transfer (write) will take place. The HP bus selected cannot be
             used for any other interfaces.
@@ -298,7 +309,7 @@
 
 
 
-        \subsubsection{CPU\_API.read - a CPU-readable interface}\label{sec:lpcpurd}
+        \subsubsection{CPU\_API.read - a CPU-readable interface}\label{sec:lpcpuread}
 
             {\bf Library: xilinx/cpu.3pl}
 
@@ -410,7 +421,7 @@
 
 
 
-        \subsubsection{CPU\_API.write - a CPU-writable interface}\label{sec:lpcpuwr}
+        \subsubsection{CPU\_API.write - a CPU-writable interface}\label{sec:lpcpuwrite}
 
             {\bf Library: xilinx/cpu.3pl}
 

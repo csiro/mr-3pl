@@ -1564,6 +1564,8 @@ public class ThreePL implements TDEConstants {
      * Print a usage message and exit
      */
     private static void usage () {
+        System.out.println("3PL - CSIRO Australia");
+        System.out.println("Commonwealth Scientific and Industrial Research Organisation");
         System.out.println("Usage: 3pl {-Iincludes} {-odirname} {-Dirname} {-Ndesname} {-dilptv} name");
         System.out.println("Options and 'name' may be in any order.");
         System.out.println("-c       - compile only - do not execute");

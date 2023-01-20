@@ -294,7 +294,7 @@ public class FileChooser extends JPanel implements ActionListener {
      */
     private static void createAndShowGUI () {
         //Create and set up the window.
-        JFrame frame = new JFrame("3PL " + version + " - Parallel Pipeline Programming Language");
+        JFrame frame = new JFrame("3PL " + version + " - Parallel Pipeline Programming Language - CSIRO Australia.");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //Add content to the window.

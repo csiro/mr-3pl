@@ -33,7 +33,7 @@
         University by Ian Watson and John Gurd in the late 1970s.} parallel
         programming language for FPGAs which has been explicitly designed to
         support pipelining. The name {\bf 3PL} stands for "Parallel Pipeline
-        Programming Language" (the name was suggested by Alen Yokhanis).
+        Programming Language".
 
         In principle we would like our pipeline to have the following
         characteristics -
@@ -50,10 +50,9 @@
         \end{enumerate}
 
         Data will flow through the pipeline as rapidly as possible, retarded
-        only when modules or groups of modules are not in a state to accept
-        them.
-
-        Data cannot be assumed to be contiguous in a pipeline.
+        only when one or more source module queues are empty or a destination
+        module queue is full. Thus such pipelines do not necessarily move
+        in lock-step with the clock.
 
         {\bf 3PL} supports pipelined data, and modules are inherently
         parallel. While the pipeline/module model works well for real-time
@@ -63,7 +62,7 @@
         be significantly faster), occasions arise where the sequential code is
         but a small part of a larger, predominantly parallel, algorithm. For
         this reason {\bf 3PL} supports the usual conventional sequential
-        constructs as well.
+        code blocks as well as parallel code blocks.
 
         Sequential constructs can also be used in code which is executed at
         compile time, rather than in the target architecture. This {\em
@@ -239,6 +238,8 @@
     \section{Acknowledgements}
 
         This work was done within what was the Machine Vision group in CSIRO
+        \footnote{Commonwealth Scientific and Industrial Research Organisation -
+        an Australian federal government research laboratory}
         Manufacturing and Infrastructure Technology, Preston laboratory,
         Melbourne. The group is now called High Speed Instrumentation and is in
         CSIRO Mineral Resources, Clayton, Melbourne.
@@ -250,15 +251,16 @@
         wrote the code generator.
 
         The first version of the compiler was a good learning exercise but soon
-        proved to have serious shortcomings and was never completed. Paul Dunn
-        redesigned the language and re-implemented the compiler from scratch.
-        This benefited greatly from the experience of the first attempt.
+        proved to have serious shortcomings and was never completed. Andrew left
+        the laboratory shortly thereafter and Paul redesigned the language and
+        re-implemented the compiler. This benefited greatly from the experience
+        of the first attempt.
 
         Andrew Tulloh has worked through both compiler versions developing the
         target simulator (currently disabled as it has not kept up with 3PL
         evolution).
         
         Robin Kirkham has been an invaluable critic and expert user of 3PL
-        throughout and has contributed considerable 3PL library code.
+        throughout and has contributed significant 3PL library code.
 
 

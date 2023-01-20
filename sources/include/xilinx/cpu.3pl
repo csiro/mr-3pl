@@ -583,7 +583,7 @@ CPU_API () {
     //
     module
     dma_read (queue(data) <- queue(address), queue(burstlen), int(bus)) {
-        if (directive("uart_cpu")) {
+        if (direxists("uart_cpu") && directive("uart_cpu")) {
             if (matched(burstlen) || matched(bus))
                 texit("dma_read - parameters 'burstlen' or 'bus' not allowed for serial interface");
             dma_read_ptr->(data <- address);
@@ -596,7 +596,7 @@ CPU_API () {
     //
     module
     dma_write (queue(data), queue(address), queue(burstlen), int(bus)) {
-        if (directive("uart_cpu")) {
+        if (direxists("uart_cpu") && directive("uart_cpu")) {
             if (matched(burstlen) || matched(bus))
                 texit("dma_read - parameters 'burstlen' or 'bus' not allowed for serial interface");
             dma_write_ptr->(data, address);

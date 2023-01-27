@@ -63,7 +63,7 @@ public class InbuiltProcs {
         procs.put("fscanf", new FscanfProc());
         procs.put("ident", new IdentProc());
         procs.put("import", new ImportProc());
-        procs.put("includedir", new IncludeDirProc());
+//        procs.put("includedir", new IncludeDirProc());
         procs.put("input", new InputProc());
         procs.put("int", new IntProc());
         procs.put("log", new LogProc());

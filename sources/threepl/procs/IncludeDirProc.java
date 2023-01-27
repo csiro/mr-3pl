@@ -8,6 +8,10 @@ import threepl.parser.SrcLoc;
 
 
 /**
+ * NOT SURE WHY THIS WAS EVER WRITEN!!!!
+ * BY THE TIME THIS IS EXECUTED ALL INCLUDED FILES WILL ALREADY HAVE
+ * BEEN READ>
+ * 
  * An inbuilt procedure to append a directory name to the list of
  * directories searched for included files.
  * This has 1 input argument and no output arguments.

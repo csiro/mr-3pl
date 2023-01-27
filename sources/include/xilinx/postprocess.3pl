@@ -1,7 +1,20 @@
 // Include file invoking Xilinx processing tools ISE and Vivado
-// This code presently will only work on Unix platforms
+// This code presently will only work on Unix, Linux and OSX platforms.
+//
 nosource
 
+
+//
+// 'rname' is a recipe name. It is one of -
+//      ise_cpld.cmd
+//      ise_fpga.cmd
+//      ise_xflow.cmd
+//      xilinx/vivado.tcl
+//
+// 'minver' is an optional minimal version number for ISE or Vivado as
+// appropriate and similarly 'maxver' is an optional maximum version
+// number.
+//
 global procedure
 postprocess(str(rname), str(tool), float(minver, 1.0), float(maxver, 9999.0)) {
 

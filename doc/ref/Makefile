@@ -24,6 +24,7 @@ texts =         alist.tex \
                 boards_papilio.tex \
                 boards_v4fx.tex \
                 boards_zybo.tex \
+                building_3pl.tex \
                 CPLDs.tex \
                 capture.tex \
                 clock_attributes.tex \

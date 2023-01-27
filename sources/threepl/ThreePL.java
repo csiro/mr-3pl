@@ -277,7 +277,7 @@ public class ThreePL implements TDEConstants {
         //  -T      print TDE list with TDESIGs
         //  -t      print TDE list without TDESIGs
         //  -l      suppress location in TDE list
-        //  -V      print the 3PL version number and built data as a single string
+        //  -V      print the 3PL version number and build date as a single string
         //  -S      run simulator instead of code generation
         //  -s      skip post-processing
         //  -w      give warnings of integer variables truncated on assignment
@@ -442,6 +442,21 @@ public class ThreePL implements TDEConstants {
             default:
                 System.out.println("unknown option -" + cloptions.charAt(i));
             }   
+        }
+        
+        //
+        // If environment variable THREEPL_INCLUDE_DIRS exists add
+        // colon-separated directories to the include_dirs list.
+        //
+        String  idirs = environment.get("THREEPL_INCLUDE_DIRS");
+        if (idirs != null) {
+            String      s = (idirs.length() == 2) ? idirs : idirs.substring(2);
+            String[]    dirs = s.split(":");
+            for (int j=0 ; j<dirs.length ; j++)
+                if (dirs[j].charAt(dirs[j].length()-1) == '/')
+                    include_dirs.add(dirs[j]);
+                else
+                    include_dirs.add(dirs[j] + "/");
         }
         
         //------------------------------------------------------------------

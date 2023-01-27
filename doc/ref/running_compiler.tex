@@ -4,88 +4,74 @@
 \label{chap:run3pl}
 
 
-    The 3PL compiler is written in Java. It can be run on any computing platform
-    that supports Java 1.6 or later. The 3PL compiler was developed and used in
-    UNIX and MACOS environments, but can be run in a Windows environment as
-    well.
-
-    The 3PL compiler and libraries are generally installed in a system directory
-    such as {\bf /opt/3pl}. Each version (comprising both compiler and matching
-    library files) is installed in a subdirectory such as {\bf /opt/3pl/11.4.3},
-    so multiple versions can exist side-by-side. A symbolic link
-    {\bf /opt/3pl/current} points to the most recent version. The compiler 
-    executable would then be {\bf /opt/3pl/current/bin/3pl}.
-
-    The compiler generates a Xilinx EDIF netlist file, some associated ISE and
-    Vivado constraint files and three optional report files. It can then run ISE or
-    Vivado to produce a configuration file that can be executed on the FPGA.
+    The 3PL compiler is written in Java. It can be run on any computing
+    platform that supports Java 1.6 or later. The 3PL compiler was developed
+    and used in UNIX and MACOS environments, but can be run in a Windows
+    environment as well.
     
-    Error messages during parsing or immediate execution display variable
-    identifiers in a number of different formats depending on the specific error.
-    In many instances the identifier is displayed literally. Where more
-    information would seem to be useful the identifier is displayed as {\em
-    proc/var} for example where {\em var} was created within procedure {\em proc}.
-    The same format applies to variables created within modules or functions. Note
-    however that variables created within a structure nested within a module,
-    procedure or function are in a deeper scope which has no name so the
-    identifier will just be displayed literally. In the case of file variables the
-    display format is {\em file:var} and for global variables {\em glob:var}.
-    Where arguments are passed to module, procedure or function parameters a
-    parameter identifier will be displayed as a chain of variables separated by
-    \verb'->' showing the linkage from the parameter back through one or more
-    calls, for example {\em p1/v\verb'->'m2/a\verb'->'glob:x} where the first variable in the
-    chain is the parameter in question.
+    To use 3PL only the following are needed -
+    \blist
+    \item   the jar file - classes/3PL.jar
+    \item   the 3PL libraries in sources/include
+    \blend
+    
+    
+    A script for running 3PL should be of the form -
+
+    \verb'exec java -Xmx800M -jar .../3PL/classes/3pl.jar -I.../3PL/sources/include  $*'
+
+    The first option of the Java call provides more heap space than default.
+    The -I gives the location of the libraries.
+
+    The compiler generates a Xilinx EDIF netlist file, some associated ISE or
+    Vivado constraint files and three optional report files. It can then
+    optionally run ISE or Vivado to produce a configuration file that can be
+    executed on the FPGA (see below).
     
 
     \section{Environment variables}
-    
-	The following environment variables should be defined -
 
-	{\bf PATH} should include the location of the 3PL compiler, typically
-	{\bf /opt/3pl/current/bin}. However, you can select a specific version
-	if you wish. The latter is typically done in Makefiles or build scripts.
+        The environment variable {\bf THREEPL\_INCLUDE\_DIRS} gives an
+        additional location of 3PL libraries. It is searched following the
+        current directory and the directory specified by the command line -I
+        option.
 
-	{\bf XILINX} should be set to the installation directory of the Xilinx
-	post-processing tools, typically {\bf /opt/Xilinx} or similar, if 3PL is
-	to run these tools. This directory would have been selected when the
-	Xilinx tools (either ISE or Vivado) were installed. The standard Xilinx
-	installation structure under this directory is assumed.
-	It can be overridden by a 3PL directive of the same name.
+        3PL will by default attempt to post-process the configuration by
+        executing the procedure postprocess() in xiline/postprocess.3pl,
+        which runs the Xilinx ISE or Vivado tools. The post-processing module
+        is described in \autorefph{ch:pp}.
+        
+        If manual invokation of place-and-route tools is prefered
+        then the post-processing can be supressed by
+        giving the -s option or by including the following in the 3PL
+        source -
+        \begin{lstlisting}[gobble=12, language=threepl]
+            directive("skipPostProc", true)
+        \end{lstlisting}
+        
+        If 3PL post-processing is to be used then the environment variable
+        {\bf XILINX} must be set to the installation directory of the Xilinx
+        post-processing tools, typically {\bf /opt/Xilinx} or similar. This
+        directory would have been selected when the Xilinx tools (either ISE
+        or Vivado) were installed. The standard Xilinx installation structure
+        under this directory is assumed. It can be overridden by a 3PL
+        directive of the same name.
 
+        The following environment variables should not normally be defined by
+        the user, but may be required in unusual situations -
 
-	The following environment variables generally {\em should not} be defined
-	by the user, but may be required in unusual situations -
+        {\bf XILINX\_ISE}. Specifies a precise version of Xilinx ISE to use,
+        for example  {\bf /opt/Xilinx/14.7i}. It can be overridden by a 3PL
+        directive of the same name. This overrides the {\bf XILINX}
+        environment variable, if defined. Normally the 3PL post-processing
+        code will choose the newest version appropriate for the device.
 
-	{\bf THREEPL\_JAVA}.
-	It is assumed the Java virtual machine is run by executing the command
-	{\bf java}. If not, or if you wish to use a specific Java, the command
-	to execute it can be overridden by defining this environment variable.
-
-	{\bf THREEPL\_JAVA\_OPTS}.
-	This is by default -Xmx800M which sets the Java machine maximum heap size
-	to 800Mbyte.
-
-	{\bf THREEPL\_INCLUDE\_DIRS}.
-	This is the location of the 3PL libraries, and is automatically
-	generated relative to the execution path of the compiler executable.
-	This ensures the correct version of the libraries is used. However it
-	can be overridden using this environment variable.
-
-	{\bf XILINX\_ISE}.
-	Specifies a precise version of Xilinx ISE to use, for example 
-	{\bf /opt/Xilinx/14.7i}.
-	It can be overridden by a 3PL directive of the same name.
-	This overrides the {\bf XILINX} environment variable, if defined.
-	Normally the 3PL post-processing code will choose the newest version
-	appropriate for the device.
-
-	{\bf XILINX\_VIVADO}.
-	Specifies a precise version of Xilinx Vivado to use, for example 
-	{\bf /opt/Xilinx/Vivado/2019.1}.
-	It can be overridden by a 3PL directive of the same name.
-	This overrides the {\bf XILINX} environment variable, if defined.
-	Normally the 3PL post-processing code will choose the newest version
-	appropriate for the device.
+        {\bf XILINX\_VIVADO}. Specifies a precise version of Xilinx Vivado to
+        use, for example  {\bf /opt/Xilinx/Vivado/2019.1}. It can be
+        overridden by a 3PL directive of the same name. This overrides the
+        {\bf XILINX} environment variable, if defined. Normally the 3PL
+        post-processing code will choose the newest version appropriate for
+        the device.
 
 
     \section{Generating EDIF}
@@ -192,7 +178,7 @@
         
         The -R, -x, -X and -Y options are only used for compiler testing.
         
-        The -D command defines a directive. The directive may be just a
+        The -D option defines a directive. The directive may be just a
         key, in which case a directive of type "log" with that key and value
         {\bf true} will be created. If key=value is given then the directive
         will be given the specified value and its type will be as appropriate
@@ -499,17 +485,17 @@
         
         
 
-    \section{Netlist display and debugging}
+    \section{Netlist identifier file}
 
-        When calling 3PL and the {\bf -n} option is given, a list of netlist file
-        net identifiers will be written to file {\em design\_name}.net. Each
-        identifier is listed at the beginning of a line and is followed by a
-        colon and then a list of equivalent net identifiers. If the {\bf -o}
-        option is also supplied then the file will appear in the specified
-        directory. The list of equivalent net identifers can be used to identify
-        source program variable identifiers associated with signal identifiers
-        appearing in the netlist
-        file or in any vendor place-and-route report files.
+        When calling 3PL and the {\bf -n} option is given, a list of netlist
+        file net identifiers will be written to file {\em design\_name}.net.
+        Each identifier is listed at the beginning of a line and is followed
+        by a colon and then a list of equivalent net identifiers. If the {\bf
+        -o} option is also supplied then the file will appear in the
+        specified directory. The list of equivalent net identifers can be
+        used to identify source program variable identifiers associated with
+        signal identifiers appearing in the netlist file or in any vendor
+        place-and-route report files.
         
     \section{The intermediate code list file}
     
@@ -530,10 +516,16 @@
     \section{Netlist display and debugging}
     
         The compiler can also display the generated netlist as a schematic
-        if the {\bf -d} option is given. A window will appear which has a text
-        area on the bottom right in which to click and enter a signal, pin or
-        block identifier. The type of identifier is selected by clicking on
-        buttons "signal", "pin" or "block".
+        if the {\bf -d} option is given. In this window elements and nets of the
+        EDIF netlist can be traced. This feature is not very useful and
+        indeed has not been used for years. In the interim it appears to
+        have atrophied. It will be fixed when time permits. A version
+        displaying the intermediate code list would be much more useful.
+        
+        The display window has a text area on the bottom right in which to
+        click and enter a signal, pin or block identifier. The type of
+        identifier is selected by clicking on buttons "signal", "pin" or
+        "block".
         
         For signals a signal identifier, or part of an identifier, is entered
         followed by a return. If the string entered is an identifier and it is not

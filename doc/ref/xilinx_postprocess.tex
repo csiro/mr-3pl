@@ -14,10 +14,30 @@
     See \autorefph{sec:mpfcdecl} and \autorefph{sec:xpp}.
     
     More than one postprocessing module can be specified in which case an
-    additional integer argument can be supplied to specify ordering. If omitted
-    the order in which the modules have been added to the list will be the order
-    of execution. Thus far only this module has been used.
+    additional integer argument can be supplied to specify ordering. If
+    omitted the order in which the modules have been added to the list will
+    be the order of execution. Thus far only this module has been used.
     
+    The post-processing required is selected in the header module for
+    the FPGA, e.g for earlier FPGAs the following is included -
+
+    \begin{lstlisting}[gobble=12, language=threepl]
+    postmodule ("Xilinx postprocessing") {
+        postprocess("xilinx/ise_fpga.cmd", directive("postProcessTool"), 8.2);
+    }
+            directive("postProcessTool")
+    \end{lstlisting}
+
+    For series 7 either ISE of Vivado can be used -
+    
+    \begin{lstlisting}[gobble=12, language=threepl]
+    postmodule ("Xilinx post-processing") {
+        if (directive("postProcessTool") == "ise")
+	    postprocess("xilinx/ise_fpga.cmd", "ise", 13.1);
+        else
+	    postprocess("xilinx/vivado.tcl", "vivado");
+    }
+    \end{lstlisting}
 
 
     \subsection{library modules}

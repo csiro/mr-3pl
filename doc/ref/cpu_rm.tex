@@ -25,7 +25,7 @@
             
             \begin{tabular}{| l | l |}
             \hline
-            function                 &                                \\ \hline \hline
+            function                 & action                         \\ \hline \hline
             fpga\_{\em name}\_read() & read a datum from FPGA memory  \\ \hline
             \end{tabular}
             
@@ -42,7 +42,7 @@
             \end{lstlisting}
             then for zynq the CPU code should contain something like \\
             \begin{lstlisting}[gobble=12, language=C]
-                   #include "prog.h"
+                   #include "prog_fpga.h"
                    .
                    .
                    fpga_t *fpga = NULL;

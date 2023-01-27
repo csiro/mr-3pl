@@ -12,7 +12,6 @@
     \blist
     \item   current directory
     \item   directories listed in -I options to the 3PL command line
-    \item   directories listed in environment variable {\bf THREEPL\_INCLUDE\_DIRS}
     \blend
     
     3PL libraries may be -
@@ -63,12 +62,16 @@
             dsp48.3pl
             gtp_dual.3pl
             io.3pl
+            ise_cpld.cmd
+            ise_fpga.cmd
+            ise_xflow.cmd
             mgt.3pl
             postprocess.3pl
             ppc405lib.3pl
             ppclib.3pl
             ps7.3pl
             uart_cpu.3pl
+            vivado.tcl
             xc2s.3pl
             xc2v.3pl
             xc2vp.3pl
@@ -116,7 +119,13 @@
     \item   io.3pl - input/output functions for Virtex5 and later
     \item   mgt.3pl - an MGT transceiver
     \item   postprocess.3pl - a module to generate the configuration file from
-            the EDIF file using ISE or VIVADO
+            the EDIF file using ISE or VIVADO.
+            The following files are command files ('recipe' files) used by
+            postprocess() -\\
+            \hspace{1cm}ise\_cpld.cmd for CPLDs\\
+            \hspace{1cm}ise\_fpga.cmd for FPGAs\\
+            \hspace{1cm}ise\_xflow.cmd for FPGAs\\
+            \hspace{1cm}vivado.tcl for version 7 FPGAs
     \item   ppc405lib.3pl - an embedded PowerPC instance with instruction and data RAMs
     \item   ppclib.3pl - interface for an embedded PowerPC
     \item   uart\_cpu.3pl - low level UART CPU interface 
@@ -132,6 +141,10 @@
     \item   xc7.3pl - Artix 7, Kintex 7, Virtex 7 and Zynq 7000 elements
     \item   zynq\_axi.3pl - Zynq PL instance and AXI interface to CPU
     \blend
+    
+
+
+
 
     Directory {\bf boards} contains header files for a limited number of
     commercial FPGA boards. There are not very many included as most of our work

@@ -193,9 +193,10 @@
             from CPU memory by a software thread.
             
             In the case of a platform with a serial interface only one input
-            argument, {\bf address}, is valid - {\bf burstlen} and {\bf bus} must
-            not be given arguments. \bf{This address is relative to a base address
-            set by calling} {\bf set\_dma\_address()} \autorefph{tools_c_serial}.
+            argument, {\bf address}, is valid - {\bf burstlen} and {\bf bus}
+            must not be given arguments. {\bf This address is relative to a base
+            address} set by calling {\bf set\_dma\_address()}
+            \autorefph{ch:tools_c_serial}.
             
             When an address becomes available on the {\bf address} input queue
             and the output {\bf data} queue is not full a DMA transfer (read)
@@ -251,9 +252,9 @@
             
             In the case of a platform with a serial interface only two input
             arguments, {\bf data} and {\bf address}, are valid - {\bf burstlen}
-            and {\bf bus} must not be given arguments. \bf{This address is
-            relative to a base address set by calling} {\bf set\_dma\_address()}
-            \autorefph{tools_c_serial}.
+            and {\bf bus} must not be given arguments. {\bf This address is
+            relative to a base address} set by calling {\bf set\_dma\_address()}
+            \autorefph{ch:tools_c_serial}.
             
             When data and an address become available on the {\bf data} and {\bf
             address} input queues a DMA transfer (read) will take place. For a
@@ -309,7 +310,7 @@
 
 
 
-        \subsubsection{CPU\_API.read - a CPU-readable interface}\label{sec:lpcpuread}
+        \subsubsection{CPU\_API.read - a CPU-readable interface}\label{sec:lpcpurd}
 
             {\bf Library: xilinx/cpu.3pl}
 
@@ -421,7 +422,7 @@
 
 
 
-        \subsubsection{CPU\_API.write - a CPU-writable interface}\label{sec:lpcpuwrite}
+        \subsubsection{CPU\_API.write - a CPU-writable interface}\label{sec:lpcpuwr}
 
             {\bf Library: xilinx/cpu.3pl}
 

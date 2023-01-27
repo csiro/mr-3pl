@@ -16,7 +16,7 @@
             
             \begin{tabular}{| l | l |}
             \hline
-            function                   &               \\ \hline \hline
+            function                   & action         \\ \hline \hline
             fpga\_{\em name}\_write()  & write a datum  \\ \hline
             \end{tabular}
             
@@ -34,7 +34,7 @@
             \end{lstlisting}
             then for zynq the CPU code should contain something like \\
             \begin{lstlisting}[gobble=12, language=C]
-                   #include "prog.h"
+                   #include "prog_fpga.h"
                    .
                    .
                    int     d;

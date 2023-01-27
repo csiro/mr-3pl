@@ -2352,37 +2352,40 @@
         regarded as excessive!}
 
 
-
-    \section{inludedir - add directory for source/module path}\label{sec:ipincludedir}
-        
-        {\bf Call:} \\
-        inludedir(dir);
-        
-        {\bf Output parameters:} \\
-        none
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf Input parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode     & type  & \\
-        \hline \hline
-        dir & I & str & directory string    \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf In-line target execution:} \\
-        No
-        
-        {\bf Description:} \\
-        The string argument is added to the list of directories to be searched for
-        source/module files. If the string has a leading "/" the directory path
-        will be absolute, otherwise it will be relative to the directory containing
-        the initial source file. A trailing "/" on the string is optional.
+% Not sure why this was ever written!!!!
+% By the time this procedure is executed all source code has been read
+% and parsed and any included files will have already been read.
+%
+%    \section{inludedir - add directory for source/module path}\label{sec:ipincludedir}
+%        
+%        {\bf Call:} \\
+%        inludedir(dir);
+%        
+%        {\bf Output parameters:} \\
+%        none
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf Input parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode     & type  & \\
+%        \hline \hline
+%        dir & I & str & directory string    \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf In-line target execution:} \\
+%        No
+%        
+%        {\bf Description:} \\
+%        The string argument is added to the list of directories to be searched for
+%        source/module files. If the string has a leading "/" the directory path
+%        will be absolute, otherwise it will be relative to the directory containing
+%        the initial source file. A trailing "/" on the string is optional.
 
 
 

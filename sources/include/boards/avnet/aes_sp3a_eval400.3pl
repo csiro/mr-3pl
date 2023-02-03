@@ -104,5 +104,5 @@ attributes(c12, tnm="C12");
 
 directive("comms_baud_rate", 115200); // serial device nominal baud rate
 //directive("comms_baud_rate", 53475);    // baud rate empirically determined!
-module "xilinx/uart_cpu.3pl"
+module ifdirective("includeinfo") "xilinx/uart_cpu.3pl"
 

@@ -1053,6 +1053,8 @@ public abstract class XElements extends GenFunctions implements NetConstants, Co
      * @param   dinb        port B data input
      * @param   doutb       port B data output
      * @param   init        initialisation array (binary strings) for requested address width.
+     * @param   init0       initial binary string value of output register port 0 (rmemory only)
+     * @param   init1       initial binary string value of output register port 1 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      */
     public void ramallocate (
@@ -1073,6 +1075,8 @@ public abstract class XElements extends GenFunctions implements NetConstants, Co
         Net[]               dinb,
         Net[]               doutb,
         String[]            init,
+        String              init0,
+        String              init1,
         ArrayList<String>   properties
     ) {
         throw new ExEx("SYSTEM ERROR - Block RAM not available in this FPGA");

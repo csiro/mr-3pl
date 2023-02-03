@@ -6,6 +6,7 @@ import threepl.exec.Val;
 import threepl.nodes.NodeList;
 import threepl.parser.Constant;
 import threepl.parser.SrcLoc;
+import threepl.parser.Constant.Ptype;
 
 /**
  * An inbuilt function to return the type value of a type variable
@@ -25,8 +26,23 @@ public class TypeValStringFunc extends InbuiltFunc implements Constant {
             throw new ExEx("typevalstring() must have single argument", loc);
 
         Val     val = args.getVal(0);
-        Type    type = val.getSingleTval(loc);
+        String  si;
+
+        if (val.getPrimType() == Ptype.STR) // is a string
+            si = val.getSingleSval(loc);
+        else if (val.getPrimType() == Ptype.TYPE)   // is a type
+            si = val.getSingleTval(loc).getTypeString();
+        else
+            si = val.getTypeString();   // variable - get its type
+        return(new Val(si, loc));
+
+        /*
+        Val     val = args.getVal(0);
+        if (val.getMode() != Mode.IMMEDIATE) {
+            type = val.getType();
+        } else
+            type = val.getSingleTval(loc);
         String  s = type.getTypeString();
-        return(new Val(s, loc));
+        return(new Val(s, loc));*/
     }
 }

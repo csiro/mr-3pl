@@ -46,6 +46,8 @@ public final class Memory extends Var implements Constant, TDEConstants {
     private ArrayList<TDEVar>[] writes;     // port writes
     private Clock[]             mem_clk_var;// memory clock variables
     private Val                 targ_init;  // target variable initialisation
+    private Val                 targ_init0; // output register initial value, port 0, if rmemory
+    private Val                 targ_init1; // output register initial value, port 1, if rmemory and 2 ports
 
     /**
      * Construct a CMEMORY or RMEMORY mode variable.
@@ -59,6 +61,8 @@ public final class Memory extends Var implements Constant, TDEConstants {
      * @param   out_par is true if this is a module or procedure output
      *          parameter
      * @param   init is a compound initialisation value
+     * @param   init0 is the initial value of output register port 0 (rmemory only)
+     * @param   init1 is the initial value of output register port 1 (rmemory only)
      * @param   loc is the source file location
      */
     @SuppressWarnings("unchecked")
@@ -71,6 +75,8 @@ public final class Memory extends Var implements Constant, TDEConstants {
         boolean     in_par,
         boolean     out_par,
         Val         init,
+        Val         init0,
+        Val         init1,
         SrcLoc      loc
     ) {
         super(ident, in_par, out_par, null, Ptype.NONE, loc);
@@ -112,6 +118,8 @@ public final class Memory extends Var implements Constant, TDEConstants {
                 writable[i] = getFamily().cramWritable(i, loc);
             }
         targ_init = init;
+        targ_init0 = init0;
+        targ_init1 = init1;
         this.dtype = dtype;
         this.atype = atype;
         if (ports < 0)
@@ -150,21 +158,6 @@ public final class Memory extends Var implements Constant, TDEConstants {
     }
     
     /**
-     * Initialise the memory mode variable.
-     * @param v is the initial value
-     * @param loc is the source file location
-     */
-    private void setInitVar (Val v, SrcLoc loc) {
-        if ((v.getMode() != Mode.IMMEDIATE) &&
-            ((v.getMode() != Mode.VALUE) || (v.getVals() == null)))
-            throw new ExEx("memory variable '" + name + "' initialiser is target mode", loc);
-        if (v.isPrimitive())
-            throw new ExEx("memory variable '" + name + "' initialiser is primitive type", loc);
-        targ_init = v;
-        
-    }
-    
-    /**
      * Set the attributes map.
      * @param   val is the attributes map value
      * @param   loc is the source file location
@@ -184,10 +177,27 @@ public final class Memory extends Var implements Constant, TDEConstants {
             Clock   clockvar = null;
             mkey = mkey.toLowerCase();
             
-            // Check for "init" attribute before calling checkAttribute() below since that
+            // Check for "init","init0" and "init1" attributes before calling checkAttribute() below since that
             // method cannot handle arbitrary types.
             if (mkey.equals("init")) {
-                setInitVar (mval, loc);
+                if ((mval.getMode() != Mode.IMMEDIATE) &&
+                        ((mval.getMode() != Mode.VALUE) || (mval.getVals() == null)))
+                        throw new ExEx("memory variable '" + name + "' initialiser is target mode", loc);
+                if (mval.isPrimitive())
+                    throw new ExEx("memory variable '" + name + "' initialiser is primitive type", loc);
+                targ_init = mval;
+                continue;
+            } else if (mkey.equals("init0")) {
+                if ((mval.getMode() != Mode.IMMEDIATE) &&
+                        ((mval.getMode() != Mode.VALUE) || (mval.getVals() == null)))
+                        throw new ExEx("memory variable '" + name + "' output register initialiser is target mode", loc);
+                targ_init0 = mval;
+                continue;
+            } else if (mkey.equals("init1")) {
+                if ((mval.getMode() != Mode.IMMEDIATE) &&
+                        ((mval.getMode() != Mode.VALUE) || (mval.getVals() == null)))
+                        throw new ExEx("memory variable '" + name + "' output register initialiser is target mode", loc);
+                targ_init1 = mval;
                 continue;
             }
 
@@ -284,8 +294,12 @@ public final class Memory extends Var implements Constant, TDEConstants {
             attr.put("matched", new Val(matched, loc));
             attr.put("readonly", new Val(readonly, loc));
             attr.put("assigned", new Val(assigned, loc));
-            if (targ_init != null)
+            if (targ_init != null)      // memory data initialisation
                 attr.put("init", targ_init);
+            if (targ_init0 != null)     // output latch A initialisation
+                attr.put("init0", targ_init0);
+            if (targ_init1 != null)     // output latch B initialisation
+                attr.put("init1", targ_init1);
       }
         Object[]    oa = new Object[1];
         Type[]      ta = new Type[1];
@@ -777,11 +791,17 @@ public final class Memory extends Var implements Constant, TDEConstants {
         ram.add2p(awidth);
         
         // Initialisation
-        if (targ_init != null) {
-            int         n = 1 << awidth;
-            String[]    sinit = memdws.packInit(targ_init, n, "memory variable '" + name + "'", decloc);
-            ram.add2p(sinit);
-        } else
+        if (targ_init != null)  // memory data
+            ram.add2p(memdws.packInit(targ_init, 1 << awidth, "memory variable '" + name + "'", decloc));
+        else
+            ram.add2p();
+        if (targ_init0 != null) // output latch A
+            ram.add2p(memdws.pack(targ_init0, 0, "memory variable '" + name + "'", decloc));
+        else
+            ram.add2p();
+        if (targ_init1 != null) // output latch B
+            ram.add2p(memdws.pack(targ_init1, 0, "memory variable '" + name + "'", decloc));
+        else
             ram.add2p();
         
         // Check if there are any 'write_mode' attributes and if so copy them to the

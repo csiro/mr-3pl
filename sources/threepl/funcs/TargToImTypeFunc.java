@@ -1,10 +1,12 @@
 package threepl.funcs;
 
 import threepl.exceptions.ExEx;
+import threepl.exec.Type;
 import threepl.exec.Val;
 import threepl.nodes.NodeList;
 import threepl.parser.Constant;
 import threepl.parser.SrcLoc;
+import threepl.parser.Constant.Ptype;
 
 /**
  * An inbuilt function to return the type of a target mode variable as an
@@ -25,10 +27,14 @@ public class TargToImTypeFunc extends InbuiltFunc implements Constant {
         if (args.size() != 1)
             throw new ExEx("targtoimtype() must have single argument", loc);
         Val     val = args.getVal(0);
-        String  si = val.getTypeString();
+        String  si;
 
-        if (val.getMode() == Mode.IMMEDIATE)
-            return(new Val(si, loc));
+        if (val.getPrimType() == Ptype.STR) // is a string
+            si = val.getSingleSval(loc);
+        else if (val.getPrimType() == Ptype.TYPE)   // is a type
+            si = val.getSingleTval(loc).getTypeString();
+        else
+            si = val.getTypeString();   // variable - get its type
 
         String  st = null;
         String  re1 = ":[0-9]+";

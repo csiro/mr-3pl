@@ -55,6 +55,8 @@ public class RamBlock {
     Net[]               idb;        // port B data input
     Net[]               odb;        // port B data output
     String[]            init;       // initialisation array binary strings
+    String              init0;      // output register 0 initial value
+    String              init1;      // output register 0 initial value
     int                 arrayformat;
     ArrayList<String>   properties;
    
@@ -112,6 +114,8 @@ public class RamBlock {
         Net[]               idb,
         Net[]               odb,
         String[]            init,
+        String              init0,
+        String              init1,
         int                 arrayformat,
         ArrayList<String>   properties
     ) {
@@ -131,6 +135,8 @@ public class RamBlock {
         this.idb = idb;
         this.odb = odb;
         this.init = init;
+        this.init0 = init0;
+        this.init1 = init1;
         this.arrayformat = arrayformat;
         this.properties = properties;
     }
@@ -217,7 +223,7 @@ public class RamBlock {
             e.addOutputArray("DO", oda, arrayformat);
         }
 
-        raminit(e, init_lines, init, dwidth, 0);
+        raminit(e, init_lines, dual_port, init, init0, init1, dwidth, 0);
         
         Iterator<String>    pit = properties.iterator();
         while (pit.hasNext())
@@ -303,7 +309,7 @@ public class RamBlock {
             }
         }
         
-        raminit(e, init_lines, init, rdwidth, rpwidth);
+        raminit(e, init_lines, dual_port, init, init0, init1, rdwidth, rpwidth);
         
         Iterator<String>    pit = properties.iterator();
         while (pit.hasNext())
@@ -411,7 +417,7 @@ public class RamBlock {
             }
         }
 
-        raminit(e, init_lines, init, rdwidth, rpwidth);
+        raminit(e, init_lines, dual_port, init, init0, init1, rdwidth, rpwidth);
         
         Iterator<String>    pit = properties.iterator();
         while (pit.hasNext())
@@ -520,7 +526,7 @@ public class RamBlock {
             }
         }
         
-        raminit(e, init_lines, init, rdwidth, rpwidth);
+        raminit(e, init_lines, dual_port, init, init0, init1, rdwidth, rpwidth);
 
         Iterator<String>    pit = properties.iterator();
         while (pit.hasNext())
@@ -612,6 +618,11 @@ public class RamBlock {
             e.addInput("CASCADEINLATA", Net.LO);
             e.addInput("CASCADEINLATB", Net.LO);
         }
+        
+        if ((clka != null) && (init0 != null))
+            e.addProperty("INIT_A", init0);
+        if ((clkb != null) && (init1 != null))
+            e.addProperty("INIT_B", init1);
 
         switch (dwidth) {
         case 1:
@@ -655,7 +666,7 @@ public class RamBlock {
             }
         }
         
-        raminit(e, init_lines, init, rdwidth, rpwidth);
+        raminit(e, init_lines, dual_port, init, init0, init1, rdwidth, rpwidth);
         
         Iterator<String>    pit = properties.iterator();
         while (pit.hasNext())
@@ -668,15 +679,21 @@ public class RamBlock {
      * Trailing entries in the initialisation array may be null.
      * @param   e is the element
      * @param   init_lines is the number of main initialisation lines
+     * @param   dual_port is true if there are two ports
      * @param   init is an array of binary strings, one for each word, the
      *          length of each being the block data width
+     * @param   init0 is the initial value of output register port 0
+     * @param   init1 is the initial value of output register port 1
      * @param   dwidth is the block data width
      * @param   pwidth is the block parity width
      */
     private static void raminit (
         Element     e,
         int         init_lines,
+        boolean     dual_port,
         String[]    init,
+        String      init0,
+        String      init1,
         int         dwidth,
         int         pwidth
     ) {        
@@ -688,8 +705,10 @@ public class RamBlock {
         int         j;
         int         start = pwidth;
         int         finish = start + dwidth;
+        StringBuffer sb;
+        
         for (j=0 ; j<init_lines ; j++) {
-            StringBuffer sb = new StringBuffer();
+            sb = new StringBuffer();
             for (int k=0 ; k<256 ; k+=dwidth, i++) {
                 if ((init != null) && (init[i] != null))
                     sb.insert(0, init[i].substring(start, finish));
@@ -712,7 +731,7 @@ public class RamBlock {
         finish = start + pwidth;
         int init_plines = init_lines / 8;
         for (j=0 ; j<init_plines ; j++) {
-            StringBuffer sb = new StringBuffer();
+            sb = new StringBuffer();
             for (int k=0 ; k<256 ; k+=pwidth, i++) {
                 if ((init != null) && (init[i] != null))
                     sb.insert(0, init[i].substring(start, finish));
@@ -723,6 +742,17 @@ public class RamBlock {
             p += Integer.toHexString(j).toUpperCase();
             s = binToHex(sb);
             e.addProperty(p, s);
+       }
+       if (init0 != null) {
+           s = binToHex(init0);
+           if (dual_port)
+               e.addProperty("INIT_A", s);
+           else
+               e.addProperty("INIT", s);
+       }
+       if (init1 != null) {
+           s = binToHex(init0);
+           e.addProperty("INIT_B", s);
        }
     }
 }

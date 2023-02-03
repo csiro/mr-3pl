@@ -49,6 +49,8 @@ public class RmemoryProc extends InbuiltProc implements Constant, TDEConstants {
         ipnames.put("atype", 2);
         ipnames.put("dtype", 3);
         ipnames.put("init", 4);
+        ipnames.put("init0", 5);
+        ipnames.put("init1", 6);
     }
 
     /**

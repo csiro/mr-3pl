@@ -776,101 +776,116 @@ public class WordSpec implements Constant, TDEConstants {
      * @param loc is the source file location
      * @return an array of hexadecimal strings of packed data
      */
-    public String[] packInit (Val targ_init, int len, String mess, SrcLoc loc) {
-        
-        int         words_per_entry = numWords();
+    public String[] packInit (Val targ_init, int len, String mess, SrcLoc loc) { 
         int         valwords = targ_init.numWords();// number of words in the initialisation compound value
-        int         iwords = valwords / words_per_entry;
-        int         k = 0;
-        int         bits;
-        long        int_val;
+        int         iwords = valwords / numWords();
         String[]    sinit = new String[iwords];
-        String      s;
 
         if (iwords > len)
             throw new ExEx(mess + ": too many initialisation values", loc);
 
         for (int i=0 ; i<iwords ; i++) {
-            TDEVar          tdev = null;
-            StringBuffer    sb = new StringBuffer();
-            
-            for (int j=0 ; j<words_per_entry ; j++) {
-                Ptype   prim_type = targ_init.getValPType(k);
-                int     width = getWidth(j);
-                int     fixoffset = getFixOffset(j);
-                Object  o = targ_init.getVal(k++);
-                if (o instanceof TDEVar) {
-                    tdev = (TDEVar)o;
-                    if (tdev.getType() == TDEVtype.VAR)
-                        throw new ExEx(mess +
-                                "': initialisation value is non-constant target variable", loc);
-                    o = tdev.getConst();
-                }
-                boolean signed;
-                
-                switch (prim_type) {
-                case NONE:
-                    sb.insert(0, zeropad(width));
-                    break;
-                case BITS:
-                case UINT:
-                case INT:
-                case UFIXED:
-                case FIXED:
-                    if (o instanceof Double) {
-                        double  d = ((Double)o).doubleValue();
-                        int_val = Math.round(d * ((long)1 << fixoffset));
-                    } else if (o instanceof Long)
-                        int_val = ((Long)o).longValue();
-                    else
-                        throw new ExEx(mess +
-                            "': initialisation value address " + i +
-                            " field index " + j + " wrong type", loc);
-                    s = Long.toBinaryString(int_val);
-                    signed = getPrimType(j)==Ptype.INT ||
-                             getPrimType(j)==Ptype.FIXED;
-                    bits = bits(int_val, signed);
-                    if (bits > width)
-                        throw new ExEx(mess + "': initialisation value " + int_val + " too large", loc);
-                    if (s.length() > width)
-                        // -ve - truncate extra bits from front
-                        s = s.substring(s.length() - width);
-                    else if (s.length() < width)
-                        // +ve - add extra 0 bits at front
-                        s = zeropad(width - s.length()) + s;
-                    sb.insert(0, s);
-                    break;
-                case ENUM:
-                    if (!(o instanceof Long))
-                        throw new ExEx(mess +
-                            "': initialisation value address " + i +
-                            " field index " + j + " wrong type", loc);
-                    int_val = ((Long)o).longValue();
-                    s = Long.toBinaryString(int_val);
-                    if (s.length() < width)
-                        // add extra 0 bits at front
-                        s = zeropad(width - s.length()) + s;
-                    sb.insert(0, s);
-                    break;
-                case LOG:
-                    if (!(o instanceof Boolean))
-                        throw new ExEx(mess +
-                            "': initialisation value address " + i +
-                            " field index " + j + " wrong type", loc);
-                    if (((Boolean)o).booleanValue())
-                        sb.insert(0, "1");
-                    else
-                        sb.insert(0, "0");
-                    break;
-                case FLOAT:
-                    throw new ExEx(mess + "': initialisation value unimplemented type (float)", loc);
-                default:
-                    throw new ExEx(mess + "': initialisation value wrong type", loc);
-                }
-            }
-            sinit[i] = binToHex(sb);
+            sinit[i] = pack(targ_init, i, mess, loc);
         }
         return(sinit);
+    }
+    
+    /**
+     * Pack initialisation word data into a string.
+     * This is called from packInit() above and exec.Memory.createVar().
+     * The initialisation data Val must be an immediate value whose type matches
+     * the target type in this WordSpec class
+     * @param   targ_init is 
+     * @param   index is the index into the entry
+     * @param   mess is an error message header
+     * @param   loc is the source file location
+     * @return  a hexadecimal string of packed data
+     */
+    public String pack (Val targ_init, int index, String mess, SrcLoc loc) {            
+        int             words_per_entry = numWords();
+        int             bits;
+        long            int_val;
+        String          s;
+        StringBuffer    sb = new StringBuffer();
+        
+        for (int j=0 ; j<words_per_entry ; j++) {
+            int     k = index * words_per_entry + j;
+            Ptype   prim_type = targ_init.getValPType(k);
+            int     width = getWidth(j);
+            int     fixoffset = getFixOffset(j);
+            Object  o = targ_init.getVal(k);
+            TDEVar  tdev = null;
+            
+            if (o instanceof TDEVar) {
+                tdev = (TDEVar)o;
+                if (tdev.getType() == TDEVtype.VAR)
+                    throw new ExEx(mess +
+                            "': initialisation value is non-constant target variable", loc);
+                o = tdev.getConst();
+            }
+            boolean signed;
+
+            switch (prim_type) {
+            case NONE:
+                sb.insert(0, zeropad(width));
+                break;
+            case BITS:
+            case UINT:
+            case INT:
+            case UFIXED:
+            case FIXED:
+                if (o instanceof Double) {
+                    double  d = ((Double)o).doubleValue();
+                    int_val = Math.round(d * ((long)1 << fixoffset));
+                } else if (o instanceof Long)
+                    int_val = ((Long)o).longValue();
+                else
+                    throw new ExEx(mess +
+                        "': initialisation value address " + index +
+                        " field index " + j + " wrong type", loc);
+                s = Long.toBinaryString(int_val);
+                signed = getPrimType(j)==Ptype.INT ||
+                         getPrimType(j)==Ptype.FIXED;
+                bits = bits(int_val, signed);
+                if (bits > width)
+                    throw new ExEx(mess + "': initialisation value " + int_val + " too large", loc);
+                if (s.length() > width)
+                    // -ve - truncate extra bits from front
+                    s = s.substring(s.length() - width);
+                else if (s.length() < width)
+                    // +ve - add extra 0 bits at front
+                    s = zeropad(width - s.length()) + s;
+                sb.insert(0, s);
+                break;
+            case ENUM:
+                if (!(o instanceof Long))
+                    throw new ExEx(mess +
+                        "': initialisation value address " + index +
+                        " field index " + j + " wrong type", loc);
+                int_val = ((Long)o).longValue();
+                s = Long.toBinaryString(int_val);
+                if (s.length() < width)
+                    // add extra 0 bits at front
+                    s = zeropad(width - s.length()) + s;
+                sb.insert(0, s);
+                break;
+            case LOG:
+                if (!(o instanceof Boolean))
+                    throw new ExEx(mess +
+                        "': initialisation value address " + index +
+                        " field index " + j + " wrong type", loc);
+                if (((Boolean)o).booleanValue())
+                    sb.insert(0, "1");
+                else
+                    sb.insert(0, "0");
+                break;
+            case FLOAT:
+                throw new ExEx(mess + "': initialisation value unimplemented type (float)", loc);
+            default:
+                throw new ExEx(mess + "': initialisation value wrong type", loc);
+            }
+        }
+        return(binToHex(sb));
     }
     
     /**

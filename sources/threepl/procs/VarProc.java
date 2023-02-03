@@ -261,12 +261,12 @@ public class VarProc extends InbuiltProc implements Constant {
             case CMEMORY:
                 if ((type != null) && (type.getPrimType() != Ptype.NONE))
                     throw new ExEx(pname + "() - creating a parameter passed a cmemory argument cannot have a type", loc);
-                var = new Memory(id, false, 0, null, null, is_input, is_output, null, loc);
+                var = new Memory(id, false, 0, null, null, is_input, is_output, null, null, null, loc);
                 break;
             case RMEMORY:
                 if ((type != null) && (type.getPrimType() != Ptype.NONE))
                     throw new ExEx(pname + "() - creating a parameter passed an rmemory argument cannot have a type", loc);
-                var = new Memory(id, true, 0, null, null, is_input, is_output, null, loc);
+                var = new Memory(id, true, 0, null, null, is_input, is_output, null, null, null, loc);
                 break;
             default:
                 throw new ExEx(pname + "() - argument mode " + mode.name() + " not allowed", loc);

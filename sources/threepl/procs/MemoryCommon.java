@@ -57,6 +57,8 @@ public class MemoryCommon implements Constant, TDEConstants {
         Val                 atval = null;
         Type                atype = null;
         Val                 init = null;
+        Val                 init0 = null;
+        Val                 init1 = null;
         Val                 aval = null;
         Memory              mvar;
         
@@ -106,6 +108,35 @@ public class MemoryCommon implements Constant, TDEConstants {
                 }
             }
             
+            // optional port 0 output register initial value
+            if (nit.hasNext()) {
+                if (!is_rmemory)
+                    throw new ExEx(name + "() - cannot initialise output latch for CLB RAM", loc);
+                Node    ni = nit.next();
+                if (!(n instanceof KeyMatchNode)) {
+                    if (ni instanceof CompoundValNode)
+                        init0 = ((CompoundValNode)ni).getVal(dtype);
+                    else
+                        init0 = ni.getVal();
+                    ln++;
+                }
+            }
+            // optional port 1 output register initial value
+            if (nit.hasNext()) {
+                if (!is_rmemory)
+                    throw new ExEx(name + "() - cannot initialise output latch for CLB RAM", loc);
+                if (ports == 1)
+                    throw new ExEx(name + "() - cannot initialise output latch B for single port memory", loc);
+                Node    ni = nit.next();
+                if (!(n instanceof KeyMatchNode)) {
+                    if (ni instanceof CompoundValNode)
+                        init1 = ((CompoundValNode)ni).getVal(dtype);
+                    else
+                        init1 = ni.getVal();
+                    ln++;
+                }
+            }
+            
             if (is_input && (inargs.size() > 2))
                 throw new ExEx(name + "() - as a parameter, cannot have attribute arguments", loc);
         
@@ -137,9 +168,9 @@ public class MemoryCommon implements Constant, TDEConstants {
                     WordSpec    par_data_ws = dtype.getWordSpec(null, loc);
                     par_data_ws.checkMatch(arg_data_ws, false, "parameter " + name + "() data", loc);
                 }
-                mvar = new Memory(id, is_rmemory, 0, null, null, is_input, is_output, null, loc);
+                mvar = new Memory(id, is_rmemory, 0, null, null, is_input, is_output, null, null, null, loc);
             } else
-                mvar = new Memory(id, is_rmemory, ports, dtype, atype, is_input, is_output, init, loc);
+                mvar = new Memory(id, is_rmemory, ports, dtype, atype, is_input, is_output, init, init0, init1, loc);
 
             ThreePL.addVar(mvar, id.getScopeContext(), loc);
             if (aval != null)

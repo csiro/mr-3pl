@@ -643,10 +643,10 @@ public abstract class Body implements Constant {
                             var = new Clock(new Ident(name, Context.DEFAULT), null, true, false, loc);
                             break;
                         case RMEMORY:
-                            var = new Memory(new Ident(name, Context.DEFAULT), true, 0, null, null, true, false, null, loc);
+                            var = new Memory(new Ident(name, Context.DEFAULT), true, 0, null, null, true, false, null, null, null, loc);
                             break;
                         case CMEMORY:
-                            var = new Memory(new Ident(name, Context.DEFAULT), false, 0, null, null, true, false, null, loc);
+                            var = new Memory(new Ident(name, Context.DEFAULT), false, 0, null, null, true, false, null, null, null, loc);
                             break;
                         default:
                             break;

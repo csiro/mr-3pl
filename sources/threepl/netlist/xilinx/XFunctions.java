@@ -1009,8 +1009,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
         Net[]   rin = is_sync ? in : null;
         rram2 ( dwidth, awidth,
                 write,  write, ci, waddr,  in, null,
-                 read, writer, co, raddr, rin,  out,
-                null, new ArrayList<String>(), false );
+                read, writer, co, raddr, rin,  out,
+                null, null, null, new ArrayList<String>(), false );
         return(out);
     }
  
@@ -2971,6 +2971,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   din         data input net array or null
      * @param   dout        data output net array or null
      * @param   sinit       array of hexadecimal strings, one for each word, or null
+     * @param   init0       initial hexadecimal string value of output register port 0 (rmemory only)
+     * @param   init1       initial hexadecimal string value of output register port 1 (rmemory only, 2 ports)
      * @param   properties  properties (attributes such as writemode)
      * @param   continuous  if true causes the RAM ENABLE inputs to be tied high
      *                      rather than asserted only upon access
@@ -2985,6 +2987,7 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
         Net[]               din,
         Net[]               dout,
         String[]            sinit,
+        String              sinit0,
         ArrayList<String>   properties,
         boolean             continuous
     ) {
@@ -3001,6 +3004,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
                 en = read;
         }
         
+        // Convert hex string to binary string for initialisation of RAM
+        // and for initial value of output register.
         String[]    sinits = null;
         if (sinit != null) {
             sinits = new String[sinit.length];
@@ -3009,6 +3014,11 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
                 sinits[i] = zeropad(dwidth - binit.length()) + binit;
             }
         }
+        String      sinits0 = null;
+        if (sinit0 != null) {
+            String  binit = hexToBin(sinit0);
+            sinits0 = zeropad(dwidth - binit.length()) + binit;
+        }
   
         // Allocate block RAM elements and connect their inputs and outputs.
         // ramallocate() is defined in XElements but is overridden in FPGA family classes.
@@ -3016,7 +3026,7 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
             awidth, dwidth,
             write, en, clk, a, din, dout,
             null, null, null, null, null, null,
-            sinits, properties
+            sinits, sinits0, null, properties
         ); 
     }
 
@@ -3070,6 +3080,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   din1        port 1 data input net array or null
      * @param   dout1       port 1 data output net array or null
      * @param   sinit       array of hexadecimal strings, one for each word
+     * @param   init0       initial hexadecimal string value of output register port 0 (rmemory only)
+     * @param   init1       initial hexadecimal string value of output register port 1 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      * @param   continuous  if true causes the RAM ENABLE inputs to be tied high
      *                      rather than asserted only upon access
@@ -3090,6 +3102,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
         Net[]               din1,
         Net[]               dout1,
         String[]            sinit,
+        String              sinit0,
+        String              sinit1,
         ArrayList<String>   properties,
         boolean             continuous
     ) {
@@ -3120,6 +3134,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
                 en1 = read1;
         }
  
+        // Convert hex string to binary string for initialisation of RAM
+        // and for initial values of output registers.
         String[]    sinits = null;
         if (sinit != null) {
             sinits = new String[sinit.length];
@@ -3128,6 +3144,16 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
                 sinits[i] = zeropad(dwidth - binit.length()) + binit;
             }
         }
+        String      sinits0 = null;
+        if (sinit0 != null) {
+            String  binit = hexToBin(sinit0);
+            sinits0 = zeropad(dwidth - binit.length()) + binit;
+        }
+        String      sinits1 = null;
+        if (sinit1 != null) {
+            String  binit = hexToBin(sinit1);
+            sinits1 = zeropad(dwidth - binit.length()) + binit;
+        }
  
         // Allocate block RAM elements and connect their inputs and outputs.
         // ramallocate() is defined in XElements but is overridden in FPGA family classes.
@@ -3135,7 +3161,7 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
             awidth, dwidth,
             write0, en0, clk0, a0, din0, dout0,
             write1, en1, clk1, a1, din1, dout1,
-            sinits, properties
+            sinits, sinits0, sinits1, properties
         ); 
     }
     
@@ -3160,6 +3186,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   dinb        port B data input
      * @param   doutb       port B data output
      * @param   init        initialisation array (binary strings) for requested address width.
+     * @param   init0       initial binary string value of output register port 0 (rmemory only)
+     * @param   init1       initial binary string value of output register port 1 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      */
     public void ramallocate (
@@ -3177,7 +3205,9 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
         Net[]               addrb,
         Net[]               dinb,
         Net[]               doutb,
-        String[]            init,
+        String[]            sinit,
+        String              sinit0,
+        String              sinit1,
         ArrayList<String>   properties
     ) {
         ArrayList<RamBlock>   ar = new ArrayList<RamBlock>();
@@ -3216,6 +3246,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
         
         for (int i=dwidth ; i>0 ; i-=bdwidth) {
             String[]    binit = null;
+            String      binit0 = null;
+            String      binit1 = null;
             
             if (i <= sbw) {
                 bdwidth = sbw;  // use smaller (1st) BRAM type
@@ -3228,16 +3260,24 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
             s = f - bdwidth;
             if (s < 0)
                 s = 0;
-            if (init != null) {
+            if (sinit != null) {
                 binit = new String[depth];
                 for (int j=0 ; j<depth ; j++) {
-                    if (j >= init.length)
+                    if (j >= sinit.length)
                         binit[j] = zeropad(bdwidth);
                     else {
-                        String  bs = init[j].substring(s, f);
+                        String  bs = sinit[j].substring(s, f);
                         binit[j] = zeropad(bdwidth - bs.length()) + bs;
                     }
                 }
+            }
+            if (sinit0 != null) {
+                String  bs = sinit0.substring(s, f);
+                binit0 = zeropad(bdwidth - bs.length()) + bs;
+            }
+            if (sinit1 != null) {
+                String  bs = sinit1.substring(s, f);
+                binit1 = zeropad(bdwidth - bs.length()) + bs;
             }
             u = l + bdwidth - 1;
             if (u >= dwidth)
@@ -3250,7 +3290,7 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
                                     awidth, bdwidth, type,
                                     wea, ena, clka, addra, ida, oda,
                                     web, enb, clkb, addrb, idb, odb,
-                                    binit, arrayformat, properties
+                                    binit, binit0, binit1, arrayformat, properties
                                 );
             ar.add(rb);
             f = s;

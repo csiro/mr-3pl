@@ -1660,7 +1660,9 @@ public abstract class XTDECode extends XFunctions implements Constant, TDEConsta
      *          <li>an integer giving the number of ports
      *          <li>an integer giving the block RAM data width in bits
      *          <li>an integer giving the block RAM address width in bits
-     *          <li>an optional initialisation string array
+     *          <li>an optional initialisation string array of hex values, or null
+     *          <li>an optional output register 0 string initial hex value, or null
+     *          <li>an optional output register 1 string initial hex value, or null
      *          <li> String  - optional attribute key
      *          <li> String  - optional data for attribute key
      *          <li> ...     - other attribute pairs
@@ -1689,6 +1691,8 @@ public abstract class XTDECode extends XFunctions implements Constant, TDEConsta
         int         dwidth = ((Integer)params.get(1)).intValue();
         int         awidth = ((Integer)params.get(2)).intValue();
         String[]    sinit = (params.size() > 3) ? (String[])params.get(3) : null;
+        String      init0 = (params.size() > 4) ? (String)params.get(4) : null;
+        String      init1 = (params.size() > 5) ? (String)params.get(5) : null;
         Net         clk0 = inputs.getNet(0);
         Net[]       addr0 = inputs.getNetArray(1);
         Net[]       idata0 =  inputs.getNetArray(2);
@@ -1698,7 +1702,7 @@ public abstract class XTDECode extends XFunctions implements Constant, TDEConsta
         ArrayList<String>   properties = new ArrayList<String>();
         boolean             continuous = false;
 
-        for (int i=4 ; i<params.size() ; ) {
+        for (int i=6 ; i<params.size() ; ) {
             String  key = (String)params.get(i++);
             if (key.startsWith("write_mode")) {
                 String svalue = (String)params.get(i++);
@@ -1710,7 +1714,7 @@ public abstract class XTDECode extends XFunctions implements Constant, TDEConsta
         
         if (ports == 1) {
             Net[]   odata0 = netArray(dwidth);
-            rram1(dwidth, awidth, read0, write0, clk0, addr0, idata0, odata0, sinit, properties, continuous);
+            rram1(dwidth, awidth, read0, write0, clk0, addr0, idata0, odata0, sinit, init0, properties, continuous);
             connect(outputs.getNetArray(0), odata0);
             return;
         }
@@ -1726,7 +1730,7 @@ public abstract class XTDECode extends XFunctions implements Constant, TDEConsta
                 dwidth, awidth,
                 read0, write0, clk0, addr0, idata0, odata0,
                 read1, write1, clk1, addr1, idata1, odata1,
-                sinit, properties, continuous
+                sinit, init0, init1, properties, continuous
             );
         if (odata0 != null)
             connect(outputs.getNetArray(0), odata0);

@@ -137,6 +137,7 @@ public class InbuiltFuncs {
         funcs.put("round", new RoundFunc());
         funcs.put("rmemoryout", new RmemoryOutFunc());
         funcs.put("sample", new SampleFunc());
+//        funcs.put("select", new SelectFunc());
         funcs.put("selecta", new SelectAFunc());
         funcs.put("signum", new SignumFunc());
         funcs.put("sin", new SinFunc());
@@ -158,7 +159,7 @@ public class InbuiltFuncs {
         funcs.put("tail", new TailFunc());
         funcs.put("tan", new TanFunc());
         funcs.put("targconsttoimmed", new TargConstToImmedFunc());
-        funcs.put("tartoimtype", new TargToImTypeFunc());
+        funcs.put("targtoimtype", new TargToImTypeFunc());
         funcs.put("time", new TimeFunc());
         funcs.put("timestring", new TimeStringFunc());
         funcs.put("toarray", new ToArrayFunc());

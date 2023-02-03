@@ -2,7 +2,9 @@
         \hline
         \multicolumn{4}{|l|}{{\bf rmemory mode attributes}} \\
         \hline
-        init       & 3PL       &                      & initial value                    \\
+        init       & 3PL       &                      & memory initial value                    \\
+        init0      & 3PL       &                      & output port A initial value                    \\
+        init1      & 3PL       &                      & output port B initial value                    \\
         continuous & 3PL       & boolean              & continuous enable                \\   
         writemode  & netlist   & string               & write behaviour                  \\   
         writemodea & netlist   & string               & write behaviour for port A       \\   
@@ -22,7 +24,12 @@
         used until completion of immediate execution when variables are
         processed into target code and hence it can be changed at any time
         during immediate execution.
-        
+
+        {\bf init0} and {\bf init1} set initial values for output latch A (port
+        0)and output latch B (port 1). Any previous initial values will be
+        overwritten. {\bf init1} is only valid for a 2-port memory. Neither of
+        these is valid for CLB memory (cmemory()).
+                
         {\bf continuous} true specifies that the block RAM enables are tied high
         instead of being gated by the read enable ORed with the write enable.
         This can gain speed and reduce routing resource usage but at the

@@ -5555,6 +5555,20 @@
         will be converted to immediate type by removing width fields and converting
         "bits" to "uint".
         
+        The argument may be -
+        \blist
+        \item   a variable of type "type" - the type it represents will
+                be converted to an immediate equivalent and returned
+                as a string
+        \item   a string - the string will be converted to an immediate
+                equivalent type string and returned
+        \item   a variable - the type of the variable will be converted
+                to an immediate equivalent and returned as a string
+        \blend
+        
+        Where the type concerned is already an immediate type it will
+        be returned unchanged.
+        
         See also - \\
         {\bf type()} \autorefph{sec:iftype} \\
         {\bf arraytype()} \autorefph{sec:ifarraytype} \\
@@ -6168,6 +6182,15 @@
            println(typevalstring(s));
         \end{lstlisting}
         will print "(f1,log,f2,int)".
+        
+        The argument may be -
+        \blist
+        \item   a variable of type "type" - the type it represents will
+                be returned as a string
+        \item   a string - the string will be returned unchanged
+        \item   a variable - the type of the variable will be returned
+                as a string
+        \blend
         
         
         {\bf type()} \autorefph{sec:iftype} \\

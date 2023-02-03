@@ -1352,6 +1352,7 @@
         look-up table. For example to generate a stream of sin values
         to a queue -
         \begin{lstlisting}[gobble=8, language=threepl]
+            // Immediate code to initialise the table.
             var(mi, "[256]uint");
             for (int(i) ; i<256 ; i++)
                 mi[i] = 2048 + floor(2047.0 * sin(2 * i * math_pi / 256.0));
@@ -1371,9 +1372,45 @@
         initialisation array for the block RAM (rmemory). The 12 bit values are
         offset by 2048 so that they are positive. The rmemory has an 8 bit
         address to hold 256 values and the stored values are 12 bit unsigned.
+        As written this code will loop continuously with {\bf addr} starting
+        at 0 and wrapping back through 0 each time around the loop. As a minor
+        flaw rmemoryout() will be undefined the first time through the loop
+        since it is used in the same clock cycle as the first read is performed.
+        To fix this an initial read could be performed, but now the loop would
+        have to be explicit -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            .
+            .
+            .
+            seq {
+                rmemoryread(m, 0, 0);
+                sync while (true) {
+                    rmemoryread(m, 0, addr);
+                    sinstream <<- rmemoryout(m, 0);
+                    addr++;
+                }
+            }
+        \end{lstlisting}
+        or alternatively -
+        \begin{lstlisting}[gobble=8, language=threepl]
+            .
+            .
+            .
+            seq {
+                par {
+                    rmemoryread(m, 0, addr);
+                    addr++;
+                }
+                sync while (true) {
+                    rmemoryread(m, 0, addr);
+                    sinstream <<- rmemoryout(m, 0);
+                    addr++;
+                }
+            }
+        \end{lstlisting}
 
         The following code takes the sin stream and drives an external MCP4822
-        DAC to produce an analog sin wave. The data stream to the DAC is much
+        DAC to produce an analog sine wave. The data stream to the DAC is much
         slower than the sin generation which just waits, generating values when
         the queue {\bf sinstream} is not full.
         

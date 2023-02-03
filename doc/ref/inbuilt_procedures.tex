@@ -784,36 +784,8 @@
         No
         
         {\bf Description:} \\
-        Create a combinatorial output RAM.
-        
-        {\em name} is an identifier for the memory. The variable identifier can
-        also be constructed from a string by using the indirect operator on a
-        string variable or parenthesised expression, see subsection
-        \autorefph{subsec:strvarcreat}.
-
-        {\em ports} is the number of ports.
-
-        {\em atype} is the address type. This can be any target type with the
-        constraint that the total number of bits must not exceed 9.
-
-        {\em dtype} is the data type. This can be any target type.
-        
-        {\em init} is an optional initialisation array. The initialisation data is
-        a one-dimensional variable or array which is no larger than the depth of
-        the memory. It may be smaller in which case the memory is zero padded. The
-        types and structure of the initialisation variable or structured constant
-        after the first dimension must match the memory data type. Immediate
-        constants are padded to fit target elements but must not exceed the target
-        width. If the initialisation argument is omitted the memory will be
-        initialised to all zero.
-
-        An initial value may also be set later by calling inbuilt procedure {\bf
-        attributes()}
-        
-        Additional trailing arguments may be passed to set attributes. These
-        must be of the form attr=value.
-        
-        This procedure may create a module, procedure or function
+        Procedure {\bf cmemory()} creates a combinatorial output RAM.        
+        {\bf cmemory()} may create a module, procedure or function
         parameter in which case only the first argument is needed (the memory
         identifier).
 
@@ -823,6 +795,81 @@
         words dual port.
 
         Port 0 can be read or written (or both). Port 1 is read-only.
+        
+        {\em name} is an identifier for the memory. The variable identifier can
+        also be constructed from a string by using the indirect operator on a
+        string variable or parenthesised expression, see subsection
+        \autorefph{subsec:strvarcreat}.
+
+        {\em ports} is the number of ports. This argument may be by position or
+        by ports=x where x is a constant or immediate variable. For Xilinx FPGAs
+        theis must be 1 or 2.
+
+        {\em atype} is the address type. This can be any target type but
+        would normally be type "uint:". The type has the constraint that the total number of
+        bits must not exceed 9. This argument may be by position or by
+        atype=x where x is a string specifying a type or else a type variable.       
+
+        {\em dtype} is the data type. This can be any target type. This argument
+        may be by position or by dtype=x where x is a string specifying a type
+        or else a type variable.
+        
+        {\em init} is an optional initialisation array. The initialisation data
+        is a one-dimensional variable or array which is no larger than the depth
+        of the memory. It may be smaller in which case the memory is zero
+        padded. The types and structure of the initialisation variable or
+        structured constant after the first dimension must match the memory data
+        type. Immediate constants are padded to fit target elements but must not
+        exceed the target width. If the initialisation argument is omitted the
+        memory will be initialised to all zero. This argument may be by position
+        or by init=x where x is an immediate array variable. For compound types
+        the immediate type must match the target data type but omitting the data
+        widths. The target type can be converted to a matching immediate type
+        by the builtin function {\em targtoimtype()}.
+        
+        Where the {\em init} argument is supplied in the call to cmemory() the
+        argument may be compound constant, though this is not usually practical as
+        {\em init} is usually a large array. Otherwise the argument will be
+        an immediate variable of appropriate type. The initialising variable must be a
+        matching type to the target data type of the memory. The initial value
+        variable can be created from the target data type by calling builtin function
+        {\bf targtoimtype()} \autorefph{sec:iftargtoimtype} -
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+            struct (st,
+                f1, "uint:30",
+                f2, "uint:30"
+            );
+            var(init, "[8]" + targtoimtype(st));
+            init[0].f1 = ....;
+            init[0].f2 = ....;
+            .
+            .
+            .
+            var(init0, targtoimtype(st));
+            init0.f1 = ..;
+            init0.f2 = ..;
+            cmemory(m, 1, atype="uint:3", dtype=st, init=init);
+        \end{lstlisting}
+            
+        {\em init} can be assigned to a memory
+        variable, along with attributes, later in execution by calling
+        builtin procedure {\bf attributes()}\autorefph{sec:ipattributes}, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+            cmemory(m, 1, atype="uint:3", dtype=st);
+            attributes(m, init=init);
+        \end{lstlisting}
+        but in this case the argument must be an immediate variable, not a compound
+        constant. The call to attributes() can be any time after calling
+        cmemory() and (obviously) before termination of execution.
+
+        There may be trailing arguments following the optional {\em init} which supply
+        memory attrbutes, described in a table below. {\em init} is included amongst
+        the attributes for convenience. These arguments must all be of the form
+        attribute=value. These may be included in the call to cmemory() or else passed
+        later using builtin procedure attributes().
+
+        \input{cmemory_attributes}
 
         Architectures supported -
 
@@ -866,7 +913,6 @@
         parameter it cannot be passed attributes. The created parameter variable
         will adopt the attributes of the associated argument.
 
-        \input{cmemory_attributes}
 
 
     \section{cmemorywrite - write to a combinatorial output memory}\label{sec:ipcmemorywrite}
@@ -3737,7 +3783,7 @@
         \index{variable!memory!registered output}
         
         {\bf Call:} \\
-        rmemory(name, ports, atype, dtype, init, ...);
+        rmemory(name, ports, atype, dtype, init, init0, init1 ...);
         
         {\bf Output parameters:} \\
         none
@@ -3749,10 +3795,14 @@
         \hline \hline
         name   & - &  -           & memory identifier         \\ \hline
         ports  & I & int          & number of ports           \\ \hline
-        atype  & I & int          & address type              \\ \hline
-        dtype  & I & int          & data type                 \\ \hline
-        init   & I & []int        & optional initialisation (variable or compound
-                                    value)                    \\ \hline
+        atype  & I & uint         & address type              \\ \hline
+        dtype  & I & any          & data type                 \\ \hline
+        init   & I & []any        & optional initialisation (variable or compound
+                                    constant value)                    \\ \hline
+        init0  & I & any          & optional output latch A initialisation
+                                    (variable or compound value)  \\ \hline
+        init1  & I & any          & optional output latch B initialisation
+                                    (variable or compound value)  \\ \hline
         ...    & I &  -           & optional attributes       \\ \hline
         \end{tabular}
         
@@ -3763,52 +3813,109 @@
         No
         
         {\bf Description:} \\
-        Create a registered output RAM.
+        Procedure {\bf rmemory()} creates a registered output RAM.        
+        {\bf rmemory()} may create a module, procedure or function
+        parameter in which case only the first argument is needed (the memory
+        identifier).
+
+        In the case of Xilinx FPGAs, registered output memory is block RAM.
+        This can have one or two access ports.
+
+        Either port can be read or written (or both).
         
         {\em name} is an identifier for the memory. The variable identifier can
         also be constructed from a string by using the indirect operator on a
         string variable or parenthesised expression, see subsection
         \autorefph{subsec:strvarcreat}.
 
-        {\em ports} is the number of ports.
+        {\em ports} is the number of ports. This argument may be by position or
+        by ports=x where x is a constant or immediate variable. For Xilinx FPGAs
+        theis must be 1 or 2.
 
-        {\em atype} is the address type. This can be any target type with the
-        constraint that the total number of bits must not exceed the maximum
-        block RAM address width for the FPGA type. For Virtex, Virtex E and
-        Spartan 2 this is 12 bits. For Virtex2, Virtex2 PRO and Spartan 3
-        this is 14 bits.
+        {\em atype} is the address type. This can be any target type but would
+        usually be a "uint:". The address type has the constraint that the total
+        number of bits must not exceed the maximum block RAM address width for
+        the FPGA type. For Virtex, Virtex E and Spartan 2 this is 12 bits. For
+        Virtex2, Virtex2 PRO and Spartan 3 this is 14 bits. This would almost
+        always be an unsigned integer. This argument may be by position or by
+        atype=x where x is a string specifying a type or else a type variable.
 
-        {\em dtype} is the data type. This can be any target type.
+        {\em dtype} is the data type. This can be any target type. This argument
+        may be by position or by dtype=x where x is a string specifying a type
+        or else a type variable.
         
-        {\em init} is an optional initialisation array. The initialisation data is
-        a one-dimensional variable or array which is no larger than the depth of
-        the memory. It may be smaller in which case the memory is zero padded. The
-        types and structure of the initialisation variable or structured constant
-        after the first dimension must match the memory data type. Immediate
-        constants are padded to fit target elements but must not exceed the target
-        width. If the initialisation argument is omitted the memory will be
-        initialised to all zero.
-
-        An initial value may also be set later by calling inbuilt procedure {\bf
-        attributes()}
+        {\em init} is an optional initialisation array. The initialisation data
+        is a one-dimensional variable or array which is no larger than the depth
+        of the memory. It may be smaller in which case the memory is zero
+        padded. The types and structure of the initialisation variable or
+        structured constant after the first dimension must match the memory data
+        type. Immediate constants are padded to fit target elements but must not
+        exceed the target width. If the initialisation argument is omitted the
+        memory will be initialised to all zero. This argument may be by position
+        or by init=x where x is an immediate array variable. For compound types
+        the immediate type must match the target data type but omitting the data
+        widths. The target type can be converted to a matching immediate type
+        by the builtin function {\em targtoimtype()}.
         
-        Additional trailing arguments may be passed to set attributes. These
-        must be of the form attr=value.
+        {\em init0} and {\em init1} are optional arguments to initialise the data
+        output latches. The argument type must be the same as the memory data
+        type. For complex types the argument may be a compound constant. These
+        arguments may be by position or by init0=x or init1=x where x is an
+        immediate value matching the memory data type.
         
-        \autorefph{sec:ipattributes} with key "init".         
-        A number of constraint strings or string arrays may be appended. Each
-        constraint will be applied to each component block RAM, in each case
-        with "INST {\em name} " prepended where {\em name} is the netlist
-        identifier of each block RAM.
+        Where the {\em init}, {\em init0} or {\em init1} arguments are supplied
+        in the call to rmemory() the arguments may be compound constants, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+            struct (st,
+                f1, "uint:30",
+                f2, "uint:30"
+            );
+            rmemory(m, 1, atype="uint:3", dtype=st, init0={44, 55});
+        \end{lstlisting}
+        though this is not usually practical for {\em init} which is usually
+        a large array. Otherwise the arguments will be immediate variables
+        of appropriate type. Initialising variables must be a matching type
+        to the target data type of the memory. The initial value variable
+        can be created from the target data type by calling builtin
+        function {\bf targtoimtype()} \autorefph{sec:iftargtoimtype} -
+
+        \begin{lstlisting}[gobble=8, language=threepl]
+            struct (st,
+                f1, "uint:30",
+                f2, "uint:30"
+            );
+            var(init, "[8]" + targtoimtype(st));
+            init[0].f1 = ....;
+            init[0].f2 = ....;
+            .
+            .
+            .
+            var(init0, targtoimtype(st));
+            init0.f1 = ..;
+            init0.f2 = ..;
+            rmemory(m, 1, atype="uint:3", dtype=st, init=init, init0=init0);
+        \end{lstlisting}
+            
+        {\em init}, {\em init0} or {\em init1} can be assigned to a memory
+        variable, along with attributes, later in execution by calling
+        builtin procedure {\bf attributes()}\autorefph{sec:ipattributes}, e.g.
+        \begin{lstlisting}[gobble=8, language=threepl]
+            rmemory(m, 1, atype="uint:3", dtype=st);
+            attributes(m, init=init, init0=init0);
+        \end{lstlisting}
+        but in this case the arguments must be immediate variables, not compound
+        constants. The call to attributes() can be any time after calling
+        rmemory() and (obviously) before termination of execution.
+        The arguments to attributes() must be of the form attr=value.
         
-        This procedure may create a module, procedure or function
-        parameter in which case only the first argument is needed (the memory
-        identifier).
+        There may be trailing arguments following the optional {\em init}, {\em
+        init0} and {\em init1} which supply memory attrbutes, described in a
+        table below. {\em init}, {\em init0} or {\em init1} are included amongst
+        the attributes for convenience. These must all be of the form
+        attribute=value. These may be included in the call to rmemory() or else
+        passed later using builtin procedure attributes().
 
-        In the case of Xilinx FPGAs registered output memory is block RAM.
-        This can have one or two access ports.
-
-        Either port can be read or written (or both).
+        \input{rmemory_attributes}
         
         Architectures supported -
 
@@ -3856,8 +3963,6 @@
         When {\bf rmemory()} is used to create a module, procedure or function
         parameter it cannot be passed attributes. The created parameter variable
         will adopt the attributes of the associated argument.
-
-        \input{rmemory_attributes}
 
     \section{rmemoryread - read a registered output memory}\label{sec:iprmemoryread}
         

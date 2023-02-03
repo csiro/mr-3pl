@@ -128,7 +128,7 @@
         \blist
         \item   -c - compile only, do not execute
         \item   -d - display the interactive netlist schematic window after
-                outputing an EDIF netlist
+                outputing an EDIF netlist - broken! see note below
         \item   -D d=s - define a directive d whose value is string s
         \item   -f - force compilation even if sources have not been changed
         \item   -F - error messages use full path names rather than file names
@@ -197,6 +197,15 @@
 
         -I, -o, -D and -N may each be, but need not be, separated from its
         argument by spaces.
+        
+        The -d option should display a window in which the EDIF netlist can be
+        examined schematically. Entering a signal name results in the source and
+        sinks for that signal being displayed. Clicking on input or output
+        pins of displayed elements expands the nelist. Unfortunately this is not
+        very useful and hence has been little used. As a result it appears to
+        have atrophied over a decade or so since its last use and this has not
+        been noticed. It may be fixed in the future but is a low priority. It
+        would be more useful if it displayed the intermediate code.
         
         These options also set associated directives and for most of them
         the directives can also be set during immediate execution - see

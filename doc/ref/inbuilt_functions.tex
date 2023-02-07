@@ -6,6 +6,19 @@
     The following functions are built into the compiler. User functions must
     not use identifiers that conflict with these.
 
+    Functions with 'yes' to 'Parameter=argument allowed' can have arguments
+    matched to parameters by position in the argument list or by
+    parameter=argument (keymatch) or a mixture as long as positional arguments
+    do not follow keymatch arguments. The keymatch arguments may be in
+    any order. Otherwise these keymatch arguments are
+    not allowed. This may be because - \\
+    \blist
+    \item   the function has a single input or output argument in which case
+    no positional or keymatch parameter association is needed
+    \item   the function has an indefinite number of arguments and hence there
+    are no 'named' parameters with which to associate arguments
+    \blend
+
 
     \section{abs - absolute value function}\label{sec:ifabs}
         

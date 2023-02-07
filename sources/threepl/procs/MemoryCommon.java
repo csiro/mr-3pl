@@ -53,12 +53,12 @@ public class MemoryCommon implements Constant, TDEConstants {
         ArrayList<Var>      vars = new ArrayList<Var>();
         int                 ports = -1;
         Val                 dtval = null;
-        Type                dtype = null;
+        Type                dtype = null;   // data type
         Val                 atval = null;
-        Type                atype = null;
-        Val                 init = null;
-        Val                 init0 = null;
-        Val                 init1 = null;
+        Type                atype = null;   // address type
+        Val                 init = null;    // memory initialisation
+        Val                 init0 = null;   // output register 0 initial value
+        Val                 init1 = null;   // output register 1 initial value (if 2 ports)
         Val                 aval = null;
         Memory              mvar;
         

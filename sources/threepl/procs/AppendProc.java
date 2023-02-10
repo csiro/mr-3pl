@@ -31,9 +31,9 @@ public class AppendProc extends InbuiltProc implements Constant {
         check_null_input_args = true;
         check_null_output_args = false;
         target_inline = false;
-        ipnames.put("l", 0);
+        ipnames.put("list", 0);
         ipnames.put("index", 1);
-        ipnames.put("v", 2);
+        ipnames.put("value", 2);
     }
 
     /**

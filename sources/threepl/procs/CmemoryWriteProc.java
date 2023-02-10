@@ -42,7 +42,7 @@ public class CmemoryWriteProc extends InbuiltProc implements Constant, TDEConsta
         check_null_input_args = true;
         check_null_output_args = false;
         target_inline = true;
-        ipnames.put("m", 0);
+        ipnames.put("id", 0);
         ipnames.put("port", 1);
         ipnames.put("addr", 2);
         ipnames.put("data", 3);

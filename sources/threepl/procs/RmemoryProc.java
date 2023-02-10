@@ -44,7 +44,7 @@ public class RmemoryProc extends InbuiltProc implements Constant, TDEConstants {
         check_null_output_args = false;
         target_inline = false;
         allowed_attributes = true;
-        ipnames.put("name", 0);
+        ipnames.put("id", 0);
         ipnames.put("ports", 1);
         ipnames.put("atype", 2);
         ipnames.put("dtype", 3);

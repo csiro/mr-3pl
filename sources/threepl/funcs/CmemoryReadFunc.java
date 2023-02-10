@@ -31,7 +31,7 @@ import threepl.parser.SrcLoc;
 public class CmemoryReadFunc extends InbuiltFunc implements Constant {
     
     public CmemoryReadFunc () {
-        ipnames.put("mem", 0);
+        ipnames.put("id", 0);
         ipnames.put("port", 1);
         ipnames.put("address", 2);
     }

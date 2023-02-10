@@ -29,9 +29,9 @@ public class PutProc extends InbuiltProc implements Constant {
         check_null_input_args = true;
         check_null_output_args = false;
         target_inline = false;
-        ipnames.put("m", 0);
+        ipnames.put("map", 0);
         ipnames.put("key", 1);
-        ipnames.put("v", 2);
+        ipnames.put("value", 2);
     }
 
     /**

@@ -32,8 +32,8 @@
     \blend
 
     3PL is really two languages in one. 3PL is compiled and then executed
-    by an interpreter. That execution, called {\em immediate} execution
-    \index{immediate execution},
+    by an interpreter. That execution, called {\em immediate} execution,
+    \index{immediate execution}
     is strictly sequential. During immediate execution target (FPGA)
     statements are encountered. These target statements are also subject
     to immediate execution during which target code is generated which
@@ -87,6 +87,13 @@
            a[8] <- b[8];
        }
     \end{lstlisting}
+    
+    Note that this oversimplified example is contrived - it could have
+    been coded as
+    
+    \begin{lstlisting}[gobble=4, language=threepl]
+        a <- b;
+    \end{lstlisting}
 
     The {\bf 3PL} language contains two distinct types of statements -
     \blist
@@ -95,8 +102,8 @@
     \blend
 
     Immediate statements \index{immediate!statement} are executed by the
-    compiler following parsing. They control the processing of target
-    statements.
+    compiler in the host computer following parsing. They control the processing
+    of target statements.
 
     Target statements \index{target!statement} are to be executed in the FPGA
     later - they perform the actual data processing.
@@ -326,7 +333,14 @@
                 v--;
         \end{lstlisting}
         which achieves the same behaviour but reduces logic depth at the expense
-        of logic width.
+        of logic width. It could also be written as -
+        \begin{lstlisting}[language=threepl]
+            static(v, "int:8");
+            static({l, up}, "log");
+            when (l)
+                v <- up ? v+1 : v-1;
+        \end{lstlisting}
+        using the \verb'?:' ternary operator.
 
         Static variables have default initial values which are 0 for numeric types
         and false for the logical type. A static variable can be given an initial
@@ -377,9 +391,9 @@
         In 3PL arguments are optional and parameters can have default values specified
         for cases where no argument is passed to them.
 
-        In the code above the \var{loc} attribute must either be a string or an array or
-        strings. These are used to generate FPGA pad location constraints.
-        Note that array dimensions precede the array type.
+        In the code above the \var{loc} attribute must either be a string (for a
+        single pad) or an array of strings. These are used to generate FPGA pad
+        location constraints. Note that array dimensions precede the array type.
 
         A string immediate mode variable can be created by calling \kwd{str()}.
         The first argument is an identifier for the variable or else a list of
@@ -423,7 +437,7 @@
             var(din_pins, "[8]str", {"A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"});
             input(d_in, "int:8", loc=din_pins);
             input(enable_in, "log", loc=enable_pin);
-            static(d, type(d_in), IOB=true);
+            static(d, type(d_in), IOB=true);    // locate flip-flops in IOB blocks
             static(enable, "log", IOB=true);
 
             static(dd, type(d));
@@ -441,7 +455,6 @@
 
         We could expand the example by connecting the static variable {\var{dd}} to output
         pins -
-        \pagebreak
         \begin{lstlisting}[language=threepl]
             str(enable_pin, "D8");
             var(din_pins, "[8]str", {"A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"});
@@ -602,8 +615,7 @@
         \end{lstlisting}
         Here the value variable has as its value a single static variable. In this
         role it can be viewed as a pointer to that static variable (3PL does have
-        pointer variables but these are not discussed here as they are seldom used
-        in application code).
+        pointer variables).
 
         Value variables can be re-assigned at any time at which point they take on a
         new value. Value variables can also be evaluated prior to being assigned, in
@@ -638,6 +650,8 @@
                 stop();
             }
         \end{lstlisting}
+        Note that this then becomes dead code after executing once. It can never
+        be restarted!
 
         A parallel block is coded in a similar way -
         \begin{lstlisting}[language=threepl]
@@ -679,8 +693,8 @@
         single assignment start executing simultaneously but since the seq block
         takes two cycles the par block cannot terminate until the seq finishes.
         The par block then repeats, the seq block and the single assignment
-        again starting simultaneously. Thus in the first case the two elements repeat
-        independently whereas in the second case they repeat in step.
+        again starting simultaneously. Thus in the first case the two elements
+        repeat independently whereas in the second case they repeat in step.
 
     \section{Target loops}
 
@@ -713,6 +727,7 @@
 
         These loops add no extra clock cycles on each iteration to the code body
         however there is one extra clock cycle required on loop termination.
+        
 
     \section{Immediate execution}
 
@@ -947,7 +962,7 @@
         \item   {\bf \verb'|-'} conditionally assign to an output mode variable
         \blend
 
-        The target statement equivalent of an (immediate) {\bf if ()} statement
+        The target statement equivalent to an (immediate) {\bf if ()} statement
         is {\bf when ()}, which can also have an associated {\bf else}. The true and
         false bodies can only be single target statements. These of course may
         be other target constructs such as {\bf seq\{\}} or {\bf par\{\}}, e.g.

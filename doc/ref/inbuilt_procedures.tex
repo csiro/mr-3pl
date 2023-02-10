@@ -122,7 +122,7 @@
     \section{append - append a list entry}\label{sec:ipappend}
         
         {\bf Call:} \\
-        append(l, index, v);
+        append(list, index, value);
         
         {\bf Output parameters:} \\
         none
@@ -132,9 +132,9 @@
         \hline
         param  & mode & type & \\
         \hline \hline
-        l      & I     & list & a list   \\ \hline
+        list   & I     & list & a list   \\ \hline
         index  & I     & int  & an index   \\ \hline
-        v      & I V C & any  & the value   \\ \hline
+        value  & I V C & any  & the value   \\ \hline
         \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
@@ -144,9 +144,9 @@
         No
         
         {\bf Description:} \\
-        The item {\bf v} is appended at the position indicated by {\bf
-        index} in list {\bf l}. The index may range from 0 to {\bf
-        entries(l)} inclusive. If {\bf index} is outside this range a fatal
+        The item {\bf value} is appended at the position indicated by {\bf
+        index} in list {\bf list}. The index may range from 0 to {\bf
+        entries(list)} inclusive. If {\bf index} is outside this range a fatal
         error occurs. An index of 0 inserts at the beginning of the list and
         an index equal to the list size appends to the end of the list. If
         the index argument is omitted the item will be appended to the end
@@ -280,7 +280,7 @@
         \hline
         param & mode & type & \\
         \hline \hline
-        o & I & log & if true, OR with previous value \\ \hline
+        or & I & log & if true, OR with previous value \\ \hline
         \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
@@ -347,7 +347,7 @@
         {\bf v} has been referenced previously at which time it had not
         been assigned a value, so it takes care of the post-assignment
         (see discussion of post-assignment in section \ref{sec:im_valass}).
-        The following would not work in the same way -
+        The following {\bf would not work in the same way} -
         \begin{lstlisting}[gobble=8, language=threepl]
            value(v, "log");
 
@@ -357,7 +357,7 @@
            .
            assert(v <-);
            .
-           assert(v <- true);
+           assert(v <- true);   // PROBABLY WRONG!
            .
         \end{lstlisting}
         The second call to {\bf assert()} would indeed OR the two execution
@@ -498,7 +498,7 @@
     \section{change - change a list entry}\label{sec:ipchange}
         
         {\bf Call:} \\
-        change(l, index, v);
+        change(list, index, value);
         
         {\bf Output parameters:} \\
         none
@@ -508,9 +508,9 @@
         \hline
         param  & mode & type & \\
         \hline \hline
-        l      & I     & list & a list   \\ \hline
+        list   & I     & list & a list   \\ \hline
         index  & I     & int  & an index   \\ \hline
-        v      & I V C & any  & the value   \\ \hline
+        value  & I V C & any  & the value   \\ \hline
         \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
@@ -520,8 +520,8 @@
         No
         
         {\bf Description:} \\
-        The item in list {\bf l} at position {\bf index} is replaced by item
-        {\bf v}. The index may range from 0 to {\bf entries(l) - 1}
+        The item in list {\bf list} at position {\bf index} is replaced by item
+        {\bf value}. The index may range from 0 to {\bf entries(l) - 1}
         inclusive. If {\bf index} is outside this range a fatal error
         occurs. The new value does not have to be the same type as the
         previous value. If the last argument is omitted the list item will
@@ -759,7 +759,7 @@
         \index{variable!memory!combinatorial output}
         
         {\bf Call:} \\
-        cmemory(name, ports, atype, dtype, init, ...);
+        cmemory(id, ports, atype, dtype, init, ...);
         
         {\bf Output parameters:} \\
         none
@@ -769,7 +769,7 @@
         \hline
         param  & mode       & type  & \\
         \hline \hline
-        name   & -  &  -    & memory identifier         \\ \hline
+        id     & -  &  -    & memory identifier         \\ \hline
         ports  & I  & int   & number of ports           \\ \hline
         atype  & I  & int   & address type              \\ \hline
         dtype  & I  & int   & data type                 \\ \hline
@@ -797,7 +797,7 @@
 
         Port 0 can be read or written (or both). Port 1 is read-only.
         
-        {\em name} is an identifier for the memory. The variable identifier can
+        {\em id} is an identifier for the memory. The variable identifier can
         also be constructed from a string by using the indirect operator on a
         string variable or parenthesised expression, see subsection
         \autorefph{subsec:strvarcreat}.
@@ -919,7 +919,7 @@
     \section{cmemorywrite - write to a combinatorial output memory}\label{sec:ipcmemorywrite}
         
         {\bf Call:} \\
-        cmemorywrite(m, port, addr, data);
+        cmemorywrite(id, port, addr, data);
         
         {\bf Output parameters:} \\
         none
@@ -929,7 +929,7 @@
         \hline
         param  & mode     & type  & \\
         \hline \hline
-        m    & M             &  -  & memory being written   \\ \hline
+        id   & M             &  -  & memory being written   \\ \hline
         port & I             & int & port                   \\ \hline
         addr & I V SV S Q PR & any & memory address         \\ \hline
         data & I V SV S Q PR & any & data to be written     \\ \hline
@@ -944,7 +944,7 @@
         {\bf Description:} \\
         Write to a port of a combinatorial output memory.
 
-        {\em m} is the memory mode variable identifier.
+        {\em id} is the memory mode variable identifier.
 
         {\em port} is the memory port.
 
@@ -3415,7 +3415,7 @@
     \section{put - put a map entry}\label{sec:ipput}
         
         {\bf Call:} \\
-        put(m, key, v);
+        put(map, key, value);
         
         {\bf Output parameters:} \\
         none
@@ -3425,9 +3425,9 @@
         \hline
         param  & mode & type & \\
         \hline \hline
-        m      & I     & map             & a map        \\ \hline
+        map    & I     & map             & a map        \\ \hline
         key    & I     & str, int, uint  & a string key \\ \hline
-        v      & I V C & any             & the value    \\ \hline
+        value  & I V C & any             & the value    \\ \hline
         \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
@@ -3437,7 +3437,7 @@
         No
         
         {\bf Description:} \\
-        The item {\bf v} is placed in the map {\bf m} against key
+        The item {\bf value} is placed in the map {\bf map} against key
         {\bf key}. If that key is already in the map the value will
         be replaced. If the last argument is omitted null will be put
         against the key. The key should be type "str" but if it is
@@ -3784,7 +3784,7 @@
         \index{variable!memory!registered output}
         
         {\bf Call:} \\
-        rmemory(name, ports, atype, dtype, init, init0, init1 ...);
+        rmemory(id, ports, atype, dtype, init, init0, init1 ...);
         
         {\bf Output parameters:} \\
         none
@@ -3794,7 +3794,7 @@
         \hline
         param  & mode       & type  & \\
         \hline \hline
-        name   & - &  -           & memory identifier         \\ \hline
+        id     & - &  -           & memory identifier         \\ \hline
         ports  & I & int          & number of ports           \\ \hline
         atype  & I & uint         & address type              \\ \hline
         dtype  & I & any          & data type                 \\ \hline
@@ -3824,7 +3824,7 @@
 
         Either port can be read or written (or both).
         
-        {\em name} is an identifier for the memory. The variable identifier can
+        {\em id} is an identifier for the memory. The variable identifier can
         also be constructed from a string by using the indirect operator on a
         string variable or parenthesised expression, see subsection
         \autorefph{subsec:strvarcreat}.
@@ -3968,7 +3968,7 @@
     \section{rmemoryread - read a registered output memory}\label{sec:iprmemoryread}
         
         {\bf Call:} \\
-        rmemoryread(m, port, addr);
+        rmemoryread(id, port, addr);
         
         {\bf Output parameters:} \\
         none
@@ -3978,7 +3978,7 @@
         \hline
         param  & mode     & type  & \\
         \hline \hline
-        m    & M             &  -  & memory being read  \\ \hline
+        id   & M             &  -  & memory being read  \\ \hline
         port & I             & int & port               \\ \hline
         addr & I V SV S Q PR & any & memory address     \\ \hline
         \end{tabular}
@@ -3992,7 +3992,7 @@
         {\bf Description:} \\
         Read from a port of a registered output memory.
 
-        {\em m} is the memory mode variable identifier.
+        {\em id} is the memory mode variable identifier.
         
         {\em port} is the memory port.
         
@@ -4026,7 +4026,7 @@
     \section{rmemorywrite - write to a registered output memory}\label{sec:iprmemorywrite}
         
         {\bf Call:} \\
-        rmemorywrite(m, port, addr, data);
+        rmemorywrite(id, port, addr, data);
         
         {\bf Output parameters:} \\
         none
@@ -4036,7 +4036,7 @@
         \hline
         param  & mode     & type  & \\
         \hline \hline
-        m    & M             &  -  & memory being written   \\ \hline
+        id   & M             &  -  & memory being written   \\ \hline
         port & I             & int & port                   \\ \hline
         addr & I V SV S Q PR & any & memory address         \\ \hline
         data & I V SV S Q PR & any & data to be written     \\ \hline
@@ -4052,7 +4052,7 @@
         Write to a port of a registered output memory. The registered output
         of the port is also changed to the written value.
 
-        {\em m} is the memory mode variable identifier.
+        {\em id} is the memory mode variable identifier.
 
         {\em port} is the memory port.
 

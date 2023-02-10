@@ -69,7 +69,7 @@
         \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
-        Yes
+        No
         
         {\bf return mode:} \\
         value
@@ -812,14 +812,14 @@
     \section{cmemoryread - read a combinatorial output memory}\label{sec:ifcmemoryread}
         
         {\bf Call:} \\
-        cmemoryread(mem, port, address)
+        cmemoryread(id, port, address)
         
         {\bf parameters:} \\
         \begin{tabular}{| l | l | l | l |}
         \hline
         param  & mode & type & \\
         \hline \hline
-        mem     & M        &  -  & memory identifier    \\ \hline
+        id      & M        &  -  & memory identifier    \\ \hline
         port    & I        & int & port                 \\ \hline
         address & V SV S Q & any & address value        \\ \hline
         \end{tabular}
@@ -834,11 +834,11 @@
         data type of memory
         
         {\bf Description:} \\
-        {\em mem} is the memory mode variable identifier.
+        {\em id} is the memory mode variable identifier.
         
         {\em port} is the memory port.
         
-        {\em addr} is the address.
+        {\em address} is the address.
         
         The address may be any type, including a compound type, but the type
         must match the type given when the registered output memory
@@ -4743,14 +4743,14 @@
     \section{rmemoryout - get the value of a registered output memory}\label{sec:ifrmemoryout}
        
         {\bf Call:} \\
-        rmemoryout(mem, port)
+        rmemoryout(id, port)
         
         {\bf parameters:} \\
         \begin{tabular}{| l | l | l | l |}
         \hline
         param  & mode & type & \\
         \hline \hline
-        mem  & M &  -  & memory identifier  \\ \hline
+        id   & M &  -  & memory identifier  \\ \hline
         port & I & int & port               \\ \hline
         \end{tabular}
         

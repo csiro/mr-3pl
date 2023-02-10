@@ -2,6 +2,7 @@ package threepl.nodes;
 
 import static threepl.ThreePL.rpt;
 import static threepl.ThreePL.tdelist;
+import static threepl.ThreePL.wmsg;
 
 import java.util.ArrayList;
 
@@ -190,6 +191,9 @@ public final class WhenNode extends Node implements Constant, TDEConstants {
             tdelist.del(ffinish, fstart, clock, esig);
         }
         
+        if ((tstartl.size() == 0) && (fstartl.size() == 0))
+            wmsg("WHEN statement has no target code", loc);
+       
         // If -
         //  1. the true and false blocks are empty or flagged direct assign
         //  2. the test expression has no queue reads

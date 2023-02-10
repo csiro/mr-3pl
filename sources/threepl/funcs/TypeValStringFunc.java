@@ -1,12 +1,10 @@
 package threepl.funcs;
 
 import threepl.exceptions.ExEx;
-import threepl.exec.Type;
 import threepl.exec.Val;
 import threepl.nodes.NodeList;
 import threepl.parser.Constant;
 import threepl.parser.SrcLoc;
-import threepl.parser.Constant.Ptype;
 
 /**
  * An inbuilt function to return the type value of a type variable

@@ -15,7 +15,7 @@
     V  & value                          \\ \hline
     SV & selectvalue                    \\ \hline
     S  & static                         \\ \hline
-    Q  & queue                           \\ \hline
+    Q  & queue                          \\ \hline
     CM & combinatorial output memory    \\ \hline
     RM & registered output memory       \\ \hline
     PR & priority                       \\ \hline
@@ -1048,16 +1048,26 @@
         \vsp
         \begin{lstlisting}[gobble=8, language=threepl]
            procedure
-           divrem (value(quot), value(rem) <- value(num), value(denom)) {}
+           divrem (quot, rem <- num, denom) {}
         \end{lstlisting}
-
+        
         {\bf Output parameters:} \\
-        {\bf quot} is the quotient. \\
-        {\bf rem} is the remainder. \\
-
-        {\bf Input parameters:} \\            
-        {\bf num} is the numerator. \\
-        {\bf denom} is the denominator. \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param  & mode     & type  & \\
+        \hline \hline
+        quot   & V & int uint & quotient    \\ \hline
+        rem    & V & int uint & remainder   \\ \hline
+        \end{tabular}
+        
+        {\bf Input parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param  & mode     & type  & \\
+        \hline \hline
+        num    & I & int uint & numerator   \\ \hline
+        denom  & I & int uint & denominator \\ \hline
+        \end{tabular}
         
         {\bf Parameter=argument allowed:} \\
         Yes
@@ -1072,11 +1082,12 @@
         The input and output types must be all{\em int} or all {\em uint}
         (widths may be different). The inputs may be immediate.
 
-        Note: this procedure uses cascaded adders and subtractors and
-        will have a long data path delay. However, the code is optimised
-        for some cases where one operand is constant - 
-        for division of 0 (return 0:0), division by 1 (return n:0) and
-        division by power of 2 (quotient by shifting, remainder by masking).
+        {\nf Note: this procedure uses cascaded adders and subtractors
+        and may have a very long data path delay!} However, the code is
+        optimised for some cases where one operand is constant -  for
+        division of 0 (return 0:0), division by 1 (return n:0) and
+        division by power of 2 (quotient by shifting, remainder by
+        masking).
 
 
 

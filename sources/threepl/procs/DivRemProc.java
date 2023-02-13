@@ -37,10 +37,10 @@ public class DivRemProc extends InbuiltProc implements Constant, TDEConstants {
         check_null_input_args = true;
         check_null_output_args = false;
         target_inline = false;
-        ipnames.put("rem", 0);
-        ipnames.put("numdenom", 1);
-        opnames.put("divrem", 0);
-        opnames.put("quot", 1);
+        ipnames.put("num", 0);
+        ipnames.put("denom", 1);
+        opnames.put("quot", 0);
+        opnames.put("rem", 1);
     }
 
     /**
@@ -68,11 +68,11 @@ public class DivRemProc extends InbuiltProc implements Constant, TDEConstants {
         Ptype   atype = aval.getPrimType();
         Mode    bmode = bval.getMode();
         Ptype   btype = bval.getPrimType();
-        if ((amode == Mode.CMEMORY) || (amode == Mode.RMEMORY) || (amode == Mode.CLOCK))
+        if (!((amode == Mode.STATIC) || (amode == Mode.VALUE) || (amode == Mode.QUEUE) || (amode == Mode.IMMEDIATE)))
             throw new ExEx("divrem() 1st input argument not allowed mode", loc);
         if ((atype != Ptype.INT) && (atype != Ptype.UINT))
             throw new ExEx("divrem() 1st input argument not integer type", loc);
-        if ((bmode == Mode.CMEMORY) || (bmode == Mode.RMEMORY) || (bmode == Mode.CLOCK))
+        if (!((bmode == Mode.STATIC) || (bmode == Mode.VALUE) || (bmode == Mode.QUEUE) || (bmode == Mode.IMMEDIATE)))
             throw new ExEx("divrem() 2nd input argument not allowed mode", loc);
         if ((btype != Ptype.INT) && (btype != Ptype.UINT))
             throw new ExEx("divrem() 2nd input argument not integer type", loc);

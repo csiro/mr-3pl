@@ -1496,7 +1496,7 @@
         status value. The write-read transaction now completes and the master
         thread continues.
 
-        An assigment may have multiple buffered and unbuffered queues on its
+        An assignment may have multiple buffered and unbuffered queues on its
         RHS, for example -
         \begin{lstlisting}[gobble=8, language=threepl]
             type(t, "uint:8");
@@ -1536,7 +1536,7 @@
         \end{lstlisting}
         
         The assignments to buffered queues q1 and q2 will occur when
-        encountered (if these queues are not full). The assigment at the
+        encountered (if these queues are not full). The assignment at the
         bottom will wait until q1 and q2 are not empty and writes are pending
         on ubq1 and ubq2. The writes to ubq1 and ubq2 will also wait until
         the last assignment statement is able to execute. When that happens

@@ -131,17 +131,20 @@ public class XC6S extends XTDECode implements NetConstants {
         tde.addPin2Element("CEM",           0, TDEVar.GND);
         tde.addPin2Element("CEALUMODE",     0, TDEVar.GND);
         tde.addPin2Element("CECTRL",        0, TDEVar.GND);
-        tde.addPin2Element("CEMULTCARRYIN", 0, TDEVar.GND);
         tde.addPin2Element("CECARRYIN",     0, TDEVar.GND);
         
         tde.addProperty2Element("USE_MULT", "NONE");
         tde.addProperty2Element("PREG", "1");
-        tde.addProperty2Element("AREG", "0");
+        tde.addProperty2Element("A0REG", "0");
+        tde.addProperty2Element("A1REG", "0");
         tde.addProperty2Element("ACASCREG", "0");
-        tde.addProperty2Element("BREG", "0");
+        tde.addProperty2Element("B0REG", "0");
+        tde.addProperty2Element("B1REG", "0");
         tde.addProperty2Element("BCASCREG", "0");
         tde.addProperty2Element("CREG", "0");
+        tde.addProperty2Element("DREG", "0");
         tde.addProperty2Element("MREG", "0");
+        tde.addProperty2Element("PREG", "0");
         tde.addProperty2Element("OPMODEREG", "0");
         tde.addProperty2Element("ALUMODEREG", "0");
         tde.addProperty2Element("CARRYINREG", "0");
@@ -179,7 +182,7 @@ public class XC6S extends XTDECode implements NetConstants {
      */    
     public void Mult (TDEVar a, TDEVar b, TDEVar p) {
         TDE     tde = new TDE(TDEType.ELEMENT);
-        TDEVar  opmode  = new TDEVar(0x05L, new Type("uint:8", null), null);
+        TDEVar  opmode  = new TDEVar(1, new Type("uint:8", null), null);
 
         tde.add2p("DSP48A1");
         tde.add2p((String)null);
@@ -190,25 +193,24 @@ public class XC6S extends XTDECode implements NetConstants {
         tde.addPin2Element("P",             1,          p, 48, arrayformat);
         tde.addPin2Element("OPMODE",        0,     opmode,  8, arrayformat);
         tde.addPin2Element("CEP",           0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEA1",          0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEA2",          0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEB1",          0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEB2",          0, TDEVar.GND, 0, 0);
+        tde.addPin2Element("CEA",           0, TDEVar.GND, 0, 0);
+        tde.addPin2Element("CEB",           0, TDEVar.GND, 0, 0);
         tde.addPin2Element("CEC",           0, TDEVar.GND, 0, 0);
         tde.addPin2Element("CEM",           0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEALUMODE",     0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CECTRL",        0, TDEVar.GND, 0, 0);
-        tde.addPin2Element("CEMULTCARRYIN", 0, TDEVar.GND, 0, 0);
         tde.addPin2Element("CECARRYIN",     0, TDEVar.GND, 0, 0);
         
         tde.addProperty2Element("USE_MULT", "MULT");
         tde.addProperty2Element("PREG", "0");
-        tde.addProperty2Element("AREG", "0");
+        tde.addProperty2Element("A0REG", "0");
+        tde.addProperty2Element("A1REG", "0");
         tde.addProperty2Element("ACASCREG", "0");
-        tde.addProperty2Element("BREG", "0");
+        tde.addProperty2Element("B0REG", "0");
+        tde.addProperty2Element("B1REG", "0");
         tde.addProperty2Element("BCASCREG", "0");
         tde.addProperty2Element("CREG", "0");
+        tde.addProperty2Element("DREG", "0");
         tde.addProperty2Element("MREG", "0");
+        tde.addProperty2Element("PREG", "0");
         tde.addProperty2Element("OPMODEREG", "0");
         tde.addProperty2Element("ALUMODEREG", "0");
         tde.addProperty2Element("CARRYINREG", "0");
@@ -258,18 +260,21 @@ public class XC6S extends XTDECode implements NetConstants {
         tde.addPin2Element("CEM",           0, TDEVar.GND);
         tde.addPin2Element("CEALUMODE",     0, TDEVar.GND);
         tde.addPin2Element("CECTRL",        0, TDEVar.GND);
-        tde.addPin2Element("CEMULTCARRYIN", 0, TDEVar.GND);
         tde.addPin2Element("CECARRYIN",     0, TDEVar.GND);
         tdelist.addTDE(tde);
         
         tde.addProperty2Element("USE_MULT", mult);
         tde.addProperty2Element("PREG", "0");
-        tde.addProperty2Element("AREG", "0");
+        tde.addProperty2Element("A0REG", "0");
+        tde.addProperty2Element("A1REG", "0");
         tde.addProperty2Element("ACASCREG", "0");
-        tde.addProperty2Element("BREG", "0");
+        tde.addProperty2Element("B0REG", "0");
+        tde.addProperty2Element("B1REG", "0");
         tde.addProperty2Element("BCASCREG", "0");
         tde.addProperty2Element("CREG", "0");
+        tde.addProperty2Element("DREG", "0");
         tde.addProperty2Element("MREG", "0");
+        tde.addProperty2Element("PREG", "0");
         tde.addProperty2Element("OPMODEREG", "0");
         tde.addProperty2Element("ALUMODEREG", "0");
         tde.addProperty2Element("CARRYINREG", "0");
@@ -286,8 +291,7 @@ public class XC6S extends XTDECode implements NetConstants {
     public void Mult (Net[] a, Net[] b, Net[] p) {
         int     arrayformat = 2;
         Element e = new Element("DSP48A1");
-        Net[]   opmode = constant(5, 7);
-        Net[]   carryinsel = constant(0, 2);
+        Net[]   opmode = constant(1, 8);
         
         e.addInputArray("A", a, arrayformat);
         e.addInputArray("B", b, arrayformat);
@@ -295,32 +299,26 @@ public class XC6S extends XTDECode implements NetConstants {
                 
         e.addInput("CLK", Net.LO);
         e.addInputArray("OPMODE", opmode, arrayformat);
-        e.addInputArray("CARRYINSEL", carryinsel, arrayformat);
         e.addInput("CEP",           Net.LO);
-        e.addInput("CEA1",          Net.LO);
-        e.addInput("CEA2",          Net.LO);
-        e.addInput("CEB1",          Net.LO);
-        e.addInput("CEB2",          Net.LO);
+        e.addInput("CEA",           Net.LO);
+        e.addInput("CEB",           Net.LO);
         e.addInput("CEC",           Net.LO);
         e.addInput("CEM",           Net.LO);
-        e.addInput("CEALUMODE",     Net.LO);
-        e.addInput("CECTRL",        Net.LO);
-        e.addInput("CEMULTCARRYIN", Net.LO);
         e.addInput("CECARRYIN",     Net.LO);       
         e.addInput("CARRYIN",       Net.LO);     
-        e.addInput("SUBTRACT",      Net.LO);     
-        e.addInput("CECINSUB",      Net.LO); 
         e.addInput("RSTA",          Net.LO); 
         e.addInput("RSTB",          Net.LO); 
         e.addInput("RSTC",          Net.LO); 
         e.addInput("RSTM",          Net.LO); 
         e.addInput("RSTP",          Net.LO); 
-        e.addInput("RSTCTRL",       Net.LO); 
         e.addInput("RSTCARRYIN",    Net.LO); 
         
-        e.addProperty("AREG", "0");
-        e.addProperty("BREG", "0");
+        e.addProperty("A0REG", "0");
+        e.addProperty("A1REG", "0");
+        e.addProperty("B0REG", "0");
+        e.addProperty("B1REG", "0");
         e.addProperty("CREG", "0");
+        e.addProperty("DREG", "0");
         e.addProperty("MREG", "0");
         e.addProperty("PREG", "0");
         e.addProperty("OPMODEREG", "0");

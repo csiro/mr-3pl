@@ -78,7 +78,7 @@ public class InbuiltFuncs {
         funcs.put("hasprev", new HasPrevFunc());
         funcs.put("head", new HeadFunc());
         funcs.put("identifier", new IdentifierFunc());
-        funcs.put("imtotargtype", new ImToTargTypeFunc());
+//        funcs.put("imtotargtype", new ImToTargTypeFunc());
         funcs.put("includedirs", new IncludeDirsFunc());
         funcs.put("inttobinstring", new IntToBinStringFunc());
         funcs.put("inttohexstring", new IntToHexStringFunc());

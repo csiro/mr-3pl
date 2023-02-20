@@ -7,6 +7,8 @@ import threepl.parser.Constant;
 import threepl.parser.SrcLoc;
 
 /**
+ * NOT YET WRITTEN!
+ * Not sure how this was supposed to work!
  * An inbuilt function to return the type of an immediate mode variable as
  * a target type. The type is a string in the same format as is used for
  * type declarations. Type will be converted to target type using widths
@@ -29,10 +31,6 @@ public class ImToTargTypeFunc extends InbuiltFunc implements Constant {
             throw new ExEx("imtotargtype() - argument not immediate mode", loc);
         String  si = val.getTypeString();
         String  st = null;
-        
-        //
-        if (si != null) // DUMMY CONDITIONAL TO FORCE EXCEPTION - DELETE WHEN CODE WRITTEN
-            throw new ExEx("imtotargtype() NOT YET IMPLEMENTED!", loc);
 
         return(new Val(st, loc));
     }

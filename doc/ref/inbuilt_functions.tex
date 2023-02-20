@@ -2630,46 +2630,46 @@
         module, procedure or function in which they were created.
 
 
-    \section{imtotargtype - convert an immediate type to a target type}\label{sec:ifimtotargtype}
-        
-        {\bf Call:} \\
-        imtotargtype(expr)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        expr & any & any & value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        str
-        
-        {\bf Description:} \\
-        Return the type of an immediate variable as a target type. The type is a
-        string in the same format as is used for type declarations. The type
-        will be converted to target type using widths derived from the immediate
-        variable value(s).
-        
-        {\bf THIS FUNCTION HAS NOT YET BEEN COMPLETED AND IS A TEMPLATE
-        WHICH AT PRESENT WILL GIVE A FATAL ERROR!}
-        
-        See also - \\
-        {\bf type()} \autorefph{sec:iftype} \\
-        {\bf arraytype()} \autorefph{sec:ifarraytype} \\
-        {\bf typestring()} \autorefph{sec:iftypestring} \\
-        {\bf primtypestring()} \autorefph{sec:ifprimtypestring} \\
-        {\bf targtoimtype()} \autorefph{sec:iftargtoimtype} \\
-        {\bf typeval()} \autorefph{sec:iftypeval} \\
-        {\bf typevalstring()} \autorefph{sec:iftypevalstr} \\
-        {\bf typeisequal()} \autorefph{sec:iftypeiseq} \\
+%    \section{imtotargtype - convert an immediate type to a target type}\label{sec:ifimtotargtype}
+%        
+%        {\bf Call:} \\
+%        imtotargtype(expr)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        expr & any & any & value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        str
+%        
+%        {\bf Description:} \\
+%        Return the type of an immediate variable as a target type. The type is a
+%        string in the same format as is used for type declarations. The type
+%        will be converted to target type using widths derived from the immediate
+%        variable value(s).
+%        
+%        {\bf THIS FUNCTION HAS NOT YET BEEN COMPLETED AND IS A TEMPLATE
+%        WHICH AT PRESENT WILL GIVE A FATAL ERROR!}
+%        
+%        See also - \\
+%        {\bf type()} \autorefph{sec:iftype} \\
+%        {\bf arraytype()} \autorefph{sec:ifarraytype} \\
+%        {\bf typestring()} \autorefph{sec:iftypestring} \\
+%        {\bf primtypestring()} \autorefph{sec:ifprimtypestring} \\
+%        {\bf targtoimtype()} \autorefph{sec:iftargtoimtype} \\
+%        {\bf typeval()} \autorefph{sec:iftypeval} \\
+%        {\bf typevalstring()} \autorefph{sec:iftypevalstr} \\
+%        {\bf typeisequal()} \autorefph{sec:iftypeiseq} \\
 
 
 
@@ -2696,6 +2696,39 @@
         {\bf Description:} \\
         Return a string array containing the absolute paths of directories
         searched for module and source included files.
+
+
+
+
+
+    \section{inttobinstring - get a binary string representing an integer}\label{sec:ifinttobinstring}
+        
+        {\bf Call:} \\
+        inttohexstring(v, l)
+        
+        {\bf parameters:} \\
+        \begin{tabular}{| l | l | l | l |}
+        \hline
+        param  & mode & type & \\
+        \hline \hline
+        v & I & bits, int & value           \\ \hline
+        l & I & int       & minimum length  \\ \hline
+        \end{tabular}
+        
+        {\bf Parameter=argument allowed:} \\
+        No
+        
+        {\bf return mode:} \\
+        immediate
+
+        {\bf return type:} \\
+        str
+        
+        {\bf Description:} \\
+        Return a binary string which represents the value of the first
+        argument. The first argument must be type bits or int. The optional
+        second argument gives the minimum length of the string, the result being
+        zero-padded on the left if necessary.
 
 
 

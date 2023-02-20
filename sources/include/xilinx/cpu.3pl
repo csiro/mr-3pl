@@ -574,8 +574,9 @@ CPU_API () {
             println(interrupt_map[eventname]);
             texit();
         }
-        interrupt_map[eventname] = interrupt_n++;
+        interrupt_map[eventname] = interrupt_n;
         sigint_ptr->(interrupt_n, sig);
+        interrupt_n++;
     }
 
     //

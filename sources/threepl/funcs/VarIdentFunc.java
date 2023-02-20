@@ -30,7 +30,7 @@ public class VarIdentFunc extends InbuiltFunc implements Constant {
         
         if (args.getNode(0) instanceof ClassFuncCallNode) {
             // functions such as getclock(), currentclock(), prevclock()
-            Val val = args.getVal(0);
+            Val val = args.getVal(0, true);
             var = val.getVar();
         } else {
             Ref ref = args.getRef(0, "varident()");

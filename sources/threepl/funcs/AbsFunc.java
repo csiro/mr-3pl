@@ -27,7 +27,7 @@ public class AbsFunc extends InbuiltFunc implements Constant {
         if (args.size() != 1)
             throw new ExEx("abs() - must have one argument", loc);
         
-        Val val = args.getVal(0);
+        Val val = args.getVal(0, true);
         switch (val.getMode()) {
         case IMMEDIATE:
             switch (val.getPrimType()) {

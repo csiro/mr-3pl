@@ -35,7 +35,7 @@ public class VarListFunc extends InbuiltFunc implements Constant {
             throw new ExEx("varident() must have zero or one arguments", loc);
         
         if (args.size() == 1) {
-            Val val = args.getVal(0);
+            Val val = args.getVal(0, true);
             ios = val.getSingleLval(loc);
         }
         

@@ -47,19 +47,19 @@ public class TypeIsEqualFunc extends InbuiltFunc implements Constant {
             var0 = args.getRef(0, "typeisequal() - ").getVar();
             type0 = var0.getType();
         } else {
-            val0 = args.getVal(1);
+            val0 = args.getVal(1, true);
             type0 = val0.getType();
         }
         if (n1 instanceof VarNode) {
             var1 = args.getRef(1, "typeisequal() - ").getVar();
             type1 = var1.getType();
         } else {
-            val1 = args.getVal(1);
+            val1 = args.getVal(1, true);
             type1 = val1.getType();
         }
 
         if (args.size() == 3) {
-            Val     val3 = args.getVal(2);
+            Val     val3 = args.getVal(2, false);
             strict = val3.getSingleLval(loc);
         }
         

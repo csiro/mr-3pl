@@ -25,7 +25,7 @@ public class DimensionsFunc extends InbuiltFunc implements Constant {
         
         //Ref ref = args.getRef(0, "dimensions()");
         //int dims = ref.getDimDes().length;
-        Val val = args.getVal(0);
+        Val val = args.getVal(0, true);
         int[]   dim_des = val.getDimDes();
         if (dim_des == null)
             return(new Val(0, loc));

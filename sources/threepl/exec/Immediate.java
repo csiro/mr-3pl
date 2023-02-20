@@ -712,7 +712,7 @@ public final class Immediate extends Var implements Constant, TDEConstants {
                 TreeMap<String,Var> vars = sc.getVars();
                 cvar = vars.get(field);
                 if (cvar == null)
-                    throw new ExEx("variable '" + field + "' not found in \"class\" variable '" + name + "'");
+                    throw new ExEx("variable '" + field + "' not found in \"class\" variable '" + name + "'", loc);
                 sfl.incrementScanIndex();   // increment index as class field has been used
                 sfl.trimToScanIndex();      // trim off field item from list
                 

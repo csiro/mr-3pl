@@ -122,7 +122,7 @@ public final class NodeList extends ArrayList<Node> implements Constant {
         if (val == null)
             return(null);
         QueueRefs    p = val.getQueues();
-        p.unbufferedQueues(aupr, "", loc);
+        p.unbufferedQueues(aupr, "unbuffered queue not allowed", loc);
         return(val);
     }
     

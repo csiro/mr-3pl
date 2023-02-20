@@ -42,7 +42,7 @@ public class WidthFunc extends InbuiltFunc implements Constant {
                 return(new Val(ref.getWordSpec().getWidth(0), loc));
             val = ref.getVal(loc);
         } else        
-            val = args.getVal(0);
+            val = args.getVal(0, true);
 
         if (val.getPrimType() == Ptype.LOG)
             return(new Val(1, loc));

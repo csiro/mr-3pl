@@ -1001,7 +1001,7 @@ public class QueueRefs implements Constant, TDEConstants {
             return(false);
         if (allow_one && ((ubrqueues + ubwqueues) == 1))
             return(true);
-        throw new ExEx(mess, loc);
+        throw new ExEx("multiple unbuffered queues", loc);
     }
     
     /**

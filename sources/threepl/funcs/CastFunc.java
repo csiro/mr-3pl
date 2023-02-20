@@ -55,7 +55,7 @@ public class CastFunc extends InbuiltFunc implements Constant {
             throw new ExEx("cast() must have 2 input arguments", loc);
         
         // expression value
-        Val     val = args.getVal(0);
+        Val     val = args.getVal(0, true);
         
         // type
         // If a variable, see if it is type 'type', otherwise

@@ -30,7 +30,7 @@ public class DimensionFunc extends InbuiltFunc implements Constant {
             throw new ExEx("dimension() must have one or two arguments", loc);
 
         
-        Val     val = args.getVal(0);
+        Val     val = args.getVal(0, true);
 
         if (val.getPrimType() == Ptype.MAP) {
             if ((args.size() != 1))

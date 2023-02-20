@@ -38,7 +38,7 @@ public class ArrayTypeFunc extends InbuiltFunc implements Constant {
             Ref     ref = args.getRef(0, "arraytype()");
             t = ref.getType().getArrayType();
         } else {
-            Val val = args.getVal(0);
+            Val val = args.getVal(0, true);
             t = val.getType().getArrayType();
         }
         if (t == null)

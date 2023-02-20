@@ -36,12 +36,12 @@ public class TypeFunc extends InbuiltFunc implements Constant {
                 return(new Val(new Type(Ptype.EMPTY, 0), loc));
             Ref ref = args.getRef(0, "type()");
             if ((ref.getPrimType() == Ptype.LIST) || (ref.getPrimType() == Ptype.MAP)) {
-                Val val = args.getVal(0);
+                Val val = args.getVal(0, true);
                 return(new Val(val.getType(), loc));
             }
             return(new Val(ref.getType(), loc));
         } else {
-            Val val = args.getVal(0);
+            Val val = args.getVal(0, true);
             return(new Val(val.getType(), loc));
         }
     }

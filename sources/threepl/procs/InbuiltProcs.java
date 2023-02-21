@@ -21,6 +21,9 @@ public class InbuiltProcs {
      * and whose values are the procedure classes.
      * The explicit procedure identifiers and associated classes are coded
      * into the body of this constructor.
+     *
+     * Commented-out functions are obscure, obsolete, illconsidered or
+     * were temporarily expedient.
      */
     public InbuiltProcs () {
         procs = new TreeMap<String, InbuiltProc>();
@@ -82,7 +85,7 @@ public class InbuiltProcs {
         procs.put("println", new PrintlnProc());
         procs.put("priority", new PriorityProc());
         procs.put("priunlock", new PriUnlockProc());
-        procs.put("pulse", new PulseProc());
+//        procs.put("pulse", new PulseProc());
         procs.put("ref", new RefProc());
         procs.put("remove", new RemoveProc());
         procs.put("removedirective", new RemoveDirectiveProc());

@@ -2160,46 +2160,46 @@
 
 
 
-    \section{first - get the first value of an enum}\label{sec:iffirst}
-        
-        {\bf Call:} \\
-        first(v)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & enum or type & enumerated type value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        enum
-        
-        {\bf Description:} \\
-        Returns the first value of an enumerated type. The first value
-        is the first in the order the values had as arguments to
-        the procedure which created the enum type.
-        
-        The argument may be either an enum type variable or a variable
-        which is an enum type, e.g. for the following variables -
-        \begin{lstlisting}[gobble=8, language=threepl]
-           enum(e, val1, val2, val3);
-           static(s, e);
-        \end{lstlisting}
-        the argument to {\bf first()} could be either {\bf e} or {\bf s}
-        and the result would be the value labelled by identifier {\bf val1}
-        of enumerated type {\bf e} in immediate mode.
-        
-        The argument may be immediate, value, selectvalue, static or queue mode.
-        The returned result is immediate mode and the type is the same as the
-        argument.
+%    \section{first - get the first value of an enum}\label{sec:iffirst}
+%        
+%        {\bf Call:} \\
+%        first(v)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & enum or type & enumerated type value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        enum
+%        
+%        {\bf Description:} \\
+%        Returns the first value of an enumerated type. The first value
+%        is the first in the order the values had as arguments to
+%        the procedure which created the enum type.
+%        
+%        The argument may be either an enum type variable or a variable
+%        which is an enum type, e.g. for the following variables -
+%        \begin{lstlisting}[gobble=8, language=threepl]
+%           enum(e, val1, val2, val3);
+%           static(s, e);
+%        \end{lstlisting}
+%        the argument to {\bf first()} could be either {\bf e} or {\bf s}
+%        and the result would be the value labelled by identifier {\bf val1}
+%        of enumerated type {\bf e} in immediate mode.
+%        
+%        The argument may be immediate, value, selectvalue, static or queue mode.
+%        The returned result is immediate mode and the type is the same as the
+%        argument.
 
 
     \section{floatisnegative - sign of target float}\label{sec:iffloatisnegative}
@@ -3008,46 +3008,46 @@
         used to signal on the cycle a queue is read.
 
 
-    \section{last - get the last value of an enum}\label{sec:iflast}
-        
-        {\bf Call:} \\
-        last(v)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & enum or type & enumerated type value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        enum
-        
-        {\bf Description:} \\
-        Returns the last value of an enumerated type. The last value
-        is the last in the order the values had as arguments to
-        the procedure which created the enum type.
-        
-        The argument may be either an enum type variable or a variable
-        which is that enum type, e.g. for the following variables -
-        \begin{lstlisting}[gobble=8, language=threepl]
-           enum(e, val1, val2, val3);
-           static(s, e);
-        \end{lstlisting}
-        the argument to {\bf first()} could be either {\bf e} or {\bf s}
-        and the result would be the value labelled by identifier {\bf val3}
-        of enumerated type {\bf e} in immediate mode.
-        
-        The argument may be immediate, value, selectvalue, static or queue mode.
-        The returned result is immediate mode and the type is the same as the
-        argument.
+%    \section{last - get the last value of an enum}\label{sec:iflast}
+%        
+%        {\bf Call:} \\
+%        last(v)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & enum or type & enumerated type value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        enum
+%        
+%        {\bf Description:} \\
+%        Returns the last value of an enumerated type. The last value
+%        is the last in the order the values had as arguments to
+%        the procedure which created the enum type.
+%        
+%        The argument may be either an enum type variable or a variable
+%        which is that enum type, e.g. for the following variables -
+%        \begin{lstlisting}[gobble=8, language=threepl]
+%           enum(e, val1, val2, val3);
+%           static(s, e);
+%        \end{lstlisting}
+%        the argument to {\bf first()} could be either {\bf e} or {\bf s}
+%        and the result would be the value labelled by identifier {\bf val3}
+%        of enumerated type {\bf e} in immediate mode.
+%        
+%        The argument may be immediate, value, selectvalue, static or queue mode.
+%        The returned result is immediate mode and the type is the same as the
+%        argument.
  
 
     \section{listattributes - get a list of variable attributes}\label{sec:iflistattrs}
@@ -3642,42 +3642,42 @@
         "clock"         \\ \hline
         \end{tabular}
 
-    \section{next - get the next value of an enum}\label{sec:ifnext}
-        
-        {\bf Call:} \\
-        next(v)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & enum & enumerated type value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate or value
-
-        {\bf return type:} \\
-        enum
-        
-        {\bf Description:} \\
-        Returns the next value of an enumerated type. The next value
-        is the successor in the order the values had as arguments to
-        the procedure which created the enum type.
-        
-        If the argument is immediate mode the returned result is immediate
-        mode and the type is the same as the argument. If there is no next
-        value a fatal error occurs.
-        
-        If the argument is a target mode (value, selectvalue, static or queue)
-        the returned result is value mode and the type is the same as the
-        argument. For an argument which is a queue the result will only be
-        available when the queue is available. If there is no next
-        value a value with an ordinal of 0 is returned.
+%    \section{next - get the next value of an enum}\label{sec:ifnext}
+%        
+%        {\bf Call:} \\
+%        next(v)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & enum & enumerated type value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate or value
+%
+%        {\bf return type:} \\
+%        enum
+%        
+%        {\bf Description:} \\
+%        Returns the next value of an enumerated type. The next value
+%        is the successor in the order the values had as arguments to
+%        the procedure which created the enum type.
+%        
+%        If the argument is immediate mode the returned result is immediate
+%        mode and the type is the same as the argument. If there is no next
+%        value a fatal error occurs.
+%        
+%        If the argument is a target mode (value, selectvalue, static or queue)
+%        the returned result is value mode and the type is the same as the
+%        argument. For an argument which is a queue the result will only be
+%        available when the queue is available. If there is no next
+%        value a value with an ordinal of 0 is returned.
 
 
     \section{nullarg - omit an unmatched parameter}\label{sec:ifnullarg}
@@ -3725,31 +3725,31 @@
         turn be passed as the argument to another call.
 
 
-    \section{numfields - get the number of fields in a struct}\label{sec:ifnumfields}
-        
-        {\bf Call:} \\
-        numfields(v)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & struct & variable  \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        int
-        
-        {\bf Description:} \\
-        This function returns the number of fields in the struct given as the
-        argument.
+%    \section{numfields - get the number of fields in a struct}\label{sec:ifnumfields}
+%        
+%        {\bf Call:} \\
+%        numfields(v)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & struct & variable  \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        int
+%        
+%        {\bf Description:} \\
+%        This function returns the number of fields in the struct given as the
+%        argument.
 
 
     \section{numinargs - number of input arguments}\label{sec:ifnuminargs}
@@ -4011,41 +4011,41 @@
         "int".
  
 
-    \section{prev - get the previous value of an enum}\label{sec:ifprev}
-        
-        {\bf Call:} \\
-        prev(v)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & enum & enumerated type value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate or value
-
-        {\bf return type:} \\
-        enum
-        {\bf Description:} \\
-        Returns the previous value of an enumerated type. The previous value
-        is the predecessor in the order the values had as arguments to
-        the procedure which created the enum type.
-        
-        If the argument is immediate mode the returned result is immediate
-        mode and the type is the same as the argument. If there is no previous
-        value a fatal error occurs.
-        
-        If the argument is a target mode (value, selectvalue, static or queue)
-        the returned result is value mode and the type is the same as the
-        argument. For an argument which is a queue the result will only be
-        available when the queue is available. If there is no previous
-        value a value with an ordinal of 0 is returned.
+%    \section{prev - get the previous value of an enum}\label{sec:ifprev}
+%        
+%        {\bf Call:} \\
+%        prev(v)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & enum & enumerated type value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate or value
+%
+%        {\bf return type:} \\
+%        enum
+%        {\bf Description:} \\
+%        Returns the previous value of an enumerated type. The previous value
+%        is the predecessor in the order the values had as arguments to
+%        the procedure which created the enum type.
+%        
+%        If the argument is immediate mode the returned result is immediate
+%        mode and the type is the same as the argument. If there is no previous
+%        value a fatal error occurs.
+%        
+%        If the argument is a target mode (value, selectvalue, static or queue)
+%        the returned result is value mode and the type is the same as the
+%        argument. For an argument which is a queue the result will only be
+%        available when the queue is available. If there is no previous
+%        value a value with an ordinal of 0 is returned.
 
 
     \section{prevclock - get the previous clock variable}\label{sec:ifprevclock}

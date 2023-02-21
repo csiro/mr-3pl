@@ -3367,59 +3367,59 @@
 
 
 
-    \section{pulse - generate a pulse - DEPRECATED!}\label{sec:ippulse}
-        
-        
-        {\bf Call:} \\
-        pulse(v \verb'<-' o);
-        
-        {\bf Output parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param & mode & type & \\
-        \hline \hline
-        v & V & log & value carrying the pulse \\ \hline
-        \end{tabular}
-        
-        {\bf Input parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param & mode & type & \\
-        \hline \hline
-        o & I & log & if true, OR with previous value \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf In-line target execution:} \\
-        yes
-        
-        {\bf Description:} \\
-        Pulse a logical value variable for one clock cycle when this statement
-        executes. The value is true for the clock cycle leading up to the
-        clock edge on which execution occurs.
-        
-        This procedure has been replaced by the inbuilt
-        procedure {\bf assert()}(\autorefph{sec:ipassert}). The latter
-        procedure is identical in function and the name was changed as it was
-        felt that 'pulse' was too hardware-oriented. In addition this procedure
-        may be executed on several successive clock cycles in which case it
-        really could be viewed as a level rather than a pulse. The important
-        thing is that it is asserted true in time for the next clock edge.
-        
-        If the input argument is provided and is true the output value variable
-        will be assigned the OR of its previous value and the execution pulse.
-        If it has no previous assigned value it is assigned the execution pulse.
-        Using this optional input argument a signal pulsed from more than one
-        place can be generated. {\bf Note: when execution pulses are ORed in
-        this way, use of the value of the variable must follow the last call to
-        pulse() since each call re-assigns the value variable!}
-        
-        Note that if the ORing option is not selected and multiple calls to
-        {\bf pulse()} are made with the same output argument, each call will
-        re-assign the output value variable, which may be what is wanted or
-        may not!
+%    \section{pulse - generate a pulse - DEPRECATED!}\label{sec:ippulse}
+%        
+%        
+%        {\bf Call:} \\
+%        pulse(v \verb'<-' o);
+%        
+%        {\bf Output parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param & mode & type & \\
+%        \hline \hline
+%        v & V & log & value carrying the pulse \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Input parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param & mode & type & \\
+%        \hline \hline
+%        o & I & log & if true, OR with previous value \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf In-line target execution:} \\
+%        yes
+%        
+%        {\bf Description:} \\
+%        Pulse a logical value variable for one clock cycle when this statement
+%        executes. The value is true for the clock cycle leading up to the
+%        clock edge on which execution occurs.
+%        
+%        This procedure has been replaced by the inbuilt
+%        procedure {\bf assert()}(\autorefph{sec:ipassert}). The latter
+%        procedure is identical in function and the name was changed as it was
+%        felt that 'pulse' was too hardware-oriented. In addition this procedure
+%        may be executed on several successive clock cycles in which case it
+%        really could be viewed as a level rather than a pulse. The important
+%        thing is that it is asserted true in time for the next clock edge.
+%        
+%        If the input argument is provided and is true the output value variable
+%        will be assigned the OR of its previous value and the execution pulse.
+%        If it has no previous assigned value it is assigned the execution pulse.
+%        Using this optional input argument a signal pulsed from more than one
+%        place can be generated. {\bf Note: when execution pulses are ORed in
+%        this way, use of the value of the variable must follow the last call to
+%        pulse() since each call re-assigns the value variable!}
+%        
+%        Note that if the ORing option is not selected and multiple calls to
+%        {\bf pulse()} are made with the same output argument, each call will
+%        re-assign the output value variable, which may be what is wanted or
+%        may not!
         
 
 

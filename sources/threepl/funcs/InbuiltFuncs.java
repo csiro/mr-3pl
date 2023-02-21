@@ -22,6 +22,9 @@ public class InbuiltFuncs {
      * and whose values are the function classes.
      * The explicit function identifiers and associated classes are coded
      * into the body of this constructor.
+     *
+     * Commented-out functions are obscure, obsolete, illconsidered or
+     * were temporarily expedient.
      */
     public InbuiltFuncs () {
         funcs = new TreeMap<String, InbuiltFunc>();
@@ -65,7 +68,7 @@ public class InbuiltFuncs {
         funcs.put("exists", new ExistsFunc());
         funcs.put("exp", new ExpFunc());
         funcs.put("find", new FindFunc());
-        funcs.put("first", new FirstFunc());
+//        funcs.put("first", new FirstFunc());
         funcs.put("floatisnegative", new FloatIsNegativeFunc());
         funcs.put("floor", new FloorFunc());
         funcs.put("format", new FormatFunc());
@@ -89,7 +92,7 @@ public class InbuiltFuncs {
         funcs.put("isstruct", new IsStructFunc());
         funcs.put("istargconst", new IsTargConstFunc());
         funcs.put("iswritten", new IsWrittenFunc());
-        funcs.put("last", new LastFunc());
+//        funcs.put("last", new LastFunc());
         funcs.put("listattributes", new ListAttributesFunc());
         funcs.put("listvars", new ListVarsFunc());
         funcs.put("location", new LocationFunc());
@@ -106,9 +109,9 @@ public class InbuiltFuncs {
         funcs.put("minvalue", new MinValueFunc());
         funcs.put("mod", new ModFunc());
         funcs.put("mode", new ModeFunc());
-        funcs.put("next", new NextFunc());
+//        funcs.put("next", new NextFunc());
         funcs.put("nullarg", new NullArgFunc());
-        funcs.put("numfields", new NumFieldsFunc());
+//        funcs.put("numfields", new NumFieldsFunc());
         funcs.put("numinargs", new NumInArgsFunc());
         funcs.put("numoutargs", new NumOutArgsFunc());
         funcs.put("numwords", new NumWordsFunc());
@@ -117,7 +120,7 @@ public class InbuiltFuncs {
         funcs.put("period", new PeriodFunc());
         funcs.put("pow", new PowFunc());
         funcs.put("portdomain", new PortDomainFunc());
-        funcs.put("prev", new PrevFunc());
+//        funcs.put("prev", new PrevFunc());
         funcs.put("prevclock", new PrevClockFunc());
         funcs.put("prielse", new PriElseFunc());
         funcs.put("primtypestring", new PrimTypeStringFunc());

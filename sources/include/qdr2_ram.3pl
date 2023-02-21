@@ -209,7 +209,7 @@ qdr2_ram (
                 queue(p, read_in_struct);
                 sync when (!full) {
                     p <<- mev.in->;
-                    pulse(pre_write <-);
+                    assert(pre_write <-);
                     mev.in = &p;
                 }
                 reads[mkey] = mev;
@@ -270,7 +270,7 @@ qdr2_ram (
             write_addr := ?in.body.address;
             write_data := ?in.body.data;
             sync {
-                pulse(write <-);
+                assert(write <-);
                 null <<- in;
             }
 
@@ -294,7 +294,7 @@ qdr2_ram (
 
             read_addr := ?in.body.address;
             sync {
-                pulse(read <-);
+                assert(read <-);
                 null <<- in;
             }
 
@@ -353,7 +353,7 @@ qdr2_ram (
                 else
                     out <<- cast(cmemoryread(mem, 1, raddr), type(out));
                 raddr++;
-                pulse(read <-);
+                assert(read <-);
             }
 
             rcount <- addsub(rcount, 1, write, read ^^ write);

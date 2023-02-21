@@ -43,8 +43,8 @@ public class InbuiltFuncs {
         funcs.put("cast", new CastFunc());
         funcs.put("ceil", new CeilFunc());
         funcs.put("cmemoryread", new CmemoryReadFunc());
-        funcs.put("componentpointer", new ComponentPointerFunc());
-        funcs.put("componenttype", new ComponentTypeFunc());
+//        funcs.put("componentpointer", new ComponentPointerFunc());
+//        funcs.put("componenttype", new ComponentTypeFunc());
         funcs.put("cos", new CosFunc());
         funcs.put("copy", new CopyFunc());
         funcs.put("cspan", new CSpanFunc());
@@ -71,8 +71,8 @@ public class InbuiltFuncs {
         funcs.put("format", new FormatFunc());
         funcs.put("frequency", new FrequencyFunc());
         funcs.put("get", new GetFunc());
-        funcs.put("getfield", new GetFieldFunc());
-        funcs.put("hasfield", new HasFieldFunc());
+//        funcs.put("getfield", new GetFieldFunc());
+//        funcs.put("hasfield", new HasFieldFunc());
         funcs.put("hasnext", new HasNextFunc());
         funcs.put("hasqueuereads", new HasQueueReadsFunc());
         funcs.put("hasprev", new HasPrevFunc());

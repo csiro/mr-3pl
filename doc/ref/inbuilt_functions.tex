@@ -5,6 +5,45 @@
     \index{function!inbuilt}
     The following functions are built into the compiler. User functions must
     not use identifiers that conflict with these.
+    
+    The following abbreviations are used to denote modes -
+
+    \begin{tabular}{| l | l |}
+    \hline
+    I  & immediate                      \\ \hline
+    V  & value                          \\ \hline
+    SV & selectvalue                    \\ \hline
+    S  & static                         \\ \hline
+    Q  & queue                          \\ \hline
+    CM & combinatorial output memory    \\ \hline
+    RM & registered output memory       \\ \hline
+    PR & priority                       \\ \hline
+    IN & input                          \\ \hline
+    O  & output                         \\ \hline
+    C  & clock                          \\ \hline
+    \end{tabular}
+    
+    The following abbreviations are used to denote types -
+
+    \begin{tabular}{| l | l |}
+    \hline
+    bits  & bits                                                    \\ \hline
+    uint  & unsigned integer                                        \\ \hline
+    int   & integer or unsigned integer                             \\ \hline
+    fixed & fixed point                                             \\ \hline
+    float & floating point                                          \\ \hline
+    log   & logical (boolean)                                       \\ \hline
+    str   & string                                                  \\ \hline
+    enum  & enumerated type                                         \\ \hline
+    type  & type                                                    \\ \hline
+    file  & file                                                    \\ \hline
+    map   & map                                                     \\ \hline
+    list  & list                                                    \\ \hline
+    any   & any type                                                \\ \hline
+    prim  & a primitive type                                        \\ \hline
+    comp  & a compound type (arrays, structs or any combination)    \\ \hline
+    []    & array of type                                           \\ \hline
+    \end{tabular}
 
     Functions with 'yes' to 'Parameter=argument allowed' can have arguments
     matched to parameters by position in the argument list or by
@@ -904,98 +943,99 @@
 
 
 
-    \section{componentpointer - get a pointer to a variable component}\label{sec:ifcomponentpointer}
-        
-        {\bf Call:} \\
-        componentpointer(v, i)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & S & any & static variable   \\ \hline
-        i & I & int or uint & index     \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
+%    \section{componentpointer - get a pointer to a variable component}\label{sec:ifcomponentpointer}
+%        
+%        {\bf Call:} \\
+%        componentpointer(v, i)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & V S Q & any & static variable   \\ \hline
+%        i & I & int or uint & index     \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        \verb'->'
+%        
+%        {\bf Description:} \\
+%        Returns a pointer to a component of a value, static or queue mode
+%        variable. This is provided to allow access to a single component of a
+%        variable of compound type which has nested structs and/or arrays by
+%        means of a single integer index instead of field names and arrays
+%        subscripts. It has two arguments. The first argument is a variable
+%        reference, i.e. it may have fields or subscripts. The second argument is
+%        an integer index. If the variable type is primitive the index must be
+%        zero. The index must be non-negative and less than the number of
+%        components in the type.
+%        
+%        The increment and decrement operators cannot be used on a dereferenced
+%        pointer returned from componentpointer().
+%        
+%        This function is a bit obscure but is intended for assigning or evaluating value, static or
+%        queue mode variable fields or array members from outside the FPGA, e.g.
+%        from an attached CPU. Requests to assign to variable fields or array
+%        members can be transmitted to the FPGA using simple integer indices to
+%        select via an array of pointers the components to be referenced or
+%        assigned.
+%        
+%        When determining the index value to be used the following rules are
+%        pertinent -
+%        \blist
+%        \item   struct fields are packed in the order they are listed in the
+%                type
+%        \item   arrays are packed with last subscript varying most rapidly
+%        \blend
+%        
+%        See also {\bf componenttype()} \autorefph{sec:ifcomponenttype}.
 
-        {\bf return type:} \\
-        \verb'->'
-        
-        {\bf Description:} \\
-        Returns a pointer to a component of a value, static or queue mode
-        variable. This is provided to allow access to a single component of a
-        variable of compound type which has nested structs and/or arrays by
-        means of a single integer index instead of field names and arrays
-        subscripts. It has two arguments. The first argument is a variable
-        reference, i.e. it may have fields or subscripts. The second argument is
-        an integer index. If the variable type is primitive the index must be
-        zero. The index must be non-negative and less than the number of
-        components in the type.
-        
-        The increment and decrement operators cannot be used on a dereferenced
-        pointer returned from componentpointer().
-        
-        This function is intended for assigning or evaluating value, static or
-        queue mode variable fields or array members from outside the FPGA, e.g.
-        from an attached CPU. A request to assign to a variable field or array
-        member can be transmitted to the FPGA using a simple integer index to
-        select the component to be assigned.
-        
-        When determining the index value to be used the following rules are
-        pertinent -
-        \blist
-        \item   struct fields are packed in the order they are listed in the
-                type
-        \item   arrays are packed with last subscript varying most rapidly
-        \blend
-        
-        See also {\bf componenttype()} \autorefph{sec:ifcomponenttype}.
 
 
 
-
-    \section{componenttype - get the type of a variable component}\label{sec:ifcomponenttype}
-        
-        {\bf Call:} \\
-        componenttype(v, i)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & S & any & static variable   \\ \hline
-        i & I & int or uint & index     \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        type
-        
-        {\bf Description:} \\
-        Returns the type of a component of a value, static or queue mode
-        variable. This is provided to allow access to a single component of a
-        variable of compound type which has nested structs and/or arrays by
-        means of a single integer index instead of field names and arrays
-        subscripts. It has two arguments. The first argument is a variable
-        reference, i.e. it may have fields or subscripts. The second argument is
-        an integer index. If the variable type is primitive the index must be
-        zero. The index must be non-negative and less than the number of
-        components in the type.
-        
-        This function is a companion to inbuilt function
-        {\bf componentpointer()} \autorefph{sec:ifcomponentpointer}.
+%    \section{componenttype - get the type of a variable component}\label{sec:ifcomponenttype}
+%        
+%        {\bf Call:} \\
+%        componenttype(v, i)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & S & any & static variable   \\ \hline
+%        i & I & int or uint & index     \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        type
+%        
+%        {\bf Description:} \\
+%        Returns the type of a component of a value, static or queue mode
+%        variable. This is provided to allow access to a single component of a
+%        variable of compound type which has nested structs and/or arrays by
+%        means of a single integer index instead of field names and arrays
+%        subscripts. It has two arguments. The first argument is a variable
+%        reference, i.e. it may have fields or subscripts. The second argument is
+%        an integer index. If the variable type is primitive the index must be
+%        zero. The index must be non-negative and less than the number of
+%        components in the type.
+%        
+%        This function is a companion to inbuilt function
+%        {\bf componentpointer()} \autorefph{sec:ifcomponentpointer}.
 
 
 
@@ -2327,32 +2367,32 @@
 
 
 
-    \section{getfield - get the nth field from a struct}\label{sec:ifgetfield}
-        
-        {\bf Call:} \\
-        getfield(v, n)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & struct & variable  \\ \hline
-        n & I          & int    & field     \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        mode of the struct
-
-        {\bf return type:} \\
-        type of the field
-        
-        {\bf Description:} \\
-        This function returns the value of the field specified by the second
-        argument from the struct given as the first argument.
+%    \section{getfield - get the nth field from a struct}\label{sec:ifgetfield}
+%        
+%        {\bf Call:} \\
+%        getfield(v, n)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & struct & variable  \\ \hline
+%        n & I          & int    & field     \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        mode of the struct
+%
+%        {\bf return type:} \\
+%        type of the field
+%        
+%        {\bf Description:} \\
+%        This function returns the value of the field specified by the second
+%        argument from the struct given as the first argument.
 
 
     \section{hadeof - had EOF on the last file read}\label{sec:ifhadeof}
@@ -2382,49 +2422,49 @@
         end-of-file.
 
 
-    \section{hasfield - check if a struct has a specific field}\label{sec:ifhasfield}
-        
-        {\bf Call:} \\
-        hasfield(v, f)
-        
-        {\bf parameters:} \\
-        \begin{tabular}{| l | l | l | l |}
-        \hline
-        param  & mode & type & \\
-        \hline \hline
-        v & I V SV S Q & - & variable  \\ \hline
-        f & -          & - & field     \\ \hline
-        \end{tabular}
-        
-        {\bf Parameter=argument allowed:} \\
-        No
-        
-        {\bf return mode:} \\
-        immediate
-
-        {\bf return type:} \\
-        log
-        
-        {\bf Description:} \\
-        This function returns true if the field identifier given by the second
-        argument is included in the struct given as the first argument.
-        The first argument may be a struct variable (which is a variable of type
-        {\bf type}) or it may be an immediate or target variable that is a
-        struct type. For example in the code -
-        \begin{lstlisting}[gobble=8, language=threepl]
-           struct(s,
-               f1, "log",
-               f2, "int"
-           );
-           var(v, s);
-           ...hasfield(s, f1).....
-           ...hasfield(v, f1).....
-        \end{lstlisting}
-        the first argument to {\bf hasfield()} can be either the struct
-        variable itself or the variable that is the struct type.
-        
-        If the first argument is not an appropriate type {\bf hasfield()}
-        will simply return false.
+%    \section{hasfield - check if a struct has a specific field}\label{sec:ifhasfield}
+%        
+%        {\bf Call:} \\
+%        hasfield(v, f)
+%        
+%        {\bf parameters:} \\
+%        \begin{tabular}{| l | l | l | l |}
+%        \hline
+%        param  & mode & type & \\
+%        \hline \hline
+%        v & I V SV S Q & - & variable  \\ \hline
+%        f & -          & - & field     \\ \hline
+%        \end{tabular}
+%        
+%        {\bf Parameter=argument allowed:} \\
+%        No
+%        
+%        {\bf return mode:} \\
+%        immediate
+%
+%        {\bf return type:} \\
+%        log
+%        
+%        {\bf Description:} \\
+%        This function returns true if the field identifier given by the second
+%        argument is included in the struct given as the first argument.
+%        The first argument may be a struct variable (which is a variable of type
+%        {\bf type}) or it may be an immediate or target variable that is a
+%        struct type. For example in the code -
+%        \begin{lstlisting}[gobble=8, language=threepl]
+%           struct(s,
+%               f1, "log",
+%               f2, "int"
+%           );
+%           var(v, s);
+%           ...hasfield(s, f1).....
+%           ...hasfield(v, f1).....
+%        \end{lstlisting}
+%        the first argument to {\bf hasfield()} can be either the struct
+%        variable itself or the variable that is the struct type.
+%        
+%        If the first argument is not an appropriate type {\bf hasfield()}
+%        will simply return false.
  
 
     \section{hasnext - is there a next value of an enum}\label{sec:ifhasnext}

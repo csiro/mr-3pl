@@ -159,11 +159,11 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
     * @param   loc is the source file location
     * @return  the write availability signal
     */
-   public TDEVar getWriteAvailSig (SrcLoc loc) {
-       if (indass)
-           return(((Queue)indirect).getWriteAvailSig(loc));
-       return(wavsig);
-   }
+    public TDEVar getWriteAvailSig (SrcLoc loc) {
+        if (indass)
+            return(((Queue)indirect).getWriteAvailSig(loc));
+        return(wavsig);
+    }
     
     /**
      * Get the read availability signal for this queue for a destination module.
@@ -564,6 +564,11 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
         bufsize = i;
         attributes.put("buffersize", new Val(i, loc));
         attributes.put("depth", new Val(i, loc));
+        if (i == 0) {   // an unbuffered queue?
+            attributes.put("ignoremodules", new Val(true, loc));
+            ignore_modules = true;
+        }
+
     }
     
     /**
@@ -1168,27 +1173,7 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
         // connect the queue .NE and .POP to the module .NE and .POP.
         int         dests = pops.entrySet().size();
         Iterator<?> itm = pops.entrySet().iterator();
-        if (dests == 1) {
-            // Connect pop from single destination module.
-            // Within the module OR together all pop
-            // signals (if more than one).
-            Map.Entry<?, ?> mem = (Map.Entry<?, ?>)itm.next();
-            HashSet<?>      a = (HashSet<?>)mem.getValue();
-            TDEVar          modav = ravails.get(mem.getKey());
-            Iterator<?>     its   = a.iterator();
-            if (a.size() == 1)
-                // only 1 read pop - connect it
-                tdelist.connect(pop, (TDEVar)its.next());
-            else {
-                TDE or = new TDE(TDEType.OR, decloc);
-                // iterate through queue read pops ORing them
-                while (its.hasNext())
-                    or.add2i((TDEVar)its.next());
-                or.add2o(pop);
-                tdelist.addTDE(or);
-            }
-            tdelist.connect(modav, ravsig);
-        } else if (bufsize == 0) {
+        if (bufsize == 0) {
             // Unbuffered queue. AND the push signals (actually they are
             // pending signals in this case) rather than using a DIVERGE TDE.
             TDE         and = new TDE(TDEType.AND, decloc);
@@ -1206,16 +1191,26 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
                 TDE             modor  = new TDE(TDEType.OR, decloc);
                 TDEVar          modav  = ravails.get(mem.getKey());
                 Iterator<?>     its    = a.iterator();
-
+    
                 while (its.hasNext()) {
                     // iterate through queue read pops.
                     TDEVar  tdev = (TDEVar)its.next();
                     modor.add2i(tdev);
                     popor.add2i(tdev);
                 }
-
+    
                 and.add2i(modor.finish());
                 tdelist.connect(modav, andout);
+            }
+            // iterate through ravails connecting any unsourced avail signals.
+            // These arise if the < operator is used in a module which
+            // does not read (pop) the queue.
+            Iterator<?>    oit = ravails.entrySet().iterator();
+            while (oit.hasNext()) {
+                Map.Entry<?, ?>   me = (Map.Entry<?, ?>)oit.next();
+                TDEVar      a = (TDEVar)me.getValue();  // avail op signal
+                if (a.getSingleSrc() == null)
+                    tdelist.connect(a, andout);
             }
             
             tdelist.addTDE(and);
@@ -1241,6 +1236,26 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
             }
             or.add2o(pop);
             tdelist.addTDE(or);
+        } else if (dests == 1) {
+            // Connect pop from single destination module.
+            // Within the module OR together all pop
+            // signals (if more than one).
+            Map.Entry<?, ?> mem = (Map.Entry<?, ?>)itm.next();
+            HashSet<?>      a = (HashSet<?>)mem.getValue();
+            TDEVar          modav = ravails.get(mem.getKey());
+            Iterator<?>     its   = a.iterator();
+            if (a.size() == 1)
+                // only 1 read pop - connect it
+                tdelist.connect(pop, (TDEVar)its.next());
+            else {
+                TDE or = new TDE(TDEType.OR, decloc);
+                // iterate through queue read pops ORing them
+                while (its.hasNext())
+                    or.add2i((TDEVar)its.next());
+                or.add2o(pop);
+                tdelist.addTDE(or);
+            }
+            tdelist.connect(modav, ravsig);
         } else {
             TDE diverge = new TDE(TDEType.DIVERGE, decloc);
 

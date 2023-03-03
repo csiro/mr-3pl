@@ -1176,31 +1176,28 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
         if (bufsize == 0) {
             // Unbuffered queue. AND the push signals (actually they are
             // pending signals in this case) rather than using a DIVERGE TDE.
-            TDE         and = new TDE(TDEType.AND, decloc);
+            Iterator<?> itp = pops.entrySet().iterator();
+            //TDE         and = new TDE(TDEType.AND, decloc);
             TDE         popor = new TDE(TDEType.OR, decloc);
-            TDEVar      andout = tdelist.signal("A", decloc);
+            //TDEVar      andout = tdelist.signal("A", decloc);
             
-            and.add2i(ravsig);
-            and.add2o(andout);
+            //and.add2i(ravsig);
+            //and.add2i(push);
+            //and.add2o(andout);
             popor.add2o(pop);
             
             while (itm.hasNext()) {
                 // iterate through modules
                 Map.Entry<?, ?> mem    = (Map.Entry<?, ?>)itm.next();
                 HashSet<?>      a      = (HashSet<?>)mem.getValue();
-                TDE             modor  = new TDE(TDEType.OR, decloc);
                 TDEVar          modav  = ravails.get(mem.getKey());
                 Iterator<?>     its    = a.iterator();
     
                 while (its.hasNext()) {
                     // iterate through queue read pops.
                     TDEVar  tdev = (TDEVar)its.next();
-                    modor.add2i(tdev);
                     popor.add2i(tdev);
                 }
-    
-                and.add2i(modor.finish());
-                tdelist.connect(modav, andout);
             }
             // iterate through ravails connecting any unsourced avail signals.
             // These arise if the < operator is used in a module which
@@ -1210,10 +1207,10 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
                 Map.Entry<?, ?>   me = (Map.Entry<?, ?>)oit.next();
                 TDEVar      a = (TDEVar)me.getValue();  // avail op signal
                 if (a.getSingleSrc() == null)
-                    tdelist.connect(a, andout);
+                    tdelist.connect(a, ravsig);
             }
             
-            tdelist.addTDE(and);
+            //tdelist.addTDE(and);
             tdelist.addTDE(popor);
         } else if (ignore_modules) {
             // If 'ignore_modules' is true then simply OR all

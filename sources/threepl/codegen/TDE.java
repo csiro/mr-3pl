@@ -1213,7 +1213,7 @@ public class TDE implements Constant, TDEConstants {
             icl("\tSTART_IN  " + (((tdev=getInput(1)) == null) ? "-" : tdev));
             if (etype != 0)
                 icl("\tBQAV      " + getInput(2));
-            if (etype == 4) {
+            if (etype == 3) {
                 icl("\tUBQWAV    " + getInput(3));
                 icl("\tUBQRAV    " + getInput(4));
             }

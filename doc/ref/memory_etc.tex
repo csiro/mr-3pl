@@ -1354,12 +1354,13 @@
         complementary write or read. When the complementary write or read occurs
         the opposite availability flag is briefly raised and then the read and
         write transaction is completed. If both the read and the write to an
-        unbuffered queue were waiting on queue availability before proceeding then
-        deadlock would occur since availability requires the initiation of the
-        other side of the transaction. The second read or write operation of a
-        transaction pair could employ normal synchronisation with other queues,
-        but to allow this would provide too many opportunities for deadlock and
-        hence the above restrictions have been imposed and enforced.
+        unbuffered queue were waiting on queue availability before proceeding
+        then deadlock would occur since availability requires the initiation of
+        the other side of the transaction. The second read or write operation of
+        a transaction pair could employ normal synchronisation with other
+        buffered queues by means of a sync block, but to allow this would
+        provide too many opportunities for deadlock and hence the above
+        restrictions have been imposed and enforced.
         
         An unbuffered queue can have its read or write availability tested using
         the \verb'>' or \verb'<' unary operators. Read availability will be true

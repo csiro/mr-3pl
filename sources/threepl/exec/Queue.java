@@ -111,7 +111,7 @@ public final class Queue extends ClockedVar implements Constant, TDEConstants {
         pops = new LinkedHashMap<Scope, LinkedHashSet<TDEVar>>();
         ravails = new LinkedHashMap<Scope, TDEVar>();
         if (words != 0) {
-            inputs = new LinkedHashMap[words];
+            inputs = (LinkedHashMap<TDEVar,eapair>[]) new LinkedHashMap[words];
             for (int i=0 ; i<words ; i++)
                 inputs[i] = new LinkedHashMap<TDEVar, eapair>();
         }

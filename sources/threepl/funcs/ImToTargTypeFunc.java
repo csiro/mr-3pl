@@ -29,6 +29,7 @@ public class ImToTargTypeFunc extends InbuiltFunc implements Constant {
         Val     val = args.getVal(0);
         if (val.getMode() != Mode.IMMEDIATE)
             throw new ExEx("imtotargtype() - argument not immediate mode", loc);
+        @SuppressWarnings("unused")
         String  si = val.getTypeString();
         String  st = null;
 

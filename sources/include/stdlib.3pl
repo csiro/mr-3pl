@@ -16,7 +16,7 @@ int(global.K29_7, 0b11111101);
 int(global.K30_7, 0b11111110);
 
 /*
-Special Code    Bits     Current RD ­ Current RD +
+Special Code    Bits     Current RD ï¿½ Current RD +
    Name      HGF EDCBA   abcdei fghj  abcdei fghj
 
    K28.0     000 11100   001111 0100  110000 1011
@@ -2808,11 +2808,11 @@ netlistcommentfromdirs () {
 }
 
 global function
-svn_version () {
+git_revision () {
     str(os);
     int(status, -2);
-    shell(os, status <- "svnversion");
+    shell(os, status <- "git describe --dirty --tags --long --always --first-parent");
     if (status != 0)
-        texit("svn_version() - shell returned non-zero status");
+        texit("git_revision() - shell returned non-zero status");
     return(substring(os, 0, strlen(os)-1)); // get rid of newline
 }

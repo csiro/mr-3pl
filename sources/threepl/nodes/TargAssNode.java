@@ -24,7 +24,7 @@ import threepl.parser.Token;
 /**
  * Target assignment -
  * <ul>
- * <li> <b>{@code:=}</b> for a value, priority or clock LHS
+ * <li> <b>{@code :=}</b> for a value, priority or clock LHS
  * <li> <b>{@code|=}</b> for a selectvalue LHS
  * <li> <b>{@code<-}</b> for a static LHS
  * <li> <b>{@code<<-}</b> for a queue LHS

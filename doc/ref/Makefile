@@ -1,7 +1,4 @@
-TOP = ../..
-include $(TOP)/common.mk
-
-all: doc.pdf
+export TEXINPUTS = .:../latex:
 
 .SUFFIXES:
 .SUFFIXES:	.tex .fig .eps .pdf
@@ -13,9 +10,6 @@ all: doc.pdf
 %.eps:	%.fig
 	@echo + creating $@ from $^
 	@fig2dev -L eps $*.fig $*.eps
-
-#%.tex:	%.fig
-#	fig2dev -L latex $*.fig $*.tex
 
 texts =         alist.tex \
                 boards_avnet_sp3a.tex \
@@ -175,36 +169,25 @@ figures =       and.pdf \
                 while.pdf \
                 xor.pdf
 
+all: manual.pdf
+
 .PHONEY: version.tex
 
-version.tex: version.tex.template
+version.tex:	version.tex.template
 	@echo + creating version information
-	@sed \
-            -e $qs?@VERSION@?$(VERSION)$(VERSIONMOD)?$q \
-            -e $qs?@SVNVERSION@?$(SVNVERSION)?$q \
-            -e $qs?@SVNAUTHOR@?$(SVNTOPAUTHOR)?$q \
-            -e $qs?@SVNREV@?$(SVNTOPREV)?$q \
-            -e $qs?@SVNDATE@?$(SVNTOPDATE)?$q\
-            -e $qs?@BUILDDATE@?$(BUILDDATE)?$q \
-            -e $qs?@BUILTBY@?$(BUILTBY)?$q \
-		< version.tex.template > version.tex
+	@ant -q -S versionfilter -buildfile ../../build.xml \
+	    -Dinputfile=$(CURDIR)/$^ > $@
 
-doc.pdf:	version.tex $(texts) $(figures)
+.PRECIOUS: $(figures)
+
+manual.pdf:	version.tex $(texts) $(figures)
 	@echo + building 3pl manual pdf
 	@-pdflatex doc
 	@-makeindex -c doc.idx
 	@-pdflatex doc
-	@rm version.tex
-	mv -f doc.pdf manual.pdf
-        
-build: all
-	@echo + copying 3pl manual pdf to doc dir
-	@mkdir -p $(BUILDDIR)/doc
-	@cp -f doc.pdf $(BUILDDIR)/doc/3plmanual.pdf
+	@rm -f version.tex
+	@mv -f doc.pdf $@
 
-.PHONY: install
-install: build
-
-.PHONY: winstall
-winstall: all
-	scp doc.pdf asgard.web.csiro.au:/data/www/htdocs/3pl/3plmanual.pdf
+clean:
+	rm -f manual.pdf version.tex $(figures)
+	rm -f doc.ind doc.ilg doc.aux doc.out doc.idx doc.toc doc.log

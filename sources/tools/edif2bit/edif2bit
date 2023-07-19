@@ -132,8 +132,8 @@ fi
 # execute the remainder of this program as a Tcl "here document"
 eval exec ${prog} <<'xyzzy'
 
-set version 10119M
-set built "2022-08-24 21:11:04"
+set version "210e812476b7e98b1958c13482d7972350c94a02"
+set built "2023-05-15 20:41:56"
 
 # -------------------------------------------------------------------------- CLO
 # $Id: clo.tcl 9015 2020-02-04 06:48:50Z kir092 $

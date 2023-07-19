@@ -1,2 +1,8 @@
-*.bak
-
+/*.bak
+/doc.ind
+/doc.ilg
+/doc.aux
+/doc.out
+/doc.idx
+/doc.toc
+/doc.log

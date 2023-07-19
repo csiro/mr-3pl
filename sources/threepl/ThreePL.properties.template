@@ -1,7 +1,0 @@
-version = @VERSION@
-revision = @SVNVERSION@
-lastChangedAuthor = @SVNAUTHOR@
-lastChangedRev = @SVNREV@
-lastChangedDate = @SVNDATE@
-buildDate = @BUILDDATE@
-builtBy = @BUILTBY@

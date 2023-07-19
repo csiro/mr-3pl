@@ -1,10 +1,10 @@
 % 3pl compiler version infomation
 
 \newcommand{\Version}{@VERSION@}
-\newcommand{\Revision}{@SVNVERSION@}
-\newcommand{\LastChangedAuthor}{@SVNAUTHOR@}
-\newcommand{\LastChangedRev}{@SVNREV@}
-\newcommand{\LastChangedDate}{@SVNDATE@}
+\newcommand{\Revision}{@REVISION@}
+\newcommand{\LastChangedAuthor}{@CHANGEAUTHOR@}
+\newcommand{\LastChangedRev}{@CHANGEREV@}
+\newcommand{\LastChangedDate}{@CHANGEDATE@}
 \newcommand{\BuildDate}{@BUILDDATE@}
 \newcommand{\BuiltBy}{@BUILTBY@}
 

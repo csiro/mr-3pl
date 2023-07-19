@@ -28,9 +28,8 @@ edif2bit: $(COMPONENTS1) $(COMPONENTS2) Makefile
 	@rm -f edif2bit
 	@cat $(COMPONENTS1) \
 	    >> edif2bit
-	@svnversion -c . \
-	    | awk -F : '{printf("set version %s\n", $$2?$$2:$$1)}' \
-	    >> edif2bit
+	@rev=`git log --no-patch --max-count=1 --pretty=format:%H .` \
+	    || rev="unknown"; echo "set version \"$$rev\"" >> edif2bit
 	@date '+set built "%Y-%m-%d %H:%M:%S"' \
 	    >> edif2bit
 	@echo \

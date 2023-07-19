@@ -14,7 +14,6 @@ import threepl.codegen.TDEVar;
 import threepl.exceptions.ExEx;
 import threepl.parser.Constant;
 import threepl.parser.SrcLoc;
-import threepl.exec.Scope;
 
 /**
  * This class represents a collection of queue references.

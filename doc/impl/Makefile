@@ -1,3 +1,5 @@
+export TEXINPUTS = .:../latex:
+
 .SUFFIXES:
 .SUFFIXES:	.tex .fig .eps .pdf
 
@@ -90,12 +92,16 @@ figures =	add.pdf \
                 whilea.pdf \
                 whileb.pdf
 
-doc:	doc.tex $(figures)
+.PRECIOUS: $(figures)
+
+implementation.pdf:	doc.tex $(figures)
 #	python unindent.py
 	pdflatex doc
 #	makeindex -c xdoc.idx
 	pdflatex doc
 #	mv -f xdoc.pdf doc.pdf
 #	rm xdoc.tex
-	mv -f doc.pdf implementation.pdf
-        
+	mv -f doc.pdf $@
+
+clean:
+	rm -f doc.aux doc.out doc.log doc.toc missfont.log implementation.pdf

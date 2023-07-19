@@ -475,7 +475,7 @@ public final class Output extends Var implements Constant, TDEConstants {
      * This method is called on completion of program interpretation at which
      * point all assignments to this variable will have been made.
      */
-    @SuppressWarnings({ "incomplete-switch", "unused" })
+    @SuppressWarnings("unused")
     public void createVar () {
         current_create = this;
         // If the simulator is to be run, add a TDEType.SIMVAR to the TDE list

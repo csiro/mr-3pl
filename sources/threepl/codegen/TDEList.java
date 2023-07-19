@@ -15,7 +15,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.TreeMap;
 
-import threepl.codegen.TDEConstants;
 import threepl.exceptions.ExEx;
 import threepl.exec.QueueRefs;
 import threepl.exec.Scope;

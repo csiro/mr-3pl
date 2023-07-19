@@ -8,6 +8,8 @@
 
 <body>
 
+<h1>Overview</h1>
+
 <p>
     3PL is a programming language for FPGAs. The language facilitiates
     the construction of data-driven processing pipelines for continuous
@@ -16,43 +18,50 @@
     executed (interpreted) sequentially. Various constructs in the language
     however, when executed, generate FPGA logic which will process data
     in parallel.
+</p>
 
 <p>
     3PL produces an EDIF netlist directly.
+</p>
 
 <p>
     3PL currently supports the Xilinx Spartan 2, Spartan 3, Virtex, Virtex E,
     Virtex 2, Virtex 2P, Virtex 4, Virtex 5 and series 7 FPGAs. The code
     generator has been designed in principle to be portable to other FPGA
     architectures but in practice this would require some months to implement.
-    
+</p>
 
+<h1>Authors</h1>
 
-<h2>Authors</h2>
 <ul>
   <li>  Paul Dunn conceived the language and Paul and Andrew Bainbridge-Smith
         developed the original (incomplete) compiler. Andrew
         wrote the original parser, did all the groundwork finding javacc,
         jjtree, jswat and jalopy and set up the make file, the directory
         structure and the javadoc framework. Paul wrote the code generator.
+  </li>
   <li>  The first version of the compiler was a good learning exercise but
         soon proved to have serious shortcomings. Paul Dunn re-implemented the
         compiler from scratch. This benefited greatly from the experience of
         the first attempt.
+  </li>
   <li>  Andrew Tulloh developed the target simulator in both compiler versions
         but this later atrophied and has been disabled, though the source code
         is still available.
+  </li>
 </ul>
 
-<h2>Related Documentation</h2>
+<h1>Related Documentation</h1>
 
 <p>
     The <a href="../../doc/ref/doc.pdf">language reference manual</a>
+</p>
 
 <p>
     An
     <a href="../../doc/impl/doc.pdf">implementation description</a>
     (this is a work in progress!)
+</p>
 
 <!-- Put @see and @since tags down here. -->
 

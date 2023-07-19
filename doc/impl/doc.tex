@@ -678,17 +678,17 @@
 
             {\bf String} version - release version number.
 
-            {\bf String} revision - subversion revision number.
+            {\bf String} revision - git revision number.
 
-            {\bf String} lastChangedAuthor - subversion author.
+            {\bf String} lastChangedAuthor - git author.
 
-            {\bf String} lastChangedRev - subversion rev.
+            {\bf String} lastChangedRev - git rev.
 
-            {\bf String} lastChangedDate - subversion date.
+            {\bf String} lastChangedDate - git date.
 
-            {\bf String} buildDate - make run date/time.
+            {\bf String} buildDate - build date/time.
 
-            {\bf String} builtBy - user that ran make.
+            {\bf String} builtBy - user that ran build.
             
             The last seven variables above are loaded as a resource bundle from file
             classes/threepl/ThreePL.properties. This might appear as -\\          
@@ -702,15 +702,13 @@
                 builtBy = jim123
             \end{verbatimtab}
             
-            This file is created by
-            sources/threepl/Makefile using a template file 
-            sources/threepl/ThreePL.properties.template which contains -\\
+            This file is created automatically during the build and contains -\\
             \begin{verbatimtab}
                 version = @VERSION@
-                revision = @SVNVERSION@
-                lastChangedAuthor = @SVNAUTHOR@
-                lastChangedRev = @SVNREV@
-                lastChangedDate = @SVNDATE@
+                revision = @REVISION@
+                lastChangedAuthor = @GITAUTHOR@
+                lastChangedRev = @GITREV@
+                lastChangedDate = @GITDATE@
                 buildDate = @BUILDDATE@
                 builtBy = @BUILTBY@
             \end{verbatimtab}

@@ -38,8 +38,10 @@ import threepl.parser.Token;
  */
 public class BlockNode extends Node implements Constant, TDEConstants {
     private Btype       btype;
+    @SuppressWarnings("unused")
     private Group       group = null;   // associated Group body for Btype.INIT
     private Scope       scope;          // temporary location to allow scope to be passed on
+    @SuppressWarnings("unused")
     private Scope       fmscope;        // file module scope
     
     /**

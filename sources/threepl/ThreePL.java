@@ -197,12 +197,12 @@ public class ThreePL implements TDEConstants {
     public static  String                       os_name = System.getProperty("os.name").toLowerCase();
     public static  String                       arch_name = System.getProperty("os.arch").toLowerCase();
     public static  String                       version;           // release version number
-    public static  String                       revision;          // subversion revision number
-    public static  String                       lastChangedAuthor; // subversion author
-    public static  String                       lastChangedRev;    // subversion rev
-    public static  String                       lastChangedDate;   // subversion date
-    public static  String                       buildDate;         // make run date/time
-    public static  String                       builtBy;           // user that ran make
+    public static  String                       revision;          // git revision string
+    public static  String                       lastChangedAuthor; // git last changed author
+    public static  String                       lastChangedRev;    // git last changed revision
+    public static  String                       lastChangedDate;   // git last changed date
+    public static  String                       buildDate;         // build date/time
+    public static  String                       builtBy;           // user that ran build
     
     static private class ExecPair {
         Val             val;
@@ -227,6 +227,12 @@ public class ThreePL implements TDEConstants {
      */
     public static void main (String args[]) throws Exception {
 
+        // ResourceBundle is normally used for internationalisation of
+        // properties files, but provides a convenient one stop shop to
+        // locate and load a properties file either from a jar file or the
+        // filesystem ... the for loop then goes through the key/value pairs
+        // and sets the static class variable with the same name as the key
+        // to the loaded value (the variable must already exist)
         ResourceBundle rb = ResourceBundle.getBundle("threepl.ThreePL");
         for (Enumeration<String> keys = rb.getKeys(); keys.hasMoreElements(); ) {
             final String key = keys.nextElement();
@@ -249,8 +255,8 @@ public class ThreePL implements TDEConstants {
 
         // Construct long version of version string.
         if (version.endsWith("M"))
-            fullVersion = version + " (devel svn " + revision + ", " +
-                                (revision.matches("^[0-9]+$") ?  lastChangedAuthor : builtBy) + ")";
+            fullVersion = version + " (devel git " + revision + ", " +
+                                (revision.endsWith("-dirty") ? lastChangedAuthor : builtBy) + ")";
         else
             fullVersion = version;
 
@@ -277,7 +283,7 @@ public class ThreePL implements TDEConstants {
         //  -T      print TDE list with TDESIGs
         //  -t      print TDE list without TDESIGs
         //  -l      suppress location in TDE list
-        //  -V      print the 3PL version number and build date as a single string
+        //  -V      print all known 3PL version and Git revision information
         //  -S      run simulator instead of code generation
         //  -s      skip post-processing
         //  -w      give warnings of integer variables truncated on assignment
@@ -1599,7 +1605,7 @@ public class ThreePL implements TDEConstants {
         //System.out.println("-S       - run the simulator instead of generating code");
         System.out.println("-s       - skip post-processing");
         System.out.println("-t       - print the TDE list without signal declaration TDEs");
-        System.out.println("-V       - print the 3PL version and Subversion version numbers concatenated");
+        System.out.println("-V       - print all known 3PL version and Git revision information");
         System.out.println("Except for -I, multiple options may be combined in one string.");
         System.out.println("There may be multiple -I options.");
         System.out.println("-I may be separated from its list by spaces.");

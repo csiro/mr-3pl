@@ -1,0 +1,4 @@
+*.swp
+/build/
+/classes/*
+!/classes/3pl.jar

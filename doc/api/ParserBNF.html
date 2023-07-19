@@ -1,0 +1,1467 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+<TITLE>BNF for Parser.jj</TITLE>
+</HEAD>
+<BODY>
+<H1 ALIGN=CENTER>BNF for Parser.jj</H1>
+<H2 ALIGN=CENTER>TOKENS</H2>
+<TABLE>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// These are source file name and line number tokens inserted by the
+// SrcReader class file reader when switching to or returning from a new
+// source file. Since file names and line numbers change each time we enter
+// or leave a source file these must be updated and this is done via
+// these inserted tokens. The tokens are thus skipped in parsing, after
+// extracting the file information.
+//SKIP :
+//{
+//    <IMARKER: "#" ("i"|"I") "#" (~["#"])+ "#" (~["#"])+ "#\n"> {ThreePL.setPosition(image);}
+//}
+
+// Update the file line number on each newline, but skip the token.
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; SKIP : {
+"\n" : {
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Skip carriage returns from DOS sources.
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; SKIP : {
+"\r"
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+//SKIP :
+//{
+//        <WHITE_SPACE:  " " | "\t" | "\r" | "\f" >
+//    |   <NEW_LINE:     (<WHITE_SPACE>)* "\n" >
+//}
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; SKIP : {
+&lt;WHITE_SPACE: " " | "\t"&gt;
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Comments
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; SKIP : {
+"//" : IN_SINGLE_LINE_COMMENT
+| "/*" : IN_MULTI_LINE_COMMENT
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;IN_SINGLE_LINE_COMMENT&gt; SKIP : {
+"\n" : DEFAULT
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;IN_MULTI_LINE_COMMENT&gt; SKIP : {
+"*/" : DEFAULT
+| "\n" : {
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;IN_SINGLE_LINE_COMMENT,IN_MULTI_LINE_COMMENT&gt; SKIP : {
+&lt;~[]&gt;
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// These are source file name and line number tokens inserted by the
+// SrcReader class file reader when switching to or returning from a new
+// module file. Since file names and line numbers change each time we
+// enter or leave a module file these must be updated and this is done via
+// these inserted tokens. These tokens are handled at the top of the parse tree.
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; TOKEN : {
+&lt;FMODSTART: "#M#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"&gt; : {
+| &lt;FMODFINISH: "#m#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"&gt; : {
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; TOKEN : {
+&lt;FSRCSTART: "#S#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"&gt; : {
+| &lt;FSRCFINISH: "#s#" (~["#"])+ "#" (~["#"])+ "#" (~["#"])* "#\n"&gt; : {
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Literals
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; TOKEN : {
+&lt;INTEGER_LITERAL: &lt;DECIMAL_LITERAL&gt; | &lt;HEX_LITERAL&gt; | &lt;BIN_LITERAL&gt; | &lt;OCTAL_LITERAL&gt;&gt;
+| &lt;#DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])*&gt;
+| &lt;#HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+&gt;
+| &lt;#BIN_LITERAL: "0" ["b","B"] (["0"-"9","a"-"f","A"-"F"])+&gt;
+| &lt;#OCTAL_LITERAL: "0" (["0"-"7"])*&gt;
+| &lt;FLOATING_POINT_LITERAL: (["0"-"9"])+ "." (["0"-"9"])+ (&lt;EXPONENT&gt;)? | "." (["0"-"9"])+ (&lt;EXPONENT&gt;)? | (["0"-"9"])+ "." &lt;EXPONENT&gt; | (["0"-"9"])+ (&lt;EXPONENT&gt;)?&gt;
+| &lt;#EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+&gt;
+| &lt;STRING_LITERAL: "\"" (~["\"","\\","\n","\r"] | "\\" (["n","t","b","r","f","\\","\'","\""] | "x" ["0"-"9","a"-"f"] ["0"-"9","a"-"f"] | "0" ["0"-"3"] ["0"-"7"] ["0"-"7"]))* "\""&gt;
+| &lt;LOG_LITERAL: "true" | "false"&gt;
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Reserved words
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; TOKEN : {
+&lt;BRANCH: "branch"&gt;
+| &lt;BREAK: "break"&gt;
+| &lt;CALLINGDOT: "calling."&gt;
+| &lt;CASE: "case"&gt;
+| &lt;CLASS: "class"&gt;
+| &lt;CLASSDOT: "class."&gt;
+| &lt;COMMON: "common"&gt;
+| &lt;CONTINUE: "continue"&gt;
+| &lt;DEF: "default"&gt;
+| &lt;DO: "do"&gt;
+| &lt;FILEDOT: "file."&gt;
+| &lt;ELSE: "else"&gt;
+| &lt;FOR: "for"&gt;
+| &lt;FUNCTION: "function"&gt;
+| &lt;GLOBAL: "global"&gt;
+| &lt;GLOBALDOT: "global."&gt;
+| &lt;IF: "if"&gt;
+| &lt;INITIAL: "initial"&gt;
+| &lt;LEADERMODULE: "leadermodule"&gt;
+| &lt;LOCALDOT: "local."&gt;
+| &lt;MODULE: "module"&gt;
+| &lt;NULL: "null"&gt;
+| &lt;PAR: "par"&gt;
+| &lt;PETRINET: "petrinet"&gt;
+| &lt;PRIVATE: "private"&gt;
+| &lt;PROCEDURE: "procedure"&gt;
+| &lt;POSTMODULE: "postmodule"&gt;
+| &lt;RETURN: "return"&gt;
+| &lt;SEQ: "seq"&gt;
+| &lt;SWITCH: "switch"&gt;
+| &lt;SYNC: "sync"&gt;
+| &lt;TRAILERMODULE: "trailermodule"&gt;
+| &lt;UNLESS: "unless"&gt;
+| &lt;VARARGS: "varargs"&gt;
+| &lt;WAITPRI: "waitpri"&gt;
+| &lt;WAITPRILOCK: "waitprilock"&gt;
+| &lt;WHEN: "when"&gt;
+| &lt;WHILE: "while"&gt;
+| &lt;EQ: "="&gt;
+| &lt;PLUSEQ: "+="&gt;
+| &lt;MINEQ: "-="&gt;
+| &lt;MULEQ: "*="&gt;
+| &lt;DIVEQ: "/="&gt;
+| &lt;REMEQ: "%="&gt;
+| &lt;BANDEQ: "&amp;="&gt;
+| &lt;BOREQ: "|="&gt;
+| &lt;BXOREQ: "^="&gt;
+| &lt;LANDEQ: "&amp;&amp;="&gt;
+| &lt;LOREQ: "||="&gt;
+| &lt;LXOREQ: "^^="&gt;
+| &lt;LSEQ: "&lt;&lt;="&gt;
+| &lt;RSEQ: "&gt;&gt;="&gt;
+| &lt;RRPOINT: "-&gt;&gt;"&gt;
+| &lt;RPOINT: "-&gt;"&gt;
+| &lt;COLEQ: ":="&gt;
+| &lt;BUSPOINT: "|-"&gt;
+| &lt;LLPOINT: "&lt;&lt;-"&gt;
+| &lt;LPOINT: "&lt;-"&gt;
+| &lt;PLUSLPOINT: "+&lt;-"&gt;
+| &lt;MINUSLPOINT: "-&lt;-"&gt;
+| &lt;MULLPOINT: "*&lt;-"&gt;
+| &lt;EQEQ: "=="&gt;
+| &lt;NE: "!="&gt;
+| &lt;LE: "&lt;="&gt;
+| &lt;GE: "&gt;="&gt;
+| &lt;PLUS: "+"&gt;
+| &lt;MINUS: "-"&gt;
+| &lt;STAR: "*"&gt;
+| &lt;SLASH: "/"&gt;
+| &lt;PERCENT: "%"&gt;
+| &lt;OROR: "||"&gt;
+| &lt;UPUP: "^^"&gt;
+| &lt;ANDAND: "&amp;&amp;"&gt;
+| &lt;OR: "|"&gt;
+| &lt;UP: "^"&gt;
+| &lt;AND: "&amp;"&gt;
+| &lt;EXCL: "!"&gt;
+| &lt;TILDE: "~"&gt;
+| &lt;QUEST: "?"&gt;
+| &lt;LS: "&lt;&lt;"&gt;
+| &lt;RS: "&gt;&gt;"&gt;
+| &lt;LR: "^&lt;&lt;"&gt;
+| &lt;RR: "&gt;&gt;^"&gt;
+| &lt;INCR: "++"&gt;
+| &lt;DECR: "--"&gt;
+| &lt;DOTDOT: ".."&gt;
+| &lt;LBRACE: "{"&gt;
+| &lt;RBRACE: "}"&gt;
+| &lt;LBRACK: "["&gt;
+| &lt;RBRACK: "]"&gt;
+| &lt;LPAREN: "("&gt;
+| &lt;RPAREN: ")"&gt;
+| &lt;LANGLE: "&lt;"&gt;
+| &lt;RANGLE: "&gt;"&gt;
+| &lt;COMMA: ","&gt;
+| &lt;SEMICOL: ";"&gt;
+| &lt;COLON: ":"&gt;
+| &lt;DOT: "."&gt;
+}
+
+   </PRE>
+  </TD>
+ </TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Identifiers
+</PRE>
+  </TD>
+ </TR>
+ <!-- Token -->
+ <TR>
+  <TD>
+   <PRE>
+&lt;DEFAULT&gt; TOKEN : {
+&lt;IDENTIFIER: &lt;LETTER&gt; (&lt;LETTER&gt; | &lt;DIGIT&gt;)*&gt;
+| &lt;#LETTER: ["A"-"Z","a"-"z","_"]&gt;
+| &lt;#DIGIT: ["0"-"9"]&gt;
+}
+
+   </PRE>
+  </TD>
+ </TR>
+</TABLE>
+<H2 ALIGN=CENTER>NON-TERMINALS</H2>
+<TABLE>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+// Module, procedure and function declarations are compiled into
+// 'Module", 'Procedure' and 'Function' classes which extend
+// class 'Body'.
+// These are entered into HashMaps 'modules', 'procedures'
+// and 'functions' in the enclosing module, procedure or function body.
+// The code body for each of these is compiled into
+// an instance of the 'Block' as a field of the super class 'Body'.
+//
+// Each tree node contains the location of the most appropriate
+// associated token in the form of a SrcLoc instance. This is
+// primarily for use in execution error messages. This
+// information is usually passed to the constructor by passing
+// the token as the final parameter.
+//
+
+/**
+ * File module grammar production.
+ * A scope for this file module, fmscope, is created here and passed to all
+ * modules, procedures and functions declared within this file module. It is
+ * a static scope. Variables created within this file module can be accessed
+ * from within any modules, procedures and functions declared within it even
+ * though this file module scope may no longer be on the call stack.
+ * @return  module/procedure call node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod1">Filemodule</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;FMODSTART&gt; ( ( <A HREF="#prod2">Statement</A> ) )* ( &lt;FMODFINISH&gt; | &lt;EOF&gt; )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * File source grammar production.
+ * @param   body is the Body class to contain the code body
+ * @param   fmscope is the current file module scope
+ * @return  source statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod3">Filesource</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;FSRCSTART&gt; ( ( <A HREF="#prod2">Statement</A> ) )* ( &lt;FSRCFINISH&gt; | &lt;EOF&gt; )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Class, module, procedure or function call grammar production.
+ * @param   stat_call is true if called as a statement rather than in
+ *          the RHS of as assignment statement
+ * @param   lhs is true if called on the LHS of a statement
+ * @return  function definition node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod4">Call</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( <A HREF="#prod5">DereferencedVar</A> | &lt;CLASS&gt; ) &lt;LPAREN&gt; <A HREF="#prod6">ArgList</A> &lt;RPAREN&gt; ( <A HREF="#prod7">Subscript</A> | <A HREF="#prod8">Field</A> )* ( ( &lt;RPOINT&gt; | &lt;RRPOINT&gt; ) ( <A HREF="#prod7">Subscript</A> | <A HREF="#prod8">Field</A> )* )* ( &lt;INCR&gt; | &lt;DECR&gt; )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Procedure call in parameter list or 'for' statement initialisation grammar
+ * production.
+ * @return  procedure call node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod9">ParProcCall</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( <A HREF="#prod5">DereferencedVar</A> | &lt;CLASS&gt; ) &lt;LPAREN&gt; <A HREF="#prod6">ArgList</A> &lt;RPAREN&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * A module, procedure or function call argument list grammar production.
+ * @param   call is the call node
+ * @param   arrow indicates if a &lt;- is allowed as an argument separator
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod6">ArgList</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( ( <A HREF="#prod10">Keymatch</A> | <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> ) )? ( ( &lt;COMMA&gt; | &lt;LPOINT&gt; ) ( ( <A HREF="#prod10">Keymatch</A> | <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> ) )? )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Keymatch (name=value) argument grammer production
+ * @return  a keymatch node
+ * @throws ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod10">Keymatch</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;IDENTIFIER&gt; &lt;EQ&gt; ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Common block definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod13">CommonBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;COMMON&gt; <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Group (3PL class) definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod15">GroupDef</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;GLOBAL&gt; )? ( &lt;CLASS&gt; &lt;IDENTIFIER&gt; &lt;LPAREN&gt; <A HREF="#prod16">ParamList</A> &lt;RPAREN&gt; ) <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Module definition grammar production.
+ * @param   body is the module code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod17">ModDef</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;GLOBAL&gt; | &lt;PRIVATE&gt; )? ( &lt;MODULE&gt; &lt;IDENTIFIER&gt; &lt;LPAREN&gt; <A HREF="#prod16">ParamList</A> &lt;RPAREN&gt; | &lt;LEADERMODULE&gt; &lt;LPAREN&gt; &lt;STRING_LITERAL&gt; ( &lt;COMMA&gt; &lt;INTEGER_LITERAL&gt; )? &lt;RPAREN&gt; | &lt;TRAILERMODULE&gt; &lt;LPAREN&gt; &lt;STRING_LITERAL&gt; ( &lt;COMMA&gt; &lt;INTEGER_LITERAL&gt; )? &lt;RPAREN&gt; | &lt;POSTMODULE&gt; &lt;LPAREN&gt; &lt;STRING_LITERAL&gt; ( &lt;COMMA&gt; &lt;INTEGER_LITERAL&gt; )? &lt;RPAREN&gt; ) <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Procedure definition grammar production.
+ * @param   body is the procedure code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod18">ProcDef</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;GLOBAL&gt; | &lt;PRIVATE&gt; )? &lt;PROCEDURE&gt; &lt;IDENTIFIER&gt; &lt;LPAREN&gt; <A HREF="#prod16">ParamList</A> &lt;RPAREN&gt; <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Function definition grammar production.
+ * @param   body is the function code body
+ * @param   fmscope is the current file module scope
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod19">FuncDef</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;GLOBAL&gt; | &lt;PRIVATE&gt; )? &lt;FUNCTION&gt; &lt;IDENTIFIER&gt; &lt;LPAREN&gt; <A HREF="#prod16">ParamList</A> &lt;RPAREN&gt; <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Module, procedure or function output or input parameters grammar production.
+ * @param   body is the module, procedure or function
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod16">ParamList</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( ( <A HREF="#prod9">ParProcCall</A> | &lt;VARARGS&gt; ) ( ( &lt;COMMA&gt; | &lt;LPOINT&gt; ) ( <A HREF="#prod9">ParProcCall</A> | &lt;VARARGS&gt; )? )* )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * General code block grammar production.
+ * @param   name is the module name
+ * @param   btype is the block type
+ * @param   body is the Module, Procedure or Function production or else null
+ * @param   fmscope is the file module scope
+ * @return  the code block root node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod14">Block</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Statement grammar production.
+ * @param   body is the body containing the statement
+ * @param   fmscope is the current file module scope
+ * @return  the statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod2">Statement</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( <A HREF="#prod15">GroupDef</A> | <A HREF="#prod17">ModDef</A> | <A HREF="#prod18">ProcDef</A> | <A HREF="#prod19">FuncDef</A> | <A HREF="#prod13">CommonBlock</A> | <A HREF="#prod20">InlineModBlock</A> | <A HREF="#prod4">Call</A> &lt;SEMICOL&gt; | <A HREF="#prod21">ImFuncAssignStat</A> &lt;SEMICOL&gt; | <A HREF="#prod22">TargFuncAssignStat</A> &lt;SEMICOL&gt; | <A HREF="#prod23">ImAssignStat</A> &lt;SEMICOL&gt; | <A HREF="#prod24">TargAssignStat</A> &lt;SEMICOL&gt; | <A HREF="#prod25">NullPipeAssignStat</A> &lt;SEMICOL&gt; | <A HREF="#prod26">SeqWhileStat</A> | <A HREF="#prod27">SeqDoWhileStat</A> | <A HREF="#prod28">SeqBlock</A> | <A HREF="#prod29">ParWhileStat</A> | <A HREF="#prod30">ParDoWhileStat</A> | <A HREF="#prod31">ParBlock</A> | <A HREF="#prod32">SyncWhenStat</A> | <A HREF="#prod33">SyncWhileStat</A> | <A HREF="#prod34">SyncDoWhileStat</A> | <A HREF="#prod35">SyncBlock</A> | <A HREF="#prod36">WaitPriBlock</A> | <A HREF="#prod1">Filemodule</A> | <A HREF="#prod3">Filesource</A> | <A HREF="#prod37">WhenStat</A> | <A HREF="#prod38">BranchStat</A> | <A HREF="#prod39">IncrDecrStat</A> &lt;SEMICOL&gt; | <A HREF="#prod40">ReturnStat</A> | <A HREF="#prod41">BreakStat</A> | <A HREF="#prod42">ContinStat</A> | <A HREF="#prod43">IfStat</A> | <A HREF="#prod44">WhileStat</A> | <A HREF="#prod45">DoWhileStat</A> | <A HREF="#prod46">ForStat</A> | <A HREF="#prod47">SwitchStat</A> | <A HREF="#prod48">PetriNetStat</A> | &lt;SEMICOL&gt; )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Immediate assignment (=) grammar production.
+ * @return  immediate assignment statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod23">ImAssignStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod5">DereferencedVar</A> ( &lt;EQ&gt; | &lt;PLUSEQ&gt; | &lt;MINEQ&gt; | &lt;MULEQ&gt; | &lt;DIVEQ&gt; | &lt;REMEQ&gt; | &lt;BANDEQ&gt; | &lt;BOREQ&gt; | &lt;BXOREQ&gt; | &lt;LANDEQ&gt; | &lt;LOREQ&gt; | &lt;LXOREQ&gt; | &lt;LSEQ&gt; | &lt;RSEQ&gt; ) ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Immediate assignment (=) grammar production.
+ * @return  immediate function assignment statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod21">ImFuncAssignStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod4">Call</A> ( &lt;EQ&gt; | &lt;PLUSEQ&gt; | &lt;MINEQ&gt; | &lt;MULEQ&gt; | &lt;DIVEQ&gt; | &lt;REMEQ&gt; | &lt;BANDEQ&gt; | &lt;BOREQ&gt; | &lt;BXOREQ&gt; | &lt;LANDEQ&gt; | &lt;LOREQ&gt; | &lt;LXOREQ&gt; | &lt;LSEQ&gt; | &lt;RSEQ&gt; ) ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Target assignment { @literal (:=, |-, &lt;- or &lt;&lt;-) } grammar production.
+ * @return  target assignment statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod24">TargAssignStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod5">DereferencedVar</A> ( &lt;COLEQ&gt; | &lt;BUSPOINT&gt; | &lt;LPOINT&gt; | &lt;PLUSLPOINT&gt; | &lt;MINUSLPOINT&gt; | &lt;MULLPOINT&gt; | &lt;LLPOINT&gt; ) ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Target assignment {@literal (:=, |-, &lt;- or &lt;&lt;-) } grammar production.
+ * @return  target function assignment statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod22">TargFuncAssignStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod4">Call</A> ( &lt;COLEQ&gt; | &lt;BUSPOINT&gt; | &lt;LPOINT&gt; | &lt;PLUSLPOINT&gt; | &lt;MINUSLPOINT&gt; | &lt;MULLPOINT&gt; | &lt;LLPOINT&gt; ) ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * A null pipe assignment (pop a pipe) grammar production.
+ * @return  null pipe assignment statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod25">NullPipeAssignStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;NULL&gt; &lt;LLPOINT&gt; <A HREF="#prod5">DereferencedVar</A></TD>
+</TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod49">unless</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;UNLESS&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; <A HREF="#prod14">Block</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Par block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod31">ParBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;PAR&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Seq block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod28">SeqBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SEQ&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Sync block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod35">SyncBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SYNC&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Priority wait block grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  waitpri statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod36">WaitPriBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;WAITPRI&gt; | &lt;WAITPRILOCK&gt; ) &lt;LPAREN&gt; <A HREF="#prod5">DereferencedVar</A> &lt;COMMA&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; <A HREF="#prod2">Statement</A> ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Inline module block grammar production.
+ * @param   body is the body of the in-line module
+ * @param   fmscope is the current file module scope
+ * @return  procedure or module call node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod20">InlineModBlock</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;LBRACK&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACK&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Variable increment or decrement statement (e.g. v++;) grammar production.
+ * Note: VarNode will appear in the code tree where we would
+ * expect a statement. VarNode thus has an execute() method to take
+ * care of this.
+ * @return  increment or decrement statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod39">IncrDecrStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod5">DereferencedVar</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Function or procedure return statement grammar production.
+ * @return  return statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod40">ReturnStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;RETURN&gt; ( &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; )? &lt;SEMICOL&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Break statement grammar production.
+ * @return  break statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod41">BreakStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;BREAK&gt; &lt;SEMICOL&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Continue statement grammar production.
+ * @return  continue statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod42">ContinStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;CONTINUE&gt; &lt;SEMICOL&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * If statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  if statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod43">IfStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;IF&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> ) ( &lt;ELSE&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> ) )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * While statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod44">WhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  do_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod45">DoWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;DO&gt; <A HREF="#prod14">Block</A> &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;SEMICOL&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * For statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  for statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod46">ForStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;FOR&gt; &lt;LPAREN&gt; ( <A HREF="#prod9">ParProcCall</A> | <A HREF="#prod23">ImAssignStat</A> )? &lt;SEMICOL&gt; ( <A HREF="#prod11">Expr</A> )? &lt;SEMICOL&gt; ( <A HREF="#prod23">ImAssignStat</A> | <A HREF="#prod39">IncrDecrStat</A> )? &lt;RPAREN&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Switch statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  switch statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod47">SwitchStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SWITCH&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( ( ( &lt;CASE&gt; ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> ) ) | &lt;DEF&gt; ) &lt;COLON&gt; ( <A HREF="#prod2">Statement</A> )* )+ &lt;RBRACE&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Branch statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  branch statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod38">BranchStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;BRANCH&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( ( ( &lt;CASE&gt; ( <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> ) ) | &lt;DEF&gt; ) &lt;COLON&gt; <A HREF="#prod2">Statement</A> )+ &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * block statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  class statement node
+ * @throws  ParseException on a parsing error
+ */
+/*Node
+BlockStat (
+    Body    body,
+    Scope   fmscope
+) :
+{
+    Token       t;
+    VarNode     v = null;
+    Node        n = null;
+}
+{
+    (
+        <BLOCK>
+        n = Block(null, Btype.CLASS, body, fmscope)
+        
+    )
+    { return(n); }
+}*/
+
+/**
+ * Petri net grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  Node for the petrinet
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod48">PetriNetStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;PETRINET&gt; ( &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; )? &lt;LBRACE&gt; &lt;INITIAL&gt; <A HREF="#prod50">IdentList</A> &lt;SEMICOL&gt; ( <A HREF="#prod50">IdentList</A> ( &lt;RPOINT&gt; | &lt;RRPOINT&gt; ) <A HREF="#prod50">IdentList</A> ( &lt;WHEN&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; )? ( <A HREF="#prod14">Block</A> )? &lt;SEMICOL&gt; )+ &lt;RBRACE&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Non-empty identifier list grammar production.
+ * @return  the list of identifiers
+ * @throws ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod50">IdentList</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;IDENTIFIER&gt; ( &lt;COMMA&gt; &lt;IDENTIFIER&gt; )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * When statement grammar production.
+ * @param fmscope is the current file module scope
+ * @return  the WHEN node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod37">WhenStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;WHEN&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> ) ( &lt;ELSE&gt; ( <A HREF="#prod2">Statement</A> | <A HREF="#prod14">Block</A> ) )? ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Seq while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod26">SeqWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SEQ&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Par while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod29">ParWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;PAR&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Syncwhen statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_when statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod32">SyncWhenStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SYNC&gt; &lt;WHEN&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Sync while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod33">SyncWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SYNC&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Seq do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  seq_do_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod27">SeqDoWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SEQ&gt; &lt;DO&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Par do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  par_do_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod30">ParDoWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;PAR&gt; &lt;DO&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Sync do while statement grammar production.
+ * @param   fmscope is the current file module scope
+ * @return  sync_do_while statement node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod34">SyncDoWhileStat</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;SYNC&gt; &lt;DO&gt; &lt;LBRACE&gt; ( <A HREF="#prod2">Statement</A> )* &lt;RBRACE&gt; &lt;WHILE&gt; &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; ( <A HREF="#prod49">unless</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator ? : ) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod11">Expr</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod51">Expr1</A> ( &lt;QUEST&gt; <A HREF="#prod51">Expr1</A> &lt;COLON&gt; <A HREF="#prod51">Expr1</A> )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator ||) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod51">Expr1</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod52">Expr2</A> ( &lt;OROR&gt; <A HREF="#prod52">Expr2</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator ^^) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod52">Expr2</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod53">Expr3</A> ( &lt;UPUP&gt; <A HREF="#prod53">Expr3</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator {@literal &&}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod53">Expr3</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod54">Expr4</A> ( &lt;ANDAND&gt; <A HREF="#prod54">Expr4</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator |) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod54">Expr4</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod55">Expr5</A> ( &lt;OR&gt; <A HREF="#prod55">Expr5</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator ^) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod55">Expr5</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod56">Expr6</A> ( &lt;UP&gt; <A HREF="#prod56">Expr6</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operator {@literal &}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod56">Expr6</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod57">Expr8</A> ( &lt;AND&gt; <A HREF="#prod57">Expr8</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operators == {@literal != < > <= >=}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod57">Expr8</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod58">Expr9</A> ( ( &lt;EQEQ&gt; | &lt;NE&gt; | &lt;LANGLE&gt; | &lt;RANGLE&gt; | &lt;LE&gt; | &lt;GE&gt; ) <A HREF="#prod58">Expr9</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operators {@literal << >> }) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod58">Expr9</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod59">Expr10</A> ( ( &lt;LS&gt; | &lt;RS&gt; | &lt;LR&gt; | &lt;RR&gt; ) <A HREF="#prod59">Expr10</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operators + -) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod59">Expr10</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod60">Expr11</A> ( ( &lt;PLUS&gt; | &lt;MINUS&gt; ) <A HREF="#prod60">Expr11</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (operators * / %) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod60">Expr11</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod61">Expr12</A> ( ( &lt;STAR&gt; | &lt;SLASH&gt; | &lt;PERCENT&gt; ) <A HREF="#prod61">Expr12</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (unary operators ~ ! - {@literal &}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod61">Expr12</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;TILDE&gt; <A HREF="#prod62">Expr13</A> | &lt;EXCL&gt; <A HREF="#prod62">Expr13</A> | &lt;MINUS&gt; <A HREF="#prod62">Expr13</A> | &lt;AND&gt; <A HREF="#prod62">Expr13</A> | <A HREF="#prod62">Expr13</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (unary operators ? {@literal <}) grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod62">Expr13</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;QUEST&gt; <A HREF="#prod63">Expr14</A> | &lt;LANGLE&gt; <A HREF="#prod63">Expr14</A> | <A HREF="#prod63">Expr14</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (constants, function call, parenthesised expression)
+ * grammar production.
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod63">Expr14</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;INTEGER_LITERAL&gt; | &lt;FLOATING_POINT_LITERAL&gt; | &lt;STRING_LITERAL&gt; | &lt;LOG_LITERAL&gt; | &lt;NULL&gt; | <A HREF="#prod4">Call</A> | <A HREF="#prod64">Expr15</A> | &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; &lt;RPOINT&gt; ( ( <A HREF="#prod7">Subscript</A> | <A HREF="#prod8">Field</A> )* ) | &lt;LPAREN&gt; <A HREF="#prod11">Expr</A> &lt;RPAREN&gt; )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Expression (unary operator {@literal >}) grammar production
+ * @return  expression node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod64">Expr15</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;RANGLE&gt; <A HREF="#prod5">DereferencedVar</A> | <A HREF="#prod5">DereferencedVar</A> )</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Compound value grammar production.
+ * @return  compound value node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod12">CompVal</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;LBRACE&gt; ( <A HREF="#prod10">Keymatch</A> | <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )? ( &lt;COMMA&gt; ( <A HREF="#prod10">Keymatch</A> | <A HREF="#prod11">Expr</A> | <A HREF="#prod12">CompVal</A> )? )* &lt;RBRACE&gt;</TD>
+</TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod5">DereferencedVar</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE><A HREF="#prod65">FlaggedVar</A> ( ( &lt;RPOINT&gt; | &lt;RRPOINT&gt; ) ( <A HREF="#prod7">Subscript</A> | <A HREF="#prod8">Field</A> )* )* ( &lt;INCR&gt; | &lt;DECR&gt; )?</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Pre or post increment or decrement or indirect variable grammar production.
+ * ++, --, * and {@literal &} are not handled as normal operator nodes.
+ * The VarNode to which they apply has flags set
+ * to indicate ++v, --v, v++, v-- , *v or {@literal &v}.
+ * These are handled when the variable is accessed.
+ * @return  a node for a variable with a ++ or --
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod65">FlaggedVar</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;INCR&gt; | &lt;DECR&gt; )? <A HREF="#prod66">Variable</A></TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * A variable (possibly with subscripts or field names) grammar production.
+ * @return  a variable node
+ * @throws  ParseException on a parsing error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod66">Variable</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>( &lt;GLOBALDOT&gt; | &lt;FILEDOT&gt; | &lt;CALLINGDOT&gt; | &lt;LOCALDOT&gt; | &lt;CLASSDOT&gt; )? &lt;IDENTIFIER&gt; ( <A HREF="#prod7">Subscript</A> | <A HREF="#prod8">Field</A> )*</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Subscript(s) grammar production.
+ * @return  a subscript node
+ * @throws  ParseException on a parse error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod7">Subscript</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;LBRACK&gt; ( ( <A HREF="#prod11">Expr</A> ( &lt;DOTDOT&gt; <A HREF="#prod11">Expr</A> )? )? ) &lt;RBRACK&gt;</TD>
+</TR>
+ <!-- Special token -->
+ <TR>
+  <TD>
+<PRE>
+/**
+ * Struct field (on a variable) grammar production.
+ * @return  a field node
+ * @throws  ParseException on a parse error
+ */</PRE>
+  </TD>
+ </TR>
+<TR>
+<TD ALIGN=RIGHT VALIGN=BASELINE><A NAME="prod8">Field</A></TD>
+<TD ALIGN=CENTER VALIGN=BASELINE>::=</TD>
+<TD ALIGN=LEFT VALIGN=BASELINE>&lt;DOT&gt; &lt;IDENTIFIER&gt;</TD>
+</TR>
+</TABLE>
+</BODY>
+</HTML>

@@ -1,0 +1,455 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE project>
+<project name="3pl" basedir="." default="main"
+  xmlns:if="ant:if" xmlns:unless="ant:unless">
+
+    <!-- retrieve environment variables into properties with prefix "env." -->
+    <property environment="env"/>
+
+    <!--
+        "Semantic Versioning" (ver 2.0.0) version number for 3pl
+
+        For details go to <https://semver.org/> but essentially ...
+        Given a version number MAJOR.MINOR.PATCH, increment the:
+        - MAJOR version when you make incompatible API changes; or
+        - MINOR version when you add functionality in a backwards
+          compatible manner; or
+        - PATCH version when you make backwards compatible bug fixes.
+
+        For most uses, this property will be combined with an "M" suffix
+        if 3pl is built inside a git working tree with uncommitted changes.
+    -->
+    <property name="3pl.version" value="11.7.0"/>
+
+    <!--
+        translate the version into a git tagname
+        based on: https://stackoverflow.com/a/14135833/2130789
+    -->
+    <loadresource property="3pl.tagname">
+        <propertyresource name="3pl.version"/>
+        <filterchain>
+            <prefixlines prefix="threepl-"/>
+            <tokenfilter>
+                <replacestring from="." to="-"/>
+            </tokenfilter>
+        </filterchain>
+    </loadresource>
+
+    <!-- retrieve various git properties -->
+    <exec executable="git" failonerror="true" outputproperty="3pl.revision">
+        <arg value="describe"/>
+        <arg value="--dirty"/>
+        <arg value="--tags"/>
+        <arg value="--long"/>
+        <arg value="--always"/>
+        <arg value="--first-parent"/>
+    </exec>
+    <exec executable="git" failonerror="true" outputproperty="3pl.changerev">
+        <arg value="log"/>
+        <arg value="--no-patch"/>
+        <arg value="--max-count=1"/>
+        <arg value="--pretty=format:%H"/>
+    </exec>
+    <exec executable="git" failonerror="true" outputproperty="3pl.changeauthor">
+        <arg value="log"/>
+        <arg value="--no-patch"/>
+        <arg value="--max-count=1"/>
+        <arg value="--pretty=format:%aN &lt;%aE&gt;"/>
+    </exec>
+    <exec executable="git" failonerror="true" outputproperty="3pl.changedate">
+        <arg value="log"/>
+        <arg value="--no-patch"/>
+        <arg value="--max-count=1"/>
+        <arg value="--pretty=format:%ai"/>
+    </exec>
+
+    <!--
+        if the revision ends with "-dirty" then this repo is modified - if so,
+        the 3pl.mflg property will be the string "M", otherwise it is empty
+    -->
+    <condition property="3pl.mflg" value="M" else="">
+        <matches string="${3pl.revision}" pattern="-dirty$"/>
+    </condition>
+
+    <!-- create a bunch of 3pl specific build properties -->
+    <property name="3pl.main-class" value="threepl.ThreePL"/>
+    <property name="3pl.jar" value="${ant.project.name}.jar"/>
+
+    <tstamp>
+        <format property="3pl.current_year" pattern="yyyy"/>
+        <format property="3pl.builddate" pattern="yyyy-MM-dd HH:mm:ss ZZZ"/>
+    </tstamp>
+    <property name="3pl.builtby" value="${env.USER}"/>
+    <condition property="3pl.built_on_windows">
+        <os family="windows"/>
+    </condition>
+
+    <!--
+        define a filterchain that does token replacement for 3PL version info
+    -->
+    <filterchain id="versionfilter">
+        <replacetokens>
+            <token key="YEAR" value="${3pl.current_year}"/>
+            <token key="REVISION" value="${3pl.revision}"/>
+            <token key="VERSION" value="${3pl.version}${3pl.mflg}"/>
+            <token key="CHANGEAUTHOR" value="${3pl.changeauthor}"/>
+            <token key="CHANGEREV" value="${3pl.changerev}"/>
+            <token key="CHANGEDATE" value="${3pl.changedate}"/>
+            <token key="BUILDDATE" value="${3pl.builddate}"/>
+            <token key="BUILTBY" value="${3pl.builtby}"/>
+        </replacetokens>
+    </filterchain>
+
+    <!--
+        macro to copy an include file from sources/include to the include
+        dir in a base directory, preserving the relative path ... also replaces
+        various tokens during the copy
+
+        we have to do it this way (a macrodef that copies a single file) in
+        order to have the relative path of the include file available for a
+        token filter
+
+        a header is prepended, depending on the type of the file being copied.
+        if a .3pl file is being copied, sources/include/HEADER.3pl is prepended.
+        if a .cmd or .tcl file is being copied, sources/include/HEADER.script
+        is prepended. The prepended header is included in the token filtering.
+    -->
+    <macrodef name="copyinc">
+        <attribute name="base"/>
+        <attribute name="path"/>
+        <attribute name="hext" default="3pl"/>
+        <sequential>
+            <concat destfile="@{base}/include/@{path}"
+              overwrite="yes" forceReadOnly="yes" fixlastline="yes">
+                <header file="sources/include/HEADER.@{hext}" filtering="yes"/>
+                <filelist dir="sources/include" files="@{path}"/>
+                <!-- <footer file="?" filtering="yes"/> -->
+                <filterchain>
+                    <replacetokens>
+                        <token key="NAME" value="@{path}"/>
+                    </replacetokens>
+                </filterchain>
+                <filterchain refid="versionfilter"/>
+            </concat>
+        </sequential>
+    </macrodef>
+
+    <!--
+        macro to create a complete 3pl installation in a base directory
+    -->
+    <macrodef name="createinstall">
+        <attribute name="base"/>
+        <sequential>
+            <!-- copy 3pl shell or batch script to bin -->
+            <mkdir dir="@{base}/bin"/>
+            <copy if:set="3pl.built_on_windows"
+              file="sources/scripts/3pl.bat" tofile="@{base}/bin/3pl.bat"/>
+            <copy unless:set="3pl.built_on_windows"
+              file="sources/scripts/3pl.sh" tofile="@{base}/bin/3pl"/>
+            <setpermissions unless:set="3pl.built_on_windows" mode="755">
+                <file file="@{base}/bin/3pl"/>
+            </setpermissions>
+
+            <!-- copy 3pl jar file to lib -->
+            <mkdir dir="@{base}/lib"/>
+            <copy file="classes/${3pl.jar}" tofile="@{base}/lib/${3pl.jar}"/>
+
+            <!-- copy 3pl include files to include -->
+            <mkdir dir="@{base}/include"/>
+            <copyinc base="@{base}" path="capture.3pl"/>
+            <copyinc base="@{base}" path="ctypes.3pl"/>
+            <copyinc base="@{base}" path="divlib.3pl"/>
+            <copyinc base="@{base}" path="float.3pl"/>
+            <copyinc base="@{base}" path="jsontype.3pl"/>
+            <copyinc base="@{base}" path="multlib.3pl"/>
+            <copyinc base="@{base}" path="spi.3pl"/>
+            <copyinc base="@{base}" path="stdlib.3pl"/>
+            <copyinc base="@{base}" path="uart.3pl"/>
+            <copyinc base="@{base}" path="uarts.3pl"/>
+            <copyinc base="@{base}" path="xilinx/clocks.3pl"/>
+            <copyinc base="@{base}" path="xilinx/common.3pl"/>
+            <copyinc base="@{base}" path="xilinx/cpu.3pl"/>
+            <copyinc base="@{base}" path="xilinx/uart_cpu.3pl"/>
+            <copyinc base="@{base}" path="xilinx/dsp48.3pl"/>
+            <copyinc base="@{base}" path="xilinx/gtp_dual.3pl"/>
+            <copyinc base="@{base}" path="xilinx/io.3pl"/>
+            <copyinc base="@{base}" path="xilinx/mgt.3pl"/>
+            <copyinc base="@{base}" path="xilinx/ppc405lib.3pl"/>
+            <copyinc base="@{base}" path="xilinx/ppclib.3pl"/>
+            <copyinc base="@{base}" path="xilinx/postprocess.3pl"/>
+            <copyinc base="@{base}" path="xilinx/ps7.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc2c.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc2s.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc2v.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc2vp.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc3s.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc4v.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc5v.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc6s.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc6v.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc7.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xcv.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xc95.3pl"/>
+            <copyinc base="@{base}" path="xilinx/xulib.3pl"/>
+            <copyinc base="@{base}" path="xilinx/zynq_axi.3pl"/>
+            <copyinc base="@{base}" path="xilinx/vivado.tcl" hext="script"/>
+            <copyinc base="@{base}" path="xilinx/ise_fpga.cmd" hext="script"/>
+            <copyinc base="@{base}" path="xilinx/ise_cpld.cmd" hext="script"/>
+            <copyinc base="@{base}" path="xilinx/ise_xflow.cmd" hext="script"/>
+            <copyinc base="@{base}" path="boards/avnet/aes_sp3a_eval400.3pl"/>
+            <copyinc base="@{base}" path="boards/avnet/microzed_7010.3pl"/>
+            <copyinc base="@{base}" path="boards/avnet/microzed_7020.3pl"/>
+            <copyinc base="@{base}" path="boards/dangerous_prototypes/breakout_xc2c64a.3pl"/>
+            <copyinc base="@{base}" path="boards/dangerous_prototypes/breakout_xc9572xl.3pl"/>
+            <copyinc base="@{base}" path="boards/digilent/zybo.3pl"/>
+            <copyinc base="@{base}" path="boards/xilinx/ml505.3pl"/>
+            <copyinc base="@{base}" path="boards/memec/v4fx12lc.3pl"/>
+            <copyinc base="@{base}" path="boards/memec/v4fx12mm.3pl"/>
+            <copyinc base="@{base}" path="boards/gadget_factory/papilio_one_100.3pl"/>
+            <copyinc base="@{base}" path="boards/gadget_factory/papilio_one_250.3pl"/>
+            <copyinc base="@{base}" path="boards/gadget_factory/papilio_one_500.3pl"/>
+            <copyinc base="@{base}" path="boards/gadget_factory/papilio_pro_lx4.3pl"/>
+            <copyinc base="@{base}" path="boards/gadget_factory/papilio_pro_lx9.3pl"/>
+            <copyinc base="@{base}" path="boards/fake/virtex6.3pl"/>
+            <copyinc base="@{base}" path="boards/fake/virtex7.3pl"/>
+            <copyinc base="@{base}" path="chips/maxim/ds2431.3pl"/>
+            <copyinc base="@{base}" path="chips/generic/blink.3pl"/>
+            <copyinc base="@{base}" path="chips/generic/lcd.3pl"/>
+            <copyinc base="@{base}" path="chips/generic/seven_segment.3pl"/>
+            <!-- ignoring these files for now ...
+            <copyinc base="@{base}" path="mvlib.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/ddm/dam.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/ddm/ddm.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/ddm/dbpm.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/clp1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/ext_ram.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/interrupts.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io1_interrupts.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io2.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io2r1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io25.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon2.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon3.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon4.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/qdr2_ram.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/zbt_ram.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/hsa.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/iochan.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/pulse.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hsc/base.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hsc/mv13.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod/io2p.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/pulse.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/hsa.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/iochan.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/qdr2_ram.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/io2.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/interrupts.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/io25.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/external_ram.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon3.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/io2r1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon2.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon1.3pl"/>
+            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon4.3pl"/>
+            -->
+        </sequential>
+    </macrodef>
+
+    <!--
+        macro to delete everything in a directory except one file
+    -->
+    <macrodef name="cleandirexcept">
+        <attribute name="path"/>
+        <attribute name="except"/>
+        <sequential>
+            <delete includeemptydirs="true" failonerror="false" verbose="true">
+                <fileset dir="@{path}"
+                  erroronmissingdir="false" defaultexcludes="false">
+                    <exclude name="@{except}"/>
+                </fileset>
+            </delete>
+        </sequential>
+    </macrodef>
+
+    <!--
+        macro to delete a directory if it is empty
+    -->
+    <macrodef name="cleanemptydir">
+        <attribute name="path"/>
+        <sequential>
+            <cleandirexcept path="@{path}" except="*"/>
+        </sequential>
+    </macrodef>
+
+    <!--
+        macro to delete a sub-directory in a base directory
+    -->
+    <macrodef name="cleansubdir">
+        <attribute name="path"/>
+        <attribute name="subdir"/>
+        <sequential>
+            <!-- delete everything in the sub-directory first -->
+            <delete includeemptydirs="true" failonerror="false" verbose="true">
+                <fileset dir="@{path}"
+                  erroronmissingdir="false" defaultexcludes="false">
+                    <include name="@{subdir}/**/*"/>
+                </fileset>
+            </delete>
+            <!-- then delete the empty sub-directory itself -->
+            <cleanemptydir path="@{path}/@{subdir}"/>
+        </sequential>
+    </macrodef>
+
+    <!-- SETUP IS DONE, BUILD TARGETS START HERE -->
+
+    <!-- the "version" target prints the 3pl version including "mflg" -->
+    <target name="version" description="print 3pl version with modified flag">
+        <echo message="${3pl.version}${3pl.mflg}"/>
+    </target>
+
+    <!-- the "revision" target prints the 3pl revision from git -->
+    <target name="revision" description="print 3pl revision from git">
+        <echo message="${3pl.revision}"/>
+    </target>
+
+    <!-- the "versionfilter" target filters stdin replacing version tokens -->
+    <target name="versionfilter" description="replace version tokens in stdin">
+        <fail unless:set="inputfile">
+            'inputfile' property not specified (e.g. -Dinputfile=filename)
+        </fail>
+        <loadfile property="contents" srcFile="${inputfile}" quiet="true">
+            <filterchain refid="versionfilter"/>
+        </loadfile>
+        <fail unless:set="contents">
+            can't load '${inputfile}' or it is empty.
+        </fail>
+        <echo message="${contents}"/>
+    </target>
+
+    <!--
+        the "compile" target creates a java properties file containing 3pl
+        compiler information, runs the java compiler, then creates a build
+        properties file
+    -->
+    <target name="compile"
+      description="creates properties files and compiles all .java files">
+        <mkdir dir="classes/threepl"/>
+        <propertyfile file="classes/threepl/ThreePL.properties"
+          comment="3PL Compiler Properties">
+            <entry key="version" value="${3pl.version}${3pl.mflg}"/>
+            <entry key="revision" value="${3pl.revision}"/>
+            <entry key="lastChangedAuthor" value="${3pl.changeauthor}"/>
+            <entry key="lastChangedRev" value="${3pl.changerev}"/>
+            <entry key="lastChangedDate" value="${3pl.changedate}"/>
+            <entry key="buildDate" value="${3pl.builddate}"/>
+            <entry key="builtBy" value="${3pl.builtby}"/>
+        </propertyfile>
+        <echoproperties destfile="classes/build.properties"/>
+        <javac srcdir="sources" destdir="classes"
+          source="8" target="8" debug="false" encoding="UTF-8"
+          includeantruntime="false" listfiles="true">
+
+            <compilerarg value="-Xprefer:source"/>
+            <compilerarg value="-Xlint:all"/>
+            <compilerarg value="-Xlint:-options"/>
+
+            <include name="threepl/**/*.java"/>
+            <exclude name="threepl/simulator/**.java"/>
+        </javac>
+    </target>
+
+    <!-- the "jar" target runs "compile" then builds the .jar file -->
+    <target name="jar" depends="compile"
+      description="runs compile target then builds the .jar file">
+        <jar destfile="classes/${3pl.jar}" basedir="classes" excludes="*.jar">
+            <manifest>
+                <attribute name="Main-Class" value="${3pl.main-class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <!--
+        the "run" target runs "jar" then executes the resulting jar file
+        "in place" using the source include dir
+    -->
+    <target name="run" depends="jar"
+      description="runs jar target then executes jar file in place">
+        <java jar="classes/${3pl.jar}" fork="true">
+            <jvmarg value="-Xmx800M"/>
+            <arg value="-Isources/include"/>
+        </java>
+    </target>
+
+    <!--
+        the "build" target runs "jar" then copies all necessary files into a
+        build hierarchy under the "build" directory.
+    -->
+    <target name="build" depends="jar"
+      description="runs jar target then creates new hierarchy in build dir">
+        <createinstall base="build/${3pl.version}${3pl.mflg}"/>
+    </target>
+
+    <!-- the "api" target re-creates a html version of the API javadoc -->
+    <target name="api"
+      description="run javadoc to create html version of API docs in doc/api">
+        <delete dir="doc/api"/>
+        <mkdir dir="doc/api"/>
+        <javadoc destdir="doc/api"
+          locale="en_AU" encoding="UTF-8" verbose="true"
+          access="package" author="true" version="true" use="true"
+          windowtitle="3PL API" overview="sources/threepl/overview.html">
+            <packageset dir="sources" defaultexcludes="yes">
+                <include name="threepl/**"/>
+                <exclude name="threepl/simulator/**"/>
+            </packageset>
+            <link href="https://docs.oracle.com/javase/8/docs/api/"/>
+            <doctitle><![CDATA[<table><tr><td style="font-size: xx-large;"><b>3PL</b> - Parallel Pipeline Programming Language</td><td><img src="file://${basedir}/doc/images/logo.gif" width=80 height=63/></td></tr></table>]]></doctitle>
+            <header><![CDATA[<img src="file://${basedir}/doc/images/logo-small.gif" width=36 height=28/>]]></header>
+            <footer><![CDATA[<b>3PL</b> - Parallel Pipeline Programming Language]]></footer>
+            <bottom><![CDATA[<p style="width: 100%; text-align:center; font-size: x-small; font-style: italic;">Copyright &#169; 2004-${3pl.current_year} <a href="http://www.csiro.au/">CSIRO Australia</a>. All Rights Reserved.</p>]]></bottom>
+        </javadoc>
+        <echo unless:set="env.JAVACCHOME"
+          message="JAVACCHOME environment variable to build Parser BNF html"/>
+        <jjdoc if:set="env.JAVACCHOME"
+          target="sources/threepl/parser/Parser.jj"
+          outputfile="doc/api/ParserBNF.html"
+          javacchome="${env.JAVACCHOME}"/>
+    </target>
+
+    <!-- the "javacc" target rebuilds parser source from .jj file -->
+    <target name="javacc"
+      description="rebuilds parser source from .jj file - into build/jcc-out">
+        <fail unless:set="env.JAVACCHOME"
+          message="the JAVACCHOME environment variable is not set"/>
+        <mkdir dir="build/jcc-out"/>
+        <javacc
+          target="sources/threepl/parser/Parser.jj"
+          outputdirectory="build/jcc-out"
+          javacchome="${env.JAVACCHOME}"
+          static="true"/>
+    </target>
+
+    <!-- the "clean" target removes most output except jar file -->
+    <target name="clean" description="removes most output except jar file">
+        <cleandirexcept path="classes" except="${3pl.jar}"/>
+        <cleansubdir path="build" subdir="${3pl.version}${3pl.mflg}"/>
+        <cleansubdir path="build" subdir="jcc-out"/>
+        <cleanemptydir path="build"/>
+    </target>
+
+    <target name="main" depends="clean,run"
+      description="main target - runs a clean then a run">
+    </target>
+
+    <target name="release" depends="clean,build"
+      description="runs clean and build targets then creates a release">
+    </target>
+
+    <target name="refresh" if="eclipse.running">
+        <eclipse.refreshLocal resource="${basedir}" depth="infinite"/>
+    </target>
+
+</project>

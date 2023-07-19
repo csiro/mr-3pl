@@ -2971,8 +2971,7 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   din         data input net array or null
      * @param   dout        data output net array or null
      * @param   sinit       array of hexadecimal strings, one for each word, or null
-     * @param   init0       initial hexadecimal string value of output register port 0 (rmemory only)
-     * @param   init1       initial hexadecimal string value of output register port 1 (rmemory only, 2 ports)
+     * @param   sinit0      initial hexadecimal string value of output register port 0 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      * @param   continuous  if true causes the RAM ENABLE inputs to be tied high
      *                      rather than asserted only upon access
@@ -3080,8 +3079,8 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   din1        port 1 data input net array or null
      * @param   dout1       port 1 data output net array or null
      * @param   sinit       array of hexadecimal strings, one for each word
-     * @param   init0       initial hexadecimal string value of output register port 0 (rmemory only)
-     * @param   init1       initial hexadecimal string value of output register port 1 (rmemory only)
+     * @param   sinit0      initial hexadecimal string value of output register port 0 (rmemory only)
+     * @param   sinit1      initial hexadecimal string value of output register port 1 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      * @param   continuous  if true causes the RAM ENABLE inputs to be tied high
      *                      rather than asserted only upon access
@@ -3185,9 +3184,9 @@ public abstract class XFunctions extends XElements implements Constant, TDEConst
      * @param   addrb       port B address
      * @param   dinb        port B data input
      * @param   doutb       port B data output
-     * @param   init        initialisation array (binary strings) for requested address width.
-     * @param   init0       initial binary string value of output register port 0 (rmemory only)
-     * @param   init1       initial binary string value of output register port 1 (rmemory only)
+     * @param   sinit       initialisation array (binary strings) for requested address width.
+     * @param   sinit0      initial binary string value of output register port 0 (rmemory only)
+     * @param   sinit1      initial binary string value of output register port 1 (rmemory only)
      * @param   properties  properties (attributes such as writemode)
      */
     public void ramallocate (

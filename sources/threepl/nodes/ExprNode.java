@@ -37,7 +37,7 @@ public final class ExprNode extends Node implements Constant, TDEConstants {
      * @param   t is the operator token, from which the file source location
      *          is extracted
      */
-    @SuppressWarnings("incomplete-switch")
+    // @SuppressWarnings("incomplete-switch")
     public ExprNode (TreeOp op, Node n, Token t) {
         super(t);
 /*

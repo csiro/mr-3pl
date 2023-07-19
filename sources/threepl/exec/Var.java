@@ -20,7 +20,6 @@ import static threepl.parser.Functions.zeropad;
 
 import java.util.HashMap;
 import java.util.Map;
-import threepl.exec.Val;
 import threepl.exceptions.MapException;
 import threepl.parser.AttributesMap;
 import threepl.parser.Functions;

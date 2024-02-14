@@ -165,7 +165,7 @@
     3PL supports any number of clocks and provides a means of
     resynchronising data between clock domains.
 
-    Intermediate code allows the use of pointers (both to immediate and
+    Imediate code allows the use of pointers (both to immediate and
     to target variables) so that linked data structures can be
     constructed. Variables are created during immediate execution
     (interpretation) and continue to exist after their scopes have
@@ -807,8 +807,8 @@
         in any other control structures it will be embedded in an infinite loop as
         usual.
 
-        It can be seen that intermediate execution provides fine control over what
-        target code is generated. Further than that, intermediate execution is
+        It can be seen that imediate execution provides fine control over what
+        target code is generated. Further than that, imediate execution is
         essential where an algorithm is required to generate the target algorithm.
         An extreme example is the well known Batcher parallel sort algorithm where
         a complicated algorithm must be executed to lay out the logic for the
@@ -965,7 +965,7 @@
         The target statement equivalent to an (immediate) {\bf if ()} statement
         is {\bf when ()}, which can also have an associated {\bf else}. The true and
         false bodies can only be single target statements. These of course may
-        be other target constructs such as {\bf seq\{\}} or {\bf par\{\}}, e.g.
+        be enclosing target constructs such as {\bf seq\{\}} or {\bf par\{\}}, e.g.
         \begin{lstlisting}[language=threepl]
             when (enable)
                 s <- 3;

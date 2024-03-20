@@ -4,9 +4,22 @@ import sys
 import os
 import math
 
-design = sys.argv[1:][0]
+prog = os.path.basename(sys.argv[0])
+if prog.lower().endswith('.py'):
+    prog = prog[:-3]
+
+if len(sys.argv) != 2:
+    print('Usage: {} design'.format(prog), file=sys.stderr)
+    sys.exit(1)
+
+design = sys.argv[1]
+
 infname = design + '.bit.gz'
+if not os.path.isfile(infname):
+    print('{} not found or not a regular file'.format(infname), file=sys.stderr)
+    sys.exit(1)
 outfname = design + "_cinclude.h"
+
 first = True
 with open(outfname, 'w', encoding="utf-8") as of:
 
@@ -26,4 +39,4 @@ with open(outfname, 'w', encoding="utf-8") as of:
             of.write('0x%.2x' % int(byte))
             count = count + 1
     of.write("\n};\n")
-    of.write("int "+ design + "_fpga_config_size = " + str(count) + ";")
+    of.write("int "+ design + "_fpga_config_size = " + str(count) + ";\n")

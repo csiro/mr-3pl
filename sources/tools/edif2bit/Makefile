@@ -1,13 +1,15 @@
 INSTDIR = $(HOME)/install/3pl
 
+BINDIR = $(INSTDIR)/bin
 
-default: edif2bit
+all:: edif2bit
 
-install: edif2bit
-	install -m 775 edif2bit $(INSTALLDIR)
+install:: all
+	install -d -m 755 $(BINDIR)
+	install -c -m 755 edif2bit $(BINDIR)
 
-clean:
-	@rm -f edif2bit
+clean::
+	rm -f edif2bit
 
 COMPONENTS1 = \
 	head.bash \
@@ -38,4 +40,3 @@ edif2bit: $(COMPONENTS1) $(COMPONENTS2) Makefile
 	    >> edif2bit
 	@chmod a+rx edif2bit
 	@echo made script edif2bit
-

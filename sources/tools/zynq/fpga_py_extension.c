@@ -4,20 +4,20 @@
 #include "fpga.h"
 //#include "fpga.c"
 
-static PyObject *   *py_fpga_open (PyObject *self, PyObject *args);
-static PyObject *   *py_fpga_close (PyObject *self, PyObject *args);
-static PyObject *   *py_fpga_configfile_load (PyObject *self, PyObject *args);
-static PyObject *   *py_fpga_configdata_load (PyObject *self, PyObject *args);   
-static PyObject *   *py_uio_event_wait(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_event_count(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_event_control(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_event_fd(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_event_unit(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_dma_phys_address(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_dma_get_word(PyObject *self, PyObject *args);
-static PyObject *   *py_uio_dma_put_word(PyObject *self, PyObject *args);
-static PyObject *   *py_fpga_burst_read(PyObject *self, PyObject *args);
-static PyObject *   *py_fpga_burst_write(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_open(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_close(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_configfile_load(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_configdata_load(PyObject *self, PyObject *args);   
+static PyObject *   py_uio_event_wait(PyObject *self, PyObject *args);
+static PyObject *   py_uio_event_count(PyObject *self, PyObject *args);
+static PyObject *   py_uio_event_control(PyObject *self, PyObject *args);
+static PyObject *   py_uio_event_fd(PyObject *self, PyObject *args);
+static PyObject *   py_uio_event_unit(PyObject *self, PyObject *args);
+static PyObject *   py_uio_dma_phys_address(PyObject *self, PyObject *args);
+static PyObject *   py_uio_dma_get_word(PyObject *self, PyObject *args);
+static PyObject *   py_uio_dma_put_word(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_burst_read(PyObject *self, PyObject *args);
+static PyObject *   py_fpga_burst_write(PyObject *self, PyObject *args);
 
 static __inline__ void
 fpga_burst_read(volatile uint32_t *devaddr, uint32_t *memaddr, int dww);
@@ -29,19 +29,19 @@ fpga_burst_write(volatile uint32_t *devaddr, uint32_t *memaddr, int dww);
 
 
 static PyObject *
-*py_fpga_open (PyObject *self, PyObject *args) {
+py_fpga_open(PyObject *self, PyObject *args) {
     fpga_open();
     Py_RETURN_NONE;
 }
 
 static PyObject *
-*py_fpga_close (PyObject *self, PyObject *args) {
+py_fpga_close(PyObject *self, PyObject *args) {
     fpga_close();
     Py_RETURN_NONE;
 }
 
 static PyObject *
-*py_fpga_configfile_load (PyObject *self, PyObject *args) {
+py_fpga_configfile_load(PyObject *self, PyObject *args) {
     char *filename;
 
     if (!PyArg_ParseTuple(args, "z", &filename)) {
@@ -55,7 +55,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_fpga_configdata_load (PyObject *self, PyObject *args) {
+py_fpga_configdata_load(PyObject *self, PyObject *args) {
     uint32_t    len;
     Py_buffer   data;
 
@@ -73,7 +73,7 @@ static PyObject *
 
 // Wait for event defined by argument.
 static PyObject *
-*py_uio_event_wait(PyObject *self, PyObject *args) {
+py_uio_event_wait(PyObject *self, PyObject *args) {
     // Event.
     uint32_t    n_ev;
 
@@ -89,7 +89,7 @@ static PyObject *
 
 // Enable or disable events (interrupts) according to the argument.
 static PyObject *
-*py_uio_event_control(PyObject *self, PyObject *args) {
+py_uio_event_control(PyObject *self, PyObject *args) {
     uint32_t    n_ev;   // event
     uint32_t    n_c;    // 0 for disable, 1 for enable
 
@@ -104,7 +104,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_uio_event_fd(PyObject *self, PyObject *args) {
+py_uio_event_fd(PyObject *self, PyObject *args) {
     // Event pointer.
     uint32_t    n_ev;
 
@@ -117,7 +117,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_uio_event_unit(PyObject *self, PyObject *args) {
+py_uio_event_unit(PyObject *self, PyObject *args) {
     // Event pointer.
     uint32_t    n_ev;
 
@@ -130,7 +130,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_uio_event_count(PyObject *self, PyObject *args) {
+py_uio_event_count(PyObject *self, PyObject *args) {
     // Event pointer.
     uint32_t    n_ev;
 
@@ -143,12 +143,12 @@ static PyObject *
 }
 
 static PyObject *
-*py_uio_dma_phys_address(PyObject *self, PyObject *args) {
+py_uio_dma_phys_address(PyObject *self, PyObject *args) {
     return Py_BuildValue("i", dma_space.phys);
 }
 
 static PyObject *
-*py_uio_dma_get_word(PyObject *self, PyObject *args) {
+py_uio_dma_get_word(PyObject *self, PyObject *args) {
     // Buffer subscript.
     uint32_t    index;
 
@@ -162,7 +162,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_uio_dma_put_word(PyObject *self, PyObject *args) {
+py_uio_dma_put_word(PyObject *self, PyObject *args) {
     // Buffer subscript.
     uint32_t    index, w;
 
@@ -176,7 +176,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_fpga_burst_read(PyObject *self, PyObject *args) {
+py_fpga_burst_read(PyObject *self, PyObject *args) {
     uint32_t    buffer[8];
     uint32_t    *base;
     uint32_t    n_mem, n_addr, n_len;
@@ -197,7 +197,7 @@ static PyObject *
 }
 
 static PyObject *
-*py_fpga_burst_write(PyObject *self, PyObject *args) {
+py_fpga_burst_write(PyObject *self, PyObject *args) {
     uint32_t    *base;
     uint32_t    n_mem, n_addr, n_len;
     Py_buffer   n_data;
@@ -247,4 +247,3 @@ static struct PyModuleDef FPGAmodule = {
 PyMODINIT_FUNC PyInit_fpga_read_write(void) {
   return PyModule_Create(&FPGAmodule);
 };
-

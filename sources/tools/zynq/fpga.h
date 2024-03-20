@@ -40,29 +40,29 @@ typedef struct {
     int     events;     // number of events since last interrupt servicing
 } fpga_event_info_t;
 
-fpga_space_info_t   reg_space;
-fpga_space_info_t   mem_space;
-fpga_space_info_t   dma_space;
+extern fpga_space_info_t   reg_space;
+extern fpga_space_info_t   mem_space;
+extern fpga_space_info_t   dma_space;
 
-fpga_event_info_t events[FPGA_NEVENTS];
+extern fpga_event_info_t events[FPGA_NEVENTS];
 
-void                fpga_open(void);                                      
-void                fpga_close(void);                                     
-void                fpga_event_wait(uint32_t event_index);                
-void                fpga_event_control(uint32_t event_index, uint32_t c); 
-void                fpga_configfile_load(char *filename );         
-void                fpga_configdata_load(uint8_t *data, size_t len);      
-uintptr_t           uio_dma_phys_address(void);                           
-uint32_t            uio_dma_get_word(uint32_t index);                     
-void                uio_dma_put_word(uint32_t index, uint32_t w);         
-fpga_space_info_t   uio_map_space(char *name);                      
-void                uio_unmap_space(fpga_space_info_t space);             
-void                uio_map_event(int index);                             
-void                uio_unmap_event(int index);                           
-int                 uio_find(char *name);                           
-int                 uio_event_fd(uint32_t event_index);
-int                 uio_event_count(uint32_t event_index);
-uintptr_t           uio_dma_phys_address(void);
+extern void                fpga_open(void);
+extern void                fpga_close(void);
+extern void                fpga_event_wait(uint32_t event_index);
+extern void                fpga_event_control(uint32_t event_index, uint32_t c);
+extern void                fpga_configfile_load(char *filename );
+extern void                fpga_configdata_load(uint8_t *data, size_t len);
+extern uintptr_t           uio_dma_phys_address(void);
+extern uint32_t            uio_dma_get_word(uint32_t index);
+extern void                uio_dma_put_word(uint32_t index, uint32_t w);
+extern fpga_space_info_t   uio_map_space(char *name);
+extern void                uio_unmap_space(fpga_space_info_t space);
+extern void                uio_map_event(int index);
+extern void                uio_unmap_event(int index);
+extern int                 uio_find(char *name);
+extern int                 uio_event_fd(uint32_t event_index);
+extern int                 uio_event_count(uint32_t event_index);
+extern uintptr_t           uio_dma_phys_address(void);
 
 
 // Support for info2c-generated C header files
@@ -94,7 +94,7 @@ uintptr_t           uio_dma_phys_address(void);
 //     FPGA_MEM_READ(fpga, fpga_NAME_addr, loc, local, 1)
 //     return local;
 // }
-// 
+//
 // static __inline__ void
 // fpga_NAME_write(fpga_t *fpga, unsigned loc, fpga_NAME_t val) {
 //     FPGA_MEM_WRITE(fpga, fpga_NAME_addr, loc, val, 1)
@@ -167,6 +167,7 @@ static __inline__ void
 fpga_burst_read(volatile uint32_t *devaddr, uint32_t *memaddr, int dww) {
     switch (dww) {
 	case 1: *memaddr = *devaddr; break;
+#ifndef __clang__
 	case_burst_n(2, 3, 1, 0, devaddr, memaddr, read);
 	case_burst_n(3, 4, 1, 0, devaddr, memaddr, read);
 	case_burst_n(4, 5, 1, 0, devaddr, memaddr, read);
@@ -174,6 +175,7 @@ fpga_burst_read(volatile uint32_t *devaddr, uint32_t *memaddr, int dww) {
 	case_burst_n(6, 7, 1, 0, devaddr, memaddr, read);
 	case_burst_n(7, 8, 1, 0, devaddr, memaddr, read);
 	case_burst_n(8, 9, 1, 0, devaddr, memaddr, read);
+#endif
 	default: abort(); break;
     }
 }
@@ -182,6 +184,7 @@ static __inline__ void
 fpga_burst_write(volatile uint32_t *devaddr, uint32_t *memaddr, int dww) {
     switch (dww) {
 	case 1: *devaddr = *memaddr; break;
+#ifndef __clang__
 	case_burst_n(2, 3, 0, 1, devaddr, memaddr, write);
 	case_burst_n(3, 4, 0, 1, devaddr, memaddr, write);
 	case_burst_n(4, 5, 0, 1, devaddr, memaddr, write);
@@ -189,6 +192,7 @@ fpga_burst_write(volatile uint32_t *devaddr, uint32_t *memaddr, int dww) {
 	case_burst_n(6, 7, 0, 1, devaddr, memaddr, write);
 	case_burst_n(7, 8, 0, 1, devaddr, memaddr, write);
 	case_burst_n(8, 9, 0, 1, devaddr, memaddr, write);
+#endif
 	default: abort(); break;
     }
 }

@@ -5,11 +5,11 @@ import string
 import json
 import sys
 import os
-sys.path.append(os.environ['HOME'] + "/install/3pl/lib")
+sys.path.append(os.environ['HOME'] + "/install/3pl/lib/python3")
 
 def main():
     if len(sys.argv) != 2:
-        print("usage info2c file")
+        print("Usage: info2c file")
         exit(1)
     ifile = sys.argv[1]
     if ifile.endswith('.info'):

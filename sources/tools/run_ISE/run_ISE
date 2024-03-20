@@ -1,4 +1,5 @@
-#! /bin/bash -f
+#! /usr/bin/env bash
+set -f
 ngdbuild $1
 map -detail -timing -k 6 -pr b -ol high -cm speed $1
 par -w -ol high $1 $1.ncd

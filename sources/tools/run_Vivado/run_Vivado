@@ -1,5 +1,6 @@
 #! /usr/bin/env bash
-set -f
+set -e -f
+
 prog="vivado -mode tcl -nojournal -nolog -tclargs $*"
 eval exec ${prog} <<'xyz'
 

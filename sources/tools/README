@@ -189,28 +189,26 @@ zynq
 ---------------------------------------------------------------
 bin2c               TCL             execute         install/3pl/bin
 
-bin2py              python3         execute         install/3pl/bin NOT YET WRITTEN!
+bin2py              python3         execute         install/3pl/bin
 
 edif2bit            TCL             execute         install/3pl/bin
 
 info2c              python3         execute         install/3pl/bin
+info2c_s.py         python3         import          install/3pl/lib/python3
+info2c_z.py         python3         import          install/3pl/lib/python3
 
-uart_info2c         python3         execute         install/3pl/bin
+info2py             python3         execute         install/3pl/bin
+info2py.py          python3         import          install/3pl/lib/python3
 
-info2py.py          python3         import          install/3pl/include
+run_ISE             bash script     execute         install/3pl/bin
 
-info2py             shell script    execute         install/3pl/bin
+run_Vivado          bash script     execute         install/3pl/bin
 
-cpu_serial.py       python3         import          install/3pl/include
-
+cpu_serial.h        C include       compile         install/3pl/include
 cpu_serial.o        object          link            install/3pl/lib
-cpu_serial.h        C include       include         install/3pl/include
+cpu_serial.py       python3         import          install/3pl/lib/python3
 
-fpga_read_write.c   C               build           install/3pl/src
-fpga.c              C               build           install/3pl/src
-fpga.h              C include       build           install/3pl/include
-fpga.py             Python3         import          install/3pl/include
-setup.py            python3         build           install/3pl/src
-
-fpga.py             python3         import          install/3pl/include                 Y
-
+fpga.h              C include       compile         install/3pl/include
+fpga.o              object          link            install/3pl/lib
+fpga.py             python3         import          install/3pl/lib/python3
+fpga_read_write*.so python3 C ext   import          install/3pl/lib/python3

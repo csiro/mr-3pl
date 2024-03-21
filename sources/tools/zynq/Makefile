@@ -1,12 +1,11 @@
 INSTDIR = $(HOME)/install/3pl
 
-BINDIR = $(INSTDIR)/bin
 INCDIR = $(INSTDIR)/include
 LIBDIR = $(INSTDIR)/lib
 PYLIBDIR = $(LIBDIR)/python3
 
-EXT := fpga_read_write$(shell python3 -c "from distutils import sysconfig;\
-	print(sysconfig.get_config_var('EXT_SUFFIX'))")
+EXT := fpga_read_write$(shell python3 -c 'from distutils import sysconfig; \
+	print(sysconfig.get_config_var("EXT_SUFFIX"))')
 
 CC = gcc
 CFLAGS = -O
@@ -24,7 +23,8 @@ install:: all
 	install -d -m 755 $(LIBDIR)
 	install -c -m 644 fpga.o $(LIBDIR)
 	install -d -m 755 $(PYLIBDIR)
-	install -c -m 644 $(EXT) fpga.py $(PYLIBDIR)
+	install -c -m 644 fpga.py $(PYLIBDIR)
+	install -c -m 644 $(EXT) $(PYLIBDIR)
 
 clean::
 	rm -rf build $(EXT) fpga.o

@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-set -f
+set -e -f
 ngdbuild $1
 map -detail -timing -k 6 -pr b -ol high -cm speed $1
 par -w -ol high $1 $1.ncd
@@ -8,3 +8,4 @@ bitgen -w -g Persist:yes -g LCK_cycle:4 $1
 /bin/rm -rf xlnx*
 /bin/rm -f *editor.log
 gzip -fk $1.bit
+exit 0

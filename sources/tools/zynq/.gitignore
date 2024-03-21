@@ -1,3 +1,5 @@
 build
+dist
+fpga_read_write.egg-info
 *.so
 *.o

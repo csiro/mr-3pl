@@ -1,9 +1,9 @@
 This directory contains support software related to 3PL.
 
-The makefile contained in each directory usually just installs
+The Makefile contained in each directory usually just installs
 the associated file or files in an installation directory,
-~/install/3pl in sub-directories bin, lib, include or src as
-appropriate.
+~/install/3pl in sub-directories bin, include, lib or lib/python3 as
+appropriate. The top level Makefile runs make in each subdirectory.
 
 Executable scripts, bin2c, bin2py, edif2bit, info2c and info2py,
 are installed in ~/install/3pl/bin and can be executed on any
@@ -12,12 +12,12 @@ host computer.
 C source files must be compiled for the computer on which they
 will be executed, be it a workstation or a Zynq ARM CPU.
 
-Python3 import files are imported directly into python application
+Python3 import files are imported directly into python3 application
 code on the target platform.
 
-In the special case of fpga_py_extension.c this python C extension
-code must be installed using setup.py in the python library of
-the computer on which the python application code is to execute.
+In the special case of fpga_py_extension.c this python3 C extension
+is built on the target platform using the distutils and pip modules,
+via the setup.py code - see the "target_install" target in the Makefile.
 
 
 
@@ -25,11 +25,11 @@ the computer on which the python application code is to execute.
 bin2c
 -----
     bin2c               TCL script
-    
+
     target FPGA         any
     app language        C
     install             ~/install/3pl/bin
-    
+
     Convert a Xilinx .bit FPGA configuration file to a C include file
     so that the configuration data can be incorporated into a C
     application program. The configuration can then be loaded into
@@ -39,65 +39,64 @@ bin2c
 bin2py
 ------
     bin2py              Python script
-    
+
     target FPGA         any
     app language        Python3
     install             ~/install/3pl/bin
-    
+
     Convert a Xilinx .bit FPGA configuration file to a Python3 module
     so that the configuration data can be incorporated into a Python3
     application program. The configuration can then be loaded into
     the FPGA by the application program without need for a separate
     configuration file.
-    
-    
+
 edif2bit
 --------
-    edif2bit            shell script
-    
+    edif2bit            TCL script
+
     target FPGA         any
     app language        any
     install             ~/install/3pl/bin
-    
+
     Place and route a Xilinx EDIF netlist file using either ISE
     or Vivado (default). A bitfile is produced.
 
     Various shell scripts and TCL source files.
-    
+
     Sources for edif2bit shell script.
 
 info2py
 -------
     info2py.py          Python3 module
-    
+
     target FPGA         zynq or any with CPU-FPGA serial link
     app language        Python3
-    install             ~/install/3pl/include
-    
+    install             ~/install/3pl/lib/python3
+
     Process a 3PL .info JSON structure to produce Python interface functions
     between a CPU and 3PL code in an FPGA. In the case of FPGA boards
     with a serial communication interface, e.g. Gadget Factory Papilio,
     data transfers will be via the serial link. For Zynq platforms data
     transfers will be via the AXI buses.
-    
+
     info2py.py is imported into the application python program. It reads
     the interface information either from a design.info file
     (info_from_file()) or from the identical text obtainable from the
     loaded FPGA configuration (info_from_fpga()). From this it creates an
     internal Python module containing the FPGA interface functions.
 
-    
+
     info2py             shell script calling info2py.py directly
-    
+
     target FPGA         zynq or any with CPU-FPGA serial link
     app language        Python3
     install             ~/install/3pl/bin
-    
+
     This script calls info2py.py as __main__ and creates a Python
     module file 'design_fpga.py' which can be imported into the CPU
     Python application program. This module defines the ARM CPU functions
     to communicate with the FPGA 3PL application code.
-    
+
 
 serial
 ------
@@ -106,51 +105,32 @@ serial
     cpu_serial
     ----------
         cpu_serial.py       Python3 module
-    
+
         target FPGA         any with CPU-FPGA serial link
         app language        Python3
-            
+
         Python3 CPU/FPGA interface functions.
-    
-    uart_cpu
-    --------
-        cpu_serial.h, cpu_serial.o
-    
-        target FPGA         any with CPU-FPGA serial link
-        app language        C
-            
-        C CPU/FPGA interface functions.
-    
-    uart_info2c
-    -----------
-        uart_info2c         Python3 script
-    
-        target FPGA         any with CPU-FPGA serial link
-        app language        Python3
-            
-        Create C CPU/FPGA interface functions.
 
 zynq
 ----
     Communication between Zynq ARM CPU and FPGA via AXI bus.
-   
+
     fpga
     ----
         fpga.c, fpga.h      C source
-    
+
         target FPGA         Zynq
         app language        C
-            
+
         C CPU/FPGA interface functions.
 
-        
+
         fpga.py             Python3 module
-    
+
         target FPGA         Zynq
         app language        Python3
-            
+
         Python CPU/FPGA interface functions.
-       
 
     info2c
     ------
@@ -165,23 +145,24 @@ zynq
     
     lib_py_ext
     ----------
-    
-        fpga_read_write.c   C source
-    
+
+        fpga_py_extension.c C source
+
         target FPGA         Zynq
         app language        Python3
-            
+
         Python C extension functions for low-level AXI bus data transfers.
         Uses fpga/fpga.c and fpga/fpga.h.
-        
+
         setup.py
         --------
-    
+
         target FPGA         zynq or any with CPU-FPGA serial link
         app language        Python3
-            
+
         A minimal Python3 program to install C extension module
-        fpga_read_write linked with fpga.c above.
+        fpga_read_write linked with fpga.c above. Uses distutils
+        and pip modules.
 
 
 

@@ -27,4 +27,10 @@ install:: all
 	install -c -m 644 $(EXT) $(PYLIBDIR)
 
 clean::
-	rm -rf build $(EXT) fpga.o
+	rm -rf build dist $(EXT) fpga.o fpga_read_write.egg-info
+
+target_install: all
+	python3 -m pip install .
+
+target_uninstall:
+	python3 -m pip uninstall fpga_read_write

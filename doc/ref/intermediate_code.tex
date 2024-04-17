@@ -491,7 +491,7 @@
             \subsubsection{purpose}
             
                 A controller for divergent queue signals. Where a queue is read
-                within more than one module it is required that each module
+                within more than one module instance it is required that each module
                 execute a read before the datum is popped. Until all destination
                 modules have executed a read the queue must appear unavailable
                 for reading to those modules that have already executed a read.
@@ -526,42 +526,50 @@
             \subsubsection{description}
 
                 This splits the source queue .NE (read availability) and .POP
-                (acknowledge) signals into a pair per destination module. The
-                1st input is the output (read) clock signal for the queue.
+                (acknowledge) signals into a pair per destination module.
+                
+                The 1st input is the output (read) clock signal for the queue.
+                
+                The 2nd input is an optional reset signal to clear this element
+                to initial status. This occurs if the associated QUEUEBUFFER
+                is reset.
 
-                The 2nd input is the .NE (read availability) signal from the queue.
+                The 3rd input is the .NE (read availability) signal from the queue.
+                
+                The 4th and following inputs are the .POP signal from the
+                destination modules.
+                
                 The 1st output signal is the .POP (acknowledge) signal to the
-                queue. The 2nd input is a reset which is asserted if the source
-                queue is reset. The 3rd input is the .POP signal from the 1st
-                module. The 2nd output is the .NE signal to the 1st module.
-                Further input and output signals to other modules may follow. If
-                there is only one module the .NE and .POP signals should be just
-                connected through. If all destination acknowledge signals go
-                high simultaneously the acknowledge signal to the source also
-                goes high, otherwise it goes high when the last destination
-                acknowledge signal goes high. The destination acknowledge signal
-                is high for one clock cycle. When each destination acknowledge
-                signal goes high the matching destination availability signal
-                will go low at the next clock cycle unless all destination
-                modules have also acknowledged in which case destination
-                availability signals will be the be the same as the source
+                queue.               
+                
+                The 2nd and following outputs are the .NE signals to the
+                destination modules. If there is only one destination module the
+                .NE and .POP signals should be just connected through. If all
+                destination acknowledge signals go high simultaneously the
+                acknowledge signal to the source also goes high, otherwise it
+                goes high when the last destination acknowledge signal goes
+                high. The destination acknowledge signal is high for one clock
+                cycle. When each destination acknowledge signal goes high the
+                matching destination availability signal will go low at the next
+                clock cycle unless all destination modules have also
+                acknowledged in which case destination availability signals will
+                be the be the same as the source
                 availability signal.
 
             \subsubsection{dump format}
             
                 \begin{lstlisting}{gobble=16, language={tde}}
                        DIVERGE {
-                           in:
-                               c100
-                               S11
-                               glob.p.NE
-                               S21
-                               S30
-                           out:
-                               glob.p.POP
-                               S15
-                               S22
-                               S31
+                           glob.p.POP
+                           S15
+                           S22
+                           S31
+                           <-
+                           c100
+                           S11
+                           glob.p.NE
+                           S21
+                           S30
                        }
                 \end{lstlisting}
 
@@ -1176,14 +1184,9 @@
             \subsubsection{dump format}
             
                 \begin{lstlisting}{gobble=16, language={tde}}
-                   PORT {
-                       par:
-                           Str     O
-                           Int     ADDRESS
-                       in:
-                           Var     glob.addr[0..18]
-                   }
+                   PORT portname type signal
                 \end{lstlisting}
+                where {\em type} is "input", "output" or "3_state".
 
 
 

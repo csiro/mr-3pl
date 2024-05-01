@@ -523,7 +523,7 @@ tws_send(
         [
             value(p, "log");
             par {
-                pulse(p <-);
+                assert(p <-);
                 wait(tbcycles);
             }
         ]
@@ -1715,11 +1715,11 @@ multiplext_ (
             attributes(out, queuefieldzero=false);
         sync when (!<in1 || !select1) {
             assign_port(out, p <- style, isin[0], in0);
-            pulse(step <- );
+            assert(step <- );
         }
         sync when (!<in0 || select1) {
             assign_port(out, p <- style, isin[1], in1);
-            pulse(step <- true);
+            assert(step <- true);
         }
         /*
         value(avout, "log", >out);
@@ -1731,7 +1731,7 @@ multiplext_ (
         when (avout && av1 && (!av0 || select1))
             assign_port(out, p <- style, isin[1], in1);
         when (avout && av0 && av1)
-            pulse(step <-);
+            assert(step <-);
         */
     }
     
@@ -2103,11 +2103,11 @@ timebase(
             tc := count_eq_0 && ce;
             when (tc) par {
 	        reset(count);
-                pulse(p <-);
+                assert(p <-);
             }
             when (ce && !count_eq_0)
 	        --count;
-            pulse <- p;
+            assert <- p;
         } else {
             var(s, "["+modulus+"]log", {true});
             tc := sequence(s, "log", ce) && ce;

@@ -246,7 +246,9 @@ public final class CompoundValNode extends Node implements Constant {
      * @return the primitive type
      */
     private Ptype typeCheck (Object o) {
-        if (o instanceof String)
+        if (o == null)
+            throw new ExEx("cannot have missing value (null) in this context", loc);
+        else if (o instanceof String)
             return(Ptype.STR);
         else if (o instanceof Boolean)
             return(Ptype.LOG);

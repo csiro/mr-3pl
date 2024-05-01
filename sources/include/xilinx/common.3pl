@@ -2,7 +2,7 @@
 nomodule
 
 // Map of Xilinx library elements allowed for the current
-// device. This is initialised in the device files 
+// device. This is initialised in the device files
 // xc2c.3pl, xc2s.3pl, xc2v.3pl, xc2vp.3pl, xc3s.3pl,
 // xc4v.3pl, xc5v.3pl, xc6s.3pl, xc6v.3pl, xc7.3pl,
 // xc95.3pl and xcv.3pl.
@@ -374,10 +374,10 @@ del (
     value(reset, "log"),
 ) {
     value(out, type(in));
-    
+
     if (hasqueuereads(in))
-        texit("del() - input contains queue reads");    
-    
+        texit("del() - input contains queue reads");
+
     if (matched(step) && istargconst(step) && !targconsttoimmed(step))
         step := used();
 
@@ -429,7 +429,7 @@ iopins (ident(id), type(t), var(pins, t), varargs) {
     str(st, typevalstring(t));
     if (st == "str")    // for primitive change to array for uniformity
         st = "[1]str";
-    
+
     if (varexists(id)) {
         switch (id.context) {
         case "global":
@@ -471,7 +471,7 @@ setPinAttributes (var(am), type(t), var(pins, t)) {
     setPinAttributes_ (var(am), var(v), var(index, "->")) {
         int(amentries, entries(am));
         str(key);
-        
+
         if (dimensions(v) == 0) {
             // not an array - want type str, but may be a struct
             if (isstruct(v)) {
@@ -518,12 +518,13 @@ function
 mapAttributes (str(st), var(attribs, "[]str"), var(avals, "[]->")) {
     int(n, dimension(attribs));     // number of attribute arguments
     var(am, "map");                 // New attribute map
-    
+
     if (n != 0) {
         for (int(i) ; i<n ; i++) {
+            str(pname, attribs[i]);
             if (avals[i]-> == null)
                 texit(pname + "() - keymatch argument has no value");
-            if (attribs[i] == "") {
+            if (pname == "") {
                 // No key - argument should be a map.
                 if (typestring(avals[i]->) != "map")
                     texit(pname + "() - argument is not keymatch or type \"map\"");
@@ -563,14 +564,14 @@ mapAttributes (str(st), var(attribs, "[]str"), var(avals, "[]->")) {
 global procedure processPinAttributes (var(ptr, "->")) {
     str(modename, mode(ptr->));
     // Get the attributes map of the variable.
-    var(iattr, "map", attributes(ptr->));    
-    
+    var(iattr, "map", attributes(ptr->));
+
     if (iattr["loc"] == null)
         return; // no pins specified - return
-        
+
     var(locs, "[]str", iattr["loc"]);
     int(pins, dimension(locs));
-    
+
     if (modename == "clock") {
         // clock mode
         //-----------
@@ -584,7 +585,7 @@ global procedure processPinAttributes (var(ptr, "->")) {
         }
         return;
     }
-    
+
     // input or output mode
     //---------------------
 
@@ -610,17 +611,17 @@ global procedure processPinAttributes (var(ptr, "->")) {
     }
     return;
 }
-    
+
 global procedure
 generateConstraints () {
     var(mlist, "list", varlist(true));
     int(n, entries(mlist));
     int(pins);
-    
+
     for (int(i) ; i<n ; i++) {
         var(v, "->", mlist[i]);
         // Get the attributes map of the variable.
-        var(iattr, "map", attributes(v->));    
+        var(iattr, "map", attributes(v->));
 
         if (iattr["loc"] != null)
             var(locs, "[]str", iattr["loc"]);
@@ -638,7 +639,7 @@ generateConstraints () {
             var(pullup, "["+pins+"]log");
             var(pulldown, "["+pins+"]log");
             var(diff_term, "["+pins+"]log");
-            
+
             // Copy from attributes map to local variables.
             // Note and otherwise ignore any that are not recognised.
             int(mentries, entries(iattr));
@@ -679,7 +680,7 @@ generateConstraints () {
                 if (wasassigned(diff_term) && diff_term[i])
                     IOconstraint(locs[i], "diff_term", diff_term[i]);
             }
-        
+
         case "output":
             var(differential, "["+pins+"]log");
             var(tnm, "["+pins+"]str");
@@ -687,11 +688,11 @@ generateConstraints () {
             var(noshadow, "["+pins+"]log");
             var(drive, "["+pins+"]uint");
             var(slew, "["+pins+"]str");
-            var(pullup, "["+pins+"]log"); 
-            var(pulldown, "["+pins+"]log"); 
+            var(pullup, "["+pins+"]log");
+            var(pulldown, "["+pins+"]log");
             var(diff_term, "["+pins+"]log");
             var(iostandard, "["+pins+"]str");
-            
+
             // Copy from attributes map to local variables.
             // Note and otherwise ignore any that are not recognised.
             int(mentries, entries(iattr));
@@ -716,7 +717,7 @@ generateConstraints () {
                     msg(identifier(v->) + " non-standard output attribute '" + key + "'");
                 }
             }
-            
+
             // Generate constraints from attributes.
             for (int(i) ; i<pins ; i++) {
                 if (wasassigned(tnm) && tnm[i] != "")
@@ -734,15 +735,15 @@ generateConstraints () {
                 if (wasassigned(iostandard) && iostandard[i] != "")
                     IOconstraint(locs[i], "iostandard", iostandard[i]);
             }
-        
+
         case "clock":
             log(external, varexists(locs));
-            
+
             var(diff_term, "log");
             var(tnm, "str");
             var(iostandard, "str");
             var(valid, "log");
-            
+
             // Copy from attributes map to local variables.
             // Note and otherwise ignore any that are not recognised.
             int(mentries, entries(iattr));
@@ -764,7 +765,7 @@ generateConstraints () {
                     msg(identifier(v->) + " non-standard input attribute '" + key + "'");
                 }
             }
-            
+
             if (attribute(v->, "frequency") == null)
                 continue;
             float(period, 1.0 / attribute(v->, "frequency"));
@@ -783,11 +784,11 @@ generateConstraints () {
                         IOconstraint(locs[i], "BUFG", "CLK");
                 }
             }
-                        
+
             // For internal clock apply timing name constraint to net.
             // Attribute 'valid' indicates that the clock drives clocked
             // logic elements as distinct from non-clocking inputs to which it is
-            // connected, e.g. clock managers or clock buffers.            
+            // connected, e.g. clock managers or clock buffers.
             if ((!external || directive("family") == "XC2C" || directive("family") == "XC95") &&
                     !attribute(v->, "invertedclock") && valid) {
                 if (tnm != "NONE") {
@@ -810,10 +811,10 @@ generateConstraints () {
             }
         }
     }
-    
+
     // Append path delay constraints.
     int(e, entries(path_delays));
-    for (int(i) ; i<e ; i++) { 
+    for (int(i) ; i<e ; i++) {
 	if (startswith(directive("postProcessTool"), "ise")) {
             str(name, path_delays[i].from + "_" + path_delays[i].to);
             addncfline("TIMESPEC TS_" + name + "=FROM " + path_delays[i].from + " TO " + path_delays[i].to + " " + path_delays[i].time + " DATAPATHONLY;");
@@ -861,7 +862,7 @@ generateConstraints () {
             }
         }
     }
-    
+
     // Create a variable in the calling context whose identifier is
     // 'key'.
     //
@@ -872,7 +873,7 @@ generateConstraints () {
     // map 'm' for the key.
     //
     procedure
-    condgrab (var(m, "map"), str(key), int(pins)) {       
+    condgrab (var(m, "map"), str(key), int(pins)) {
         if (m[key] == null)
             return;
         str(varname, "calling." + key);
@@ -885,7 +886,7 @@ generateConstraints () {
 
 // Get the allowed primitive type of an attribute.
 // 'attr'   is the attribute
-//              
+//
 // A fatal error occurs if the attribute is not recognised in the calling
 // context.
 //
@@ -971,7 +972,7 @@ IOconstraint (str(loc), str(con), var(val)) {
         file.iostandards_done[loc] = true;
     }
     port = "PORT_" + loc;
-    
+
     if (startswith(directive("postProcessTool"), "ise")) {  // NCF
         // special case for pullup and pulldown - no value, just constraint string
         if (CON == "PULLUP" || CON == "PULLDOWN") {

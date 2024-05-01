@@ -80,9 +80,6 @@
         <format property="3pl.builddate" pattern="yyyy-MM-dd HH:mm:ss ZZZ"/>
     </tstamp>
     <property name="3pl.builtby" value="${env.USER}"/>
-    <condition property="3pl.built_on_windows">
-        <os family="windows"/>
-    </condition>
 
     <!--
         define a filterchain that does token replacement for 3PL version info
@@ -142,11 +139,9 @@
         <sequential>
             <!-- copy 3pl shell or batch script to bin -->
             <mkdir dir="@{base}/bin"/>
-            <copy if:set="3pl.built_on_windows"
-              file="sources/scripts/3pl.bat" tofile="@{base}/bin/3pl.bat"/>
-            <copy unless:set="3pl.built_on_windows"
-              file="sources/scripts/3pl.sh" tofile="@{base}/bin/3pl"/>
-            <setpermissions unless:set="3pl.built_on_windows" mode="755">
+            <copy file="sources/scripts/3pl.bat" tofile="@{base}/bin/3pl.bat"/>
+            <copy file="sources/scripts/3pl.sh" tofile="@{base}/bin/3pl"/>
+            <setpermissions mode="755">
                 <file file="@{base}/bin/3pl"/>
             </setpermissions>
 

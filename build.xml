@@ -141,7 +141,7 @@
             <mkdir dir="@{base}/bin"/>
             <copy file="sources/scripts/3pl.bat" tofile="@{base}/bin/3pl.bat"/>
             <copy file="sources/scripts/3pl.sh" tofile="@{base}/bin/3pl"/>
-            <setpermissions mode="755">
+            <setpermissions mode="755" nonPosixMode="tryDosOrPass">
                 <file file="@{base}/bin/3pl"/>
             </setpermissions>
 

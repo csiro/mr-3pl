@@ -222,50 +222,55 @@
             <copyinc base="@{base}" path="chips/generic/lcd.3pl"/>
             <copyinc base="@{base}" path="chips/generic/seven_segment.3pl"/>
             <!-- these are only fetched on an internal build -->
-            <condition property="csiro.dir.exists">
-                <available file="sources/include/boards/csiro" type="dir"/>
+            <condition property="fetch.csiro.boards">
+                <and>
+                    <istrue value="${3pl.internal}"/>
+                    <not>
+                        <available file="sources/include/boards/csiro" type="dir"/>
+                    </not>
+                </and>
             </condition>
-            <exec if:true="${3pl.internal}" unless:true="${csiro.dir.exists}"
+            <exec if:true="${fetch.csiro.boards}"
               executable="svn" dir="sources/include/boards" failonerror="true">
                 <arg value="export"/>
                 <arg value="https://svnserv.csiro.au/svn/hsi/3pl/trunk/sources/include/boards/csiro"/>
             </exec>
-            <copyinc base="@{base}" path="boards/csiro/ddm/dam.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/ddm/ddm.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/ddm/dbpm.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/clp1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/ext_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io1_interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2r1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io25.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon3.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon4.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/qdr2_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/zbt_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/hsa.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/iochan.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/pulse.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hsc/base.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hsc/mv13.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2p.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/pulse.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/hsa.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/iochan.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/qdr2_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io25.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/external_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon3.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io2r1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon4.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/ddm/dam.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/ddm/ddm.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/ddm/dbpm.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/clp1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/ext_ram.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/interrupts.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io1_interrupts.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io2.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io2r1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io25.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/iocommon1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/iocommon2.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/iocommon3.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/iocommon4.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/qdr2_ram.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/zbt_ram.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/mezz/hsa.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/mezz/iochan.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/mezz/pulse.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hsc/base.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hsc/mv13.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod/io2p.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/mezz/pulse.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/mezz/hsa.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/mezz/iochan.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/qdr2_ram.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/io2.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/interrupts.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/io25.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/external_ram.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/iocommon3.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/io2r1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/iocommon2.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/iocommon1.3pl"/>
+            <copyinc if:true="${3pl.internal}" base="@{base}" path="boards/csiro/hymod2/iocommon4.3pl"/>
             <!-- ignoring these files for now ...
             <copyinc base="@{base}" path="mvlib.3pl"/>
             -->

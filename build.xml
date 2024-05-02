@@ -226,8 +226,7 @@
                 <available file="sources/include/boards/csiro" type="dir"/>
             </condition>
             <exec if:true="${3pl.internal}" unless:true="${csiro.dir.exists}"
-              executable="svn" dir="sources/include/boards"
-              failonerror="true" outputproperty="3pl.svnerrs">
+              executable="svn" dir="sources/include/boards" failonerror="true">
                 <arg value="export"/>
                 <arg value="https://svnserv.csiro.au/svn/hsi/3pl/trunk/sources/include/boards/csiro"/>
             </exec>

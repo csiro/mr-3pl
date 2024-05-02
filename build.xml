@@ -81,6 +81,16 @@
     </tstamp>
     <property name="3pl.builtby" value="${env.USER}"/>
 
+    <!-- record the platform this was built on -->
+    <exec executable="uname" failonerror="true" outputproperty="3pl.builton">
+        <arg value="-s"/>
+        <arg value="-r"/>
+        <arg value="-m"/>
+    </exec>
+
+    <!-- only copy internal files if -D3pl.internal=true passed on cmd line -->
+    <property name="3pl.internal" value="false" unless:set="3pl.internal"/>
+
     <!--
         define a filterchain that does token replacement for 3PL version info
     -->
@@ -211,44 +221,15 @@
             <copyinc base="@{base}" path="chips/generic/blink.3pl"/>
             <copyinc base="@{base}" path="chips/generic/lcd.3pl"/>
             <copyinc base="@{base}" path="chips/generic/seven_segment.3pl"/>
+            <!-- these are only fetched on an internal build -->
+            <exec if:true="${3pl.internal}"
+              dir="@{base}/include/boards" executable="svn"
+              failonerror="true" outputproperty="3pl.svnerrs">
+                <arg value="export"/>
+                <arg value="https://svnserv.csiro.au/svn/hsi/3pl/trunk/sources/include/boards/csiro"/>
+            </exec>
             <!-- ignoring these files for now ...
             <copyinc base="@{base}" path="mvlib.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/ddm/dam.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/ddm/ddm.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/ddm/dbpm.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/clp1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/ext_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io1_interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2r1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io25.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon3.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/iocommon4.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/qdr2_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/zbt_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/hsa.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/iochan.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/mezz/pulse.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hsc/base.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hsc/mv13.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod/io2p.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/pulse.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/hsa.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/mezz/iochan.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/qdr2_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/interrupts.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io25.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/external_ram.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon3.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/io2r1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon2.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon1.3pl"/>
-            <copyinc base="@{base}" path="boards/csiro/hymod2/iocommon4.3pl"/>
             -->
         </sequential>
     </macrodef>
@@ -310,7 +291,7 @@
         <echo message="${3pl.revision}"/>
     </target>
 
-    <!-- the "versionfilter" target filters stdin replacing version tokens -->
+    <!-- the "versionfilter" target copies a file to stdout, with vers subs -->
     <target name="versionfilter" description="replace version tokens in stdin">
         <fail unless:set="inputfile">
             'inputfile' property not specified (e.g. -Dinputfile=filename)

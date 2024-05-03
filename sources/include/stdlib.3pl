@@ -2107,11 +2107,11 @@ timebase(
             }
             when (ce && !count_eq_0)
 	        --count;
-            assert <- p;
+            assert(p <-);
         } else {
             var(s, "["+modulus+"]log", {true});
             tc := sequence(s, "log", ce) && ce;
-            pulse <- tc;
+            assert(tc <-);
         }
         used = true;
     }

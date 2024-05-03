@@ -32,11 +32,11 @@ postprocess(str(rname), str(tool), float(minver, 1.0), float(maxver, 9999.0)) {
 
     // if bitfile exists and is newer than netlist - don't post-process
     if (filelastmod(bitfile) > filelastmod(netfile)) {
-	if (directive("verbose"))
+	//if (directive("verbose"))
 	    msg("bitfile up-to-date - skipping post-processing");
         return;
     }
-    if (directive("verbose"))
+    //if (directive("verbose"))
 	msg("bitfile out-of-date - post-processing");
 
     // The recipe file contains the commands needed for post processing
@@ -122,7 +122,7 @@ postprocess(str(rname), str(tool), float(minver, 1.0), float(maxver, 9999.0)) {
     if (direxists("postProcessAppendFile")
 	    && filecanread(directive("postProcessAppendFile"))) {
 
-	if (directive("verbose"))
+	//if (directive("verbose"))
 	    msg("appending " + directive("postProcessAppendFile"));
 	file(bfile, outdir + design + ".bit");
 	open(bfile, "a");
@@ -454,7 +454,7 @@ procedure filter(str(lines)) {
 		level = 0;
 	}
     }
-    if (directive("verbose"))
+    //if (directive("verbose"))
 	level = 0;
 
     // read all lines and filter

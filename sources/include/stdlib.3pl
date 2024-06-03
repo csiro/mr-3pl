@@ -2107,7 +2107,7 @@ timebase(
             }
             when (ce && !count_eq_0)
 	        --count;
-            assert <- p;
+            pulse <- p;
         } else {
             var(s, "["+modulus+"]log", {true});
             tc := sequence(s, "log", ce) && ce;

@@ -1644,30 +1644,26 @@ public class TDE implements Constant, TDEConstants {
 
         // General dump of above 5 simple cases which do not have specific code
         icl(type.typename() + " {");
-        it = params.iterator();
+        /*it = params.iterator();
 
         if (it.hasNext())
             icl("    par:");
 
         while (it.hasNext())
-            print(it.next());
-
-        it = inputs.iterator();
-
-        if (it.hasNext())
-            icl("    in:");
-
-        while (it.hasNext())
-            print(it.next());
+            print(it.next());*/
 
         it = outputs.iterator();
 
-        if (it.hasNext())
-            icl("    out:");
+        while (it.hasNext())
+            print(it.next());
+        
+        icl("<-");
+
+        it = inputs.iterator();
 
         while (it.hasNext())
             print(it.next());
-
+        
         if (dump_loc && (loc != null))
             icl("}" + "\t" + loc);
         else

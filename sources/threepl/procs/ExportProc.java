@@ -42,7 +42,7 @@ import threepl.parser.SrcLoc;
 public class ExportProc extends InbuiltProc implements Constant, TDEConstants {
 
     /**
-     * Construct the inbuilt procedure externout().
+     * Construct the inbuilt procedure export().
      * This is called exactly once by method threepl.exec.InbuiltProcs().
      */
     public ExportProc () {
@@ -53,7 +53,7 @@ public class ExportProc extends InbuiltProc implements Constant, TDEConstants {
     }
 
     /**
-     * Execute the procedure externout(). This does not generate in-line
+     * Execute the procedure export(). This does not generate in-line
      * executable code.
      * @param   inargs is a list of input argument tree nodes
      * @param   outargs is a list of output argument tree nodes

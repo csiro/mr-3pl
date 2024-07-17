@@ -65,6 +65,35 @@
         bits, the locations being used in pairs for the +ve and the -ve inputs
         (in that order). The location array matches the associated signal
         in order LSB to MSB for the array members and the signal bits.
+        in order LSB to MSB for the array members and the signal bits.
+            
+        Pin strings are matched left to right to an output variable
+        starting at the the least-significant bit. For a compound type pins are
+        matched left to right from inner to outer nested types. For a struct the
+        strings are matched left to right in field order.
+
+        FPGA package pins are usually already defined in a platform header file,
+        for example -
+        \begin{lstlisting}[gobble=12, language=threepl]
+            static(v, "[2][2]uint:2");
+            iopins(a_pins, "[12]str",
+                        {
+                            "A0", "B0", "A1", "B1", "A2", "C2",
+                            "A3", "B3", "A4", "B4", "C3", "C4"
+                        }
+                );
+        \end{lstlisting}
+        There might be additional attributes included for these pins.
+
+        \begin{lstlisting}[gobble=12, language=threepl]
+           output(,, v, "[2][2]uint:2", loc=a_pins[2..9]);
+        \end{lstlisting}
+
+        The resulting output connections would be -\\
+        v[0][0] (LSB, MSB) is connected to pins "A1", "B1" \\
+        v[0][1] (LSB, MSB) is connected to pins "A2", "C2" \\
+        v[1][0] (LSB, MSB) is connected to pins "A3", "B3" \\
+        v[1][1] (LSB, MSB) is connected to pins "A4", "B4" \\
 
         The following attribute is read-only and is created when {\bf
         output()} is called and can be retrieved from the output mode

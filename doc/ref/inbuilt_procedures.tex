@@ -450,10 +450,8 @@
         \item   a key=value argument
         \blend
         
-        In the last case this may be followed by more key=value arguments. If this
-        is not supplied the attributes can be added later using inbuilt procedure
-        {\bf attributes()} \autorefph{sec:ipattributes}. For a description of
-        applicable attributes see \autorefph{sec:attributes}.
+        In the last case this may be followed by more key=value arguments. For a
+        description of applicable attributes see \autorefph{sec:attributes}.
         
         Attributes are applied to a variable in a map. The map
         keys are the attribute identifiers and the associated values
@@ -913,6 +911,10 @@
         When {\bf cmemory()} is used to create a module, procedure or function
         parameter it cannot be passed attributes. The created parameter variable
         will adopt the attributes of the associated argument.
+        
+        See also - \\
+        {\bf cmemoryread()} \autorefph{sec:ifcmemoryread}) \\
+        {\bf cmemorywrite()} \autorefph{sec:ipcmemorywrite}) \\
 
 
 
@@ -968,6 +970,10 @@
         the memory port to the current clock domain. All further calls to either of
         these inbuilt procedures for the same port of the same combinatorial output
         memory must be in the same clock domain (or a fatal error results).
+        
+        See also - \\
+        {\bf cmemory()} \autorefph{sec:ipcmemory}) \\
+        {\bf cmemoryread()} \autorefph{sec:ifcmemoryread}) \\
 
 
     \section{designname - change the design name}\label{sec:ipdesignname}
@@ -3975,6 +3981,11 @@
         When {\bf rmemory()} is used to create a module, procedure or function
         parameter it cannot be passed attributes. The created parameter variable
         will adopt the attributes of the associated argument.
+        
+        See also - \\
+        {\bf rmemoryout()} \autorefph{sec:ifrmemoryread}) \\
+        {\bf rmemoryread()} \autorefph{sec:ifrmemoryread}) \\
+        {\bf rmemorywrite()} \autorefph{sec:iprmemorywrite}) \\
 
     \section{rmemoryread - read a registered output memory}\label{sec:iprmemoryread}
         
@@ -4032,6 +4043,11 @@
         either of these inbuilt procedures for the same port of the same
         registered output memory must be in the same clock domain (or a fatal
         error results).
+        
+        See also - \\
+        {\bf rmemory()} \autorefph{sec:iprmemory}) \\
+        {\bf rmemoryout()} \autorefph{sec:ifrmemoryread}) \\
+        {\bf rmemorywrite()} \autorefph{sec:iprmemorywrite}) \\
 
 
     \section{rmemorywrite - write to a registered output memory}\label{sec:iprmemorywrite}
@@ -4090,6 +4106,11 @@
         current clock domain. All further calls to either of these inbuilt
         procedures for the same port of the same registered output memory must
         be in the same clock domain (or a fatal error results).
+
+        See also - \\
+        {\bf rmemory()} \autorefph{sec:iprmemory}) \\
+        {\bf rmemoryout()} \autorefph{sec:ifrmemoryread}) \\
+        {\bf rmemoryread()} \autorefph{sec:ifrmemoryread}) \\
 
 
 

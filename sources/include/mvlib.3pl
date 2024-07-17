@@ -785,7 +785,7 @@ connec (
     );
     when (outv_av) par {
         outp <<- outv;
-        pulse(outv_ack <-);
+        assert(outv_ack <-);
     }
     when (inp_ack)
         null <<- inp;

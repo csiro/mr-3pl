@@ -38,6 +38,11 @@
     refined over a long period, it will almost certainly not be error free and
     thus {\bf 3PL must not be used in any critical applications!}
     
+    3PL is implemented in Java and so will operate under both UNIX/LINUX/OSX
+    and Windows environments. The release includes the source code however
+    the Java jar file is provided so it is unnecessary to rebuild 3PL unless
+    a bug is to be corrected or some extension or improvement is contemplated.
+    
     \section{The 3PL language}
 
         3PL is a {\em dataflow}\footnote{Dataflow was a name
@@ -256,7 +261,7 @@
         Melbourne. The group is now called High Speed Instrumentation and is in
         CSIRO Mineral Resources, Clayton, Melbourne.
 
-        Paul Dunn conceived the language and Paul and Andrew Bainbridge-Smith
+        Paul Dunn conceived the language and he and Andrew Bainbridge-Smith
         developed the original (incomplete) compiler. Andrew did all the
         groundwork finding java tools and set up the make file, the directory
         structure and the javadoc framework and wrote the original parser. Paul
@@ -274,5 +279,9 @@
         
         Robin Kirkham has been an invaluable critic and expert user of 3PL
         throughout and has contributed significant 3PL library code.
+        
+        Murray Jensen crafted the make files to operate under Unix-like
+        or Windows environments (development and subsequent usage of 3PL
+        has however been entirely under UNIX/LINUX/OSX).
 
 

@@ -306,7 +306,16 @@
                 v++;
         \end{lstlisting}
         but note that these operators cannot be used on a static variable as part
-        of an expression. We could make the counter bi-directional, e.g.
+        of an expression, thus.
+        \begin{lstlisting}[language=threepl]
+            static({a, v}, "int:8");
+            static(l, "log");
+            when (l)
+                v <- a++;
+        \end{lstlisting}
+        would give a compile error.
+        
+        We could make the counter bi-directional, e.g.
         \begin{lstlisting}[language=threepl]
             static(v, "int:8");
             static({l, up}, "log");
@@ -617,10 +626,83 @@
         role it can be viewed as a pointer to that static variable (3PL does have
         pointer variables).
 
-        Value variables can be re-assigned at any time at which point they take on a
-        new value. Value variables can also be evaluated prior to being assigned, in
-        which case the later assignment is linked back by the compiler to the prior
+        Value variables can be re-assigned at any time during immediate
+        execution at which point they take on a new value, e.g. -
+        \begin{lstlisting}[language=threepl]
+            static({a, b, c, d}, "int:8");
+            value(v, "int:8", c + d);
+            a <- v;
+            v := c - d;
+            b <- v;
+        \end{lstlisting}
+        Here the value variable {\bf v} is used with its initial value then
+        re-assigned before being used again with a different value. This
+        produces the same result as -
+        \begin{lstlisting}[language=threepl]
+            static({a, b, c, d}, "int:8");
+            a <- c + d;
+            b <- c - d;
+        \end{lstlisting}
+        
+        Value variables can also be evaluated prior to being assigned, in which
+        case the later assignment is linked back by the compiler to the prior
         usage.
+        \begin{lstlisting}[language=threepl]
+            static({a, b, c}, "int:8");
+            value(v, "int:8");
+            a <- v;
+            v := b + c;
+        \end{lstlisting}
+        Here {\bf v} is created but has no initial value. When its value
+        is used 3PL keeps a pointer to the value variable so that when it
+        is subsequently assigned that value is belatedly substituted.        
+        As a consequnce of this the following may appear to produce
+        unexpected results but is nevertheless consistent with the above -
+        \begin{lstlisting}[language=threepl]
+            static({a, b, c, x, y}, "int:4"S);
+            value(v, "int:4", 0);
+            a <- v;
+            v := x;
+            b <- v;
+            v := y;
+            c <- v;
+        \end{lstlisting}
+        
+        which produces the equivalent to -
+        
+        \begin{lstlisting}[language=threepl]
+            a <- x;
+            b <- x;
+            c <- y;
+        \end{lstlisting}
+        
+        Because a value variable is assigned or evaluated during immediate execution,
+        not target execution, it can be reassigned a value at any time. For example
+        to build up the summation of multiple terms of target variables a value
+        mode variable can be used to hold intermediate values during iterations of
+        a loop -        
+        
+        \begin{lstlisting}[language=threepl]
+            static(a, "[10]int:8);
+            value(sum, "int:12", 0);
+            for (int(i, 0) ; i<size(a) , i++)
+                sum := sum + a[i];
+        \end{lstlisting}
+
+        The resulting target code is equivalent to -
+        
+        \begin{lstlisting}[language=threepl]
+            sum := (....(a[0]) + a[1]) + a[2]) + a[4]) ............);
+        \end{lstlisting}
+        
+        Note that value mode variable {\bf sum} must be initialised to 0
+        otherwise a combinatorial loop will be generated which will result in a
+        fatal error during place-and-route! The initial addition of the first
+        array member to 0 will be optimised out during code generation.
+
+
+
+
 
 
     \section{Parallel and sequential blocks}
@@ -1069,18 +1151,25 @@
         \footnote{it is called a \kwd{file} module which is described later} contains the
         infinite loops enclosing enclosing statements in that source file.
 
-        It is crucial to establish sinks for queue reads, and a module is a queue sink. A
-        queue which is read in more than one queue module will not pop the datum until
-        all modules have executed a read. Thus if a queue is read in two modules if one
-        module reads the queue but the other does not, the queue becomes unavailable in
-        the first module and remains so until the second module has read the queue. When
-        all modules have read a queue the datum is removed and if another datum is
-        present in the queue queue the queue becomes available again to all modules. Thus
-        a queue can have multiple sinks but each must read a datum before the queue pops
-        that datum and makes the next (if any) available. This data synchronisation
-        occurs automatically. Note that if all queue sinks (modules) read simultaneously
-        as soon as read availability occurs then the queue can transfer data at the
-        clock rate - there is no time penalty in this mechanism.
+        It is crucial to establish sinks for queue reads, and an instance of a
+        module is a queue sink. A queue which is read in more than one intance of a
+        queue module will not pop the datum until all destination modules have
+        executed a read. Thus if a queue is read in two modules, if one module reads
+        the queue but the other does not, the queue becomes unavailable in the
+        first module and remains so until the second module has read the queue.
+        When all modules have read a queue the datum is removed and if another
+        datum is present in the queue queue the queue becomes available again to
+        all modules. Thus a queue can have multiple sinks but each must read a
+        datum before the queue pops that datum and makes the next (if any)
+        available. This data synchronisation occurs automatically. Note that if all
+        queue sinks (modules) read simultaneously as soon as read availability
+        occurs then the queue can transfer data at the clock rate - there is no
+        time penalty in this mechanism.
+        
+        Note that there may be multiple instances (calls) of a module in which case
+        each is a separate potential queue destination and each must execute a read
+        of the queue to enable access of the next datum in the queue to all
+        destination modules.
 
         Within a queue sink (module) there can be multiple reads of the same queue but
         the effect these have on the queue depends on timing. If one or more queue reads

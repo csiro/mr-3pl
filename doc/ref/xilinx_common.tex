@@ -982,36 +982,84 @@
             no
 
             {\bf description:} \\
-            This procedure attaches attributes to a collection of FPGA pin
-            strings. Optionally the procedure can create a variable containing
-            the pin strings.
+            This procedure adds pin string names and attributes to a global map of
+            FPGA package pin attributes, {\bf pinAttributes}, the keys being FPGA
+            pin strings.
             
+            Optionally the procedure can create a variable which selects a
+            subset of pins for use in calls to inbuilt procedures {\bf input()}
+            or {\bf output()},
+
             For each pin string a map of attributes is created. This map is itself
-            contained in a single map whose key is the pin string and value the
-            attribute map for that pin.
-            
+            inserted into the single global map, {\bf pinAttributes} with the pin
+            string as the key. If that key already exists in the global map the new
+            attributes are added, or else replace existing attribute values if they
+            are already present.
+
             Parameter {\bf id} is an optional identifier which if given an argument
-            will be used to create an immediate variable whose value is the collection
-            of strings designating the FPGA pins.
+            will be used to create an immediate variable which is of type {\bf t}
+            and contains a copy of the argument to parameter {\bf pins}. This can
+            be used to select a subset of pins, usually the pins associated with
+            one of several I/O connectors.
+
+            Parameter {\bf t} is the type of the {\bf pins} argument. The argument
+            may be type {\bf type} or it may be a type string. The type may be
+            simply "str" for one pin, or more usually a 1-dimensional array of
+            strings.
+
+            Parameter {\bf pins} should match {\bf t} in type and is the collection
+            of pin strings, the argument to which may be either a compound constant
+            or a variable of the designated type.
             
-            Parameter {\bf t} is the type of the pin argument. The argument may be
-            type {\bf type} or it may be a type string. The type may be simply "str"
-            for one pin, or more usually nested arrays and structs whose primitive
-            types are only "str".
+            Usually an FPGA platform header file will contain a call to
+            {\bf iopins()} for each attached device or external connector.
+            For each call the {\bf id} identifier is then used to refer to that
+            subset of pins for input and output connections.
             
-            Parameter {\bf pins} is the collection of pin strings, the argument to
-            which may be either a compound constant or a variable of the designated
-            type.
+            To apply optional attributes to specific pins {\bf iopins()} can be
+            called with the {\bf id} argument missing in which case the call will
+            just apply the specified attributes to the specific pins regardless
+            of which subsets of pins to which they may belong.
             
+            Pin strings are matched left to right to an input or output variable
+            starting at the the least-significant bit. For a compound type pins
+            are matched left to right from inner to outer nested types. For a
+            struct the strings are matched left to right in field order.
+            
+            The pin strings are provided as a flat 1-dimensional array
+            whose dimension matches the required number of bits, e.g. -
+
+            \begin{lstlisting}[gobble=12, language=threepl]
+                static(v, "[2][2]uint:2");
+                iopins(v_pins, "[8]str", {
+                                     "A1", "B1", "A2", "C2", "A3", "B3", "A4", "B4"
+                                 });
+                output(,, v, loc=v_pins);
+            \end{lstlisting}
+            The pin specification must match the number of data bits.
+
+            The resulting output connections are -\\
+            v[0][0] is connected to pins "A1", "B1" (LSB, MSB)\\
+            v[0][1] is connected to pins "A2", "C2" (LSB, MSB)\\
+            v[1][0] is connected to pins "A3", "B3" (LSB, MSB)\\
+            v[1][1] is connected to pins "A4", "B4" (LSB, MSB)\\
+            
+            A subset of pins may be selected, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                static(w, "[2]uint:2");
+                output(,, w, loc=v_pins[2..5]);
+            \end{lstlisting}           
+
             Following these parameters a number of additional arguments may be
-            provided to specify attributes associated with the pins. These additional
-            arguments may be keymatch, i.e. attribute=value, or may be simple arguments.
-            Where an argument is not keymatch it must be type "map" whose keys are
-            attributes (strings) and values are attribute values.
-            
-            The arguments are processed left to right and where an attribute appears
-            more than once the right-most value will prevail.
-            
+            provided to specify attributes associated with the pins. These
+            additional arguments may be keymatch, i.e. attribute=value, or may be
+            simple arguments. Where an argument is not keymatch it must be type
+            "map" whose keys are attributes (strings) and values are attribute
+            values. Each attribute is applied to every pin.
+
+            The arguments are processed left to right and where an attribute
+            appears more than once the right-most value will prevail.
+
             Each attribute value must be a single value which will be added
             to each pin map.
             
@@ -1021,36 +1069,38 @@
             already exist they will be overwritten. The variable identifier must
             be different in each case or may be omitted.
             
-            It is important to note that the prime function of iopins() is to
+            It is important to note that the prime function of {\bf iopins()} is to
             establish attributes associated with pins. As an optional byproduct a
             variable can be created which contains the collection of pins and this
-            would be used to pass locations to library procedures input(), output()
-            or clock() for external connections. The pin locations can however be
-            passed to these procedures quite independently of iopins since only the
-            pin strings are needed as the attributes are extracted from the
-            attribute maps associated with the pins. It is of course usual to use
-            the variable optionally created by iopins() to pass the location pins to
-            the I/O procedures.
-            
-            The pin attributes established by iopins() are used by library
-            procedures input(), output() and clock() but attributes can also be
-            passed directly to these procedures as arguments to them in a similar
-            way. It is a matter of choice whether to associate attributes directly
-            with pins or instead to pass them directly to the input and output
-            procedures. This may be partly decided by whether pins are connected
-            to fixed external components or else to hardware which varies with the
-            application.
-            
-            Attributes passed directly to input(), output() or clock() will
-            override any attributes passed via iopins(). An attribute associated
-            with a pin via iopins() that is passed to input(), output() or
-            clock() must not conflict with that attribute on another pin in that
-            call, though that attribute need not be on all pins.
-            
-            The attributes attached to pins by iopins() may be unused. Attributes
-            are only used where pins are processed by library procedures input(),
-            output() or clock() and then only those relevant to that procedure.
-            Unrecognised attributes will result in a fatal error.
+            would be used to pass locations to library procedures {\bf input()},
+            {\bf output()} or {\bf clock()} for external connections. The pin
+            locations can however be passed to these procedures quite independently
+            of {\bf iopins()} since only the pin strings are needed as the
+            attributes are extracted from the attribute maps associated with the
+            pins. It is of course usual to use the variable optionally created by
+            {\bf iopins()} to pass the location pins to the I/O procedures.
+
+            The pin attributes established by {\bf iopins()} are used by library
+            procedures {\bf input()}, {\bf output()} and {\bf clock()} but
+            attributes can also be passed directly to these procedures as arguments
+            to them in a similar way. It is a matter of choice whether to associate
+            attributes directly with pins or instead to pass them directly to the
+            input and output procedures. This may be partly decided by whether pins
+            are connected to fixed external components or else to hardware which
+            varies with the application.
+
+            Attributes passed directly to {\bf input()}, {\bf output()} or {\bf
+            clock()} will override any attributes passed via {\bf iopins()}. An
+            attribute associated with a pin via iopins() that is passed to {\bf
+            input()}, {\bf output()} or {\bf clock()} must not conflict with that
+            attribute on another pin in that call, though that attribute need not
+            be on all pins.
+
+            The attributes attached to pins by {\bf iopins()} may be unused.
+            Attributes are only used where pins are processed by library procedures
+            input(), {\bf output()} or {\bf clock()} and then only those relevant
+            to that procedure. Unrecognised attributes will result in a fatal
+            error.
             
             The following table lists the allowed attributes that are recognised
             by iopins().
@@ -1064,12 +1114,31 @@
                iopins(, "[2]str", {"B1", "A2"}, tnm=tnms);
                output(,, led, loc=led_pins, drive=24);
             \end{lstlisting}
-            which will create a variable {\bf led\_pins} in the current scope
-            which is an array of 4 strings. The I/O standard "lvcmos33" will be
-            established for each of the four pins (inputs or outputs) and a
-            pullup resistor is specified for each. For two of the pins separate
-            timing name attributes have been added.
             
+            The 1st statement creates a static variable {\bf led} of four bits
+            (could have been "[4]log" or "uint:4" etc.) which is to be connected to
+            FPGA output pins.
+
+            The 2nd statement creates variable {\bf tnms} which is an array of two
+            strings which will be used as timing group names.
+
+            The 3rd statement adds four pins to the global pin attributes map, sets
+            their I/O standard to lvcmos33 and gives each a pullup resistor. It 
+            also creates a variable {\bf led\_pins} in the curent scope which
+            contains a string array of the specified pins that can be passed to
+            procedure {\bf output()}. Note that "A1" will be assigned to the LSB
+            and "C2" to the MSB.
+
+            The 4th statement applies the timing names in variable {\bf tnms} to
+            two of the pins in the global pin attributes map. The first argument is
+            omitted as we do not need a handle on this subset of two pins as they
+            are already included in {\bf led\_pins}.
+
+            The 5th statement creates the output connection and also adds an
+            additional attribute "drive=24" to the all four pins. Note that this
+            does not add these additional attributes to the global attributes map
+             {\bf pinAttributes}.
+                        
             The following example illustrates that attribute values for pins
             cab be overridden by an additional call to {\bf iopins()} -
             \begin{lstlisting}[gobble=12, language=threepl]
@@ -1080,8 +1149,8 @@
             \end{lstlisting}
             
             An alternative is to pass attribute values directly through calls to
-            {\bf input()}, {\bf output}, or {\bf clock()} which will override attrbute values
-            previously specified via {\bf iopins()}, e.g.
+            {\bf input()}, {\bf output}, or {\bf clock()} which will override
+            attrbute values previously specified via {\bf iopins()}, e.g.
             \begin{lstlisting}[gobble=12, language=threepl]
                static(led, "bits:4");
                iopins(led_pins, "[4]str", {"A1", "B1", "A2", "C2"}, pullup=true);

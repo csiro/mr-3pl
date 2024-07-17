@@ -1399,10 +1399,14 @@
             a C include file to be shared between a CPU C program and
             an associated 3PL FPGA program where there is a CPU/FPGA interface
             and constants such as bus or register addresses must be the same.
+
+            Note that {\bf cinclude()} only handles \#define, C-comments and
+            blank lines. Anything else gives a fatal error.
             
-            {\bf cinclude()} processes integer, string and floating point
-            definitions. It also handles a \#define with no value, creating
-            a {\bf log} type initialised to {\bf true}.
+            {\bf cinclude()} processes \#define definitions with integer,
+            string and floating point definitions. It also handles a
+            \#define with no value, creating a {\bf log} type initialised
+            to {\bf true}.
             
             {\bf cinclude()} ignores C style comments (which must not extend
             beyond one line), C++ style comments and empty lines.
@@ -2677,28 +2681,28 @@
 
 
 
-        \subsubsection{svn\_version - get the current subversion version number}\label{sec:lfsvnversion}
-
-            {\bf Library: stdlib.3pl}
-
-            {\bf Prototype:} \\
-            \vsp
-            \begin{lstlisting}[gobble=12, language=threepl]
-               global function
-               svn_version () {}
-            \end{lstlisting}
-
-            {\bf Return mode and type:} \\
-            immediate, "str"
-
-            {\bf Input parameters:} \\            
-            None.
-
-            {\bf description:} \\
-            This function returns the current subversion version number as a
-            string. It does this by running the command "svnversion" in a shell in
-            the current directory and returning the resulting string from the shell
-            standard output with the trailing newline removed.
+%        \subsubsection{svn\_version - get the current subversion version number}\label{sec:lfsvnversion}
+%
+%            {\bf Library: stdlib.3pl}
+%
+%            {\bf Prototype:} \\
+%            \vsp
+%            \begin{lstlisting}[gobble=12, language=threepl]
+%               global function
+%               svn_version () {}
+%            \end{lstlisting}
+%
+%            {\bf Return mode and type:} \\
+%            immediate, "str"
+%
+%            {\bf Input parameters:} \\            
+%            None.
+%
+%            {\bf description:} \\
+%            This function returns the current subversion version number as a
+%            string. It does this by running the command "svnversion" in a shell in
+%            the current directory and returning the resulting string from the shell
+%            standard output with the trailing newline removed.
 
 
         \subsubsection{to\_pulse - generate a pulse from a transition}\label{sec:lftopulse}

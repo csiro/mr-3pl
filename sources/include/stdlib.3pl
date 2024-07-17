@@ -2807,6 +2807,7 @@ netlistcommentfromdirs () {
     }
 }
 
+/******************************************************************
 global function
 svn_version () {
     str(os);
@@ -2816,3 +2817,4 @@ svn_version () {
         texit("svn_version() - shell returned non-zero status");
     return(substring(os, 0, strlen(os)-1)); // get rid of newline
 }
+*/

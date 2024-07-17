@@ -273,6 +273,7 @@ public class ThreePL implements TDEConstants {
         //  -O      suppress merging of otherwise suitable CONNECTs and deletion of trailing TDEVars
         //  -o dir  output files placed in this directory
         //  -p      print pre-optimisation TDE list
+        //  -r      generate a verbose report to file 'name'.rpt
         //  -R      just print token generator output
         //  -T      print TDE list with TDESIGs
         //  -t      print TDE list without TDESIGs
@@ -458,6 +459,13 @@ public class ThreePL implements TDEConstants {
                 else
                     include_dirs.add(dirs[j] + "/");
         }
+        
+        //
+        // If environment variable THREEPL_SKIP_POSTPROC exists skip
+        // any post_processing by XIlinx tools (xilinx/postprocess.3pl).
+        //
+        if (environment.get("THREEPL_SKIP_POSTPROC") != null)
+            addDir("skipPostProc", true);
         
         //------------------------------------------------------------------
         // If 3pl is called with no source file name, start up an interactive

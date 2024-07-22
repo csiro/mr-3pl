@@ -74,7 +74,7 @@ capture (
         } while (!triggered || !bitset(runon, bitsfor(length - 1)));
         running <- false;
         if (!matched(readout))
-            pulse(readout_pulse <-);
+            assert(readout_pulse <-);
     }
     
     when (running && !triggered && trigger_pulse) par {

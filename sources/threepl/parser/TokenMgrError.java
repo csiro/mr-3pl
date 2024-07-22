@@ -110,26 +110,25 @@ public class TokenMgrError extends Error
     return retval.toString();
   }
 
-  /*
+  /**
    * Returns a detailed message for the Error when it is thrown by the
    * token manager to indicate a lexical error.
    * Parameters :
+   *    EOFSeen     : indicates if EOF caused the lexical error
+   *    lexState    : lexical state in which this error occurred
+   *    errorLine   : line number when the error occurred
+   *    errorColumn : column number when the error occurred
+   *    errorAfter  : prefix that was seen before this error occurred
+   *    curchar     : the offending character
    * Note: You can customize the lexical error message by modifying this method.
-   * @param   EOFSeen     : indicates if EOF caused the lexical error
-   * @param   curLexState : lexical state in which this error occurred
-   * @param   errorLine   : line number when the error occurred
-   * @param   errorColumn : column number when the error occurred
-   * @param   errorAfter  : prefix that was seen before this error occurred
-   * @param   curchar     : the offending character
-   * @return the error message string
    */
-  protected static String LexicalError(boolean EOFSeen, int lexState, int errorLine, int errorColumn, String errorAfter, char curChar) {
-      return("encountered " +
-          (EOFSeen
-	       ? "\"<EOF>\""
-	       : "\"" + addEscapes(String.valueOf(curChar)) + "\" (" +
-		   (int)curChar + ")") +
-	  " after \"" + errorAfter + "\"");
+  protected static String LexicalErr(boolean EOFSeen, int lexState, int errorLine, int errorColumn, String errorAfter, int curChar) {
+    return("Lexical error at line " + //
+          errorLine + ", column " + //
+          errorColumn + ".  Encountered: " + //
+          (EOFSeen ? "<EOF>" : ("'" + addEscapes(String.valueOf(curChar)) + "' (" + curChar + "),")) + //
+          (errorAfter == null || errorAfter.length() == 0 ? "" : " after prefix \"" + addEscapes(errorAfter) + "\"")) + //
+          (lexState == 0 ? "" : " (in lexical state " + lexState + ")");
   }
 
   /*

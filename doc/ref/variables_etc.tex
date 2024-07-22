@@ -1229,6 +1229,7 @@
                 Arrays are created by prepending dimensions in brackets
                 to the type, e.g.
                 \begin{lstlisting}[gobble=16, language=threepl]
+                   var(a, "[20]int");
                    var(pix, value, "[3][3]uint:8");
                    var(sum, static, "[10]int:16");
                    var(q1, queue, "[2]uint:8");
@@ -1236,6 +1237,8 @@
                 \index{array!dimensions}
                 \index{array!undimensioned}
                 \index{dimensions!missing}
+                Where the mode keyword is not provided as the second argument,
+                immediate mode is assumed, as in the first example above.
                 One or more dimensions may be omitted (empty brackets) for module,
                 procedure or function parameters in which case they will be
                 supplied from the matching argument. A parameter array which is
@@ -1244,6 +1247,19 @@
                 supplied or else by default from the initialisation. Either or both
                 the argument or the initialisation may be a variable of matching
                 compound type or a compound value.
+                
+                Arrays may be initialised via a fourth argument, e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   var(sum, static, "[10]int:16", {21, 17, 45});
+                \end{lstlisting}
+                which will give the first three memebers of the array initial
+                values. Initialisation values left to right are assigned in
+                increasing subscript order. The initialisation compound value
+                can also provide default dimension(s), e.g.
+                \begin{lstlisting}[gobble=16, language=threepl]
+                   var(sum, static, "[]int:16", {21, 17, 45});
+                \end{lstlisting}
+                will create an array whose dimension is 3.
                 
                 If a parameter has one or more undimensioned arrays and it has
                 no initialiser and is not passed an argument, the undimensioned

@@ -42,13 +42,18 @@
         is described in \autorefph{ch:pp}.
         
         If manual invokation of place-and-route tools is prefered
-        then the post-processing can be supressed by
-        giving the -s option or by including the following in the 3PL
-        source -
-        \begin{lstlisting}[gobble=12, language=threepl]
-            directive("skipPostProc", true)
-        \end{lstlisting}
-        
+        then the post-processing can be supressed by one of the following -
+        \blist
+        \item   Give the -s option to 3PL.
+        \item   Include the following in the 3PL source -\\
+                \begin{lstlisting}[gobble=12, language=threepl]
+                    directive("skipPostProc", true)
+                \end{lstlisting}
+        \item   Define environment variable {\bf THREEPL\_SKIP\_POSTPROC}.
+        \item   Remove or comment out the postmodule section in the platform
+                FPGA file, e.g. xc3s.3pl.
+        \blend
+       
         If 3PL post-processing is to be used then the environment variable
         {\bf XILINX} must be set to the installation directory of the Xilinx
         post-processing tools, typically {\bf /opt/Xilinx} or similar. This
@@ -73,6 +78,20 @@
         post-processing code will choose the newest version appropriate for
         the device.
 
+        Runs after completion of 3PL netlist file generation, constraint file
+        generation, report file generation etc. when 3PL would normally exit.
+        SETTING UP postprocessing
+        rationale - is immediate code only - any target code produces fatal error
+        link to  module page
+        error messages not quie right - will fix later
+        Is initially intended to run XIlinx place-and-route tools following
+        3PL code generation, but could be used for other or additional purpsese.
+
+
+
+
+
+
 
     \section{Generating EDIF}
     
@@ -85,7 +104,7 @@
         file name argument may be a path containing "/"s.
         There must be only one source file argument.
 
-	The {\em design name} is derived from the source file name argument by
+	The {\bf design\_name} is derived from the source file name argument by
 	removing the trailing ".3pl" if present and removing the preceding
 	file path up to the rightmost "/" if any.
 
@@ -104,20 +123,38 @@
 	This is to ensure the design name matches the output file names and
 	also observes EDIF identifier name restrictions. 
 
-	The compiler will create a Xilinx EDIF netlist file called "name.edn"
-	and either a Xilinx ISE constraint file, "name.ncf", or a Vivado
-	constraint file, "name.xdc", where "name" is the design name.
+        The compiler will create
+        \blist
+        \item   a Xilinx EDIF netlist file called {\bf design\_name.edn}
+        \item   either a Xilinx ISE constraint file, {\bf design\_name.ncf}, or a Vivado
+                constraint file, {\bf design\_name.xdc}, where {\bf design\_name} is the design name.
+        \blend
+        It may optionally produce - \\
+        \blist
+        \item   a detailed report file {\bf design\_name.rpt} (-r option) \\
+        \item   an intermediate code file {\bf design\_name.icl} (-t option) \\
+        \item   a list of equivalent net identifiers {\bf design\_name.net} (-n option).
+        \blend
         
-        The {\bf -I} option specifies a ":"-separated list of directories
-	to be searched for files to be included by {\bf source} and
-	{\bf module} statements. There may be more than one {\bf -I} and they
-	may precede or follow the source file name.
-        The "-I" may be separated from its list by spaces, i.e. the list is
-        the following argument. Directories are searched in the order -
-        current directory, {\bf -I} option lists in order, then finally the
-	3PL library directory.
-	Therefore, source/module files may be preempted by including alternative
-	versions earlier in the directory search path.
+        FPGA boards which provide a CPU interface, either by a serial port (e.g.
+        papilio or AVNET boards) of a parallel shared bus (e.g. zynq) are supported
+        by 3PL library code. A shared interface, {\bf include/xilinx/cpu.3pl} is
+        common to both. For serial ports the underlying logic is contained in {\bf
+        include/xilinx/uart.cpu}. For the zynq the underlying bus interface is
+        created by {\bf include/xilinx/zynq\_axi.3pl}. When included these
+        interfaces generate a file {\bf design\_name.info} which specifies addresses, data
+        types and data widths which are used by utilities to generate C or Python
+        interface code in the CPU.
+        
+        The {\bf -I} option specifies a ":"-separated list of directories to be
+        searched for files to be included by {\bf source} and {\bf module}
+        statements. There may be more than one {\bf -I} and they may precede or
+        follow the source file name. The "-I" may be separated from its list by
+        spaces, i.e. the list is the following argument. Directories are searched
+        in the order - current directory, {\bf -I} option lists in order, then
+        finally the 3PL library directory. Therefore, source/module files may be
+        preempted by including alternative versions earlier in the directory search
+        path.
         
         To write the three output files to a directory other than the current
         directory a {\bf -o} option can be used. The directory name can
@@ -138,12 +175,12 @@
         \item   -I d1:d2:.. - list of directories to search for libraries
         \item   -l - annotate printed TDE list with source file locations
         \item   -n - print a list of netlist net identifiers and their
-                equivalent signal names to a file 'name'.net
+                equivalent signal names to a file {\bf design\_name.net}
         \item   -N name - change design name to 'name'
         \item   -o dir - write file to directory 'dir'
         \item   -p - print the TDE list prior to optimisation
         \item   -R - just print token generator output - testing only
-        \item   -r - generate a verbose report to file 'name'.rpt
+        \item   -r - generate a report to file {\bf design\_name.rpt}
 %        \item   -S - run the simulator instead of producing output code
         \item   -s - skip post-processing
         \item   -T - print the TDE list (including signal definitions)
@@ -165,8 +202,8 @@
         modules. If this is not desired the -s option will cause this to
         be skipped.
         
-        The -r option causes a detailed report to be produced in file {\em
-        design\_name}.rpt.
+        The -r option causes a detailed report to be produced in file {\bf
+        design\_name.rpt}.
         
         The -t option will result in a listing of the intermediate code in file
         {\em design\_name}.icl. The -l, -p and -T options modify the
@@ -376,7 +413,8 @@
 	so that only warning and error messages are printed. This may be
 	changed using the 3PL directive "postProcessFilter", which should have
 	string values "error", "critical", "warning", "info", or "all".
-	The 3PL compiler -v option (verbose) has the same effect as "all".
+%	The 3PL compiler -v option (verbose) has the same effect as "all".
+%       NOT IMPLEMENTED!
         
 	If the 3PL directive "postProcessAppendFile" is defined and the file
 	it names is readable, it is appended to the FPGA configuration file

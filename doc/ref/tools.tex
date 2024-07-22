@@ -149,7 +149,8 @@
         Target: Zynq or any with serial interface\\       
         Execute: on host computer or on Zynq CPU
 
-        Generate CPU/FPGA zynq interface functions for C from the 3PL
+        For a Zynq system, or a board with a serial CPU interface, generate
+        CPU/FPGA communication functions for C from the 3PL
         information file (design.info). This generates an include file
         {\bf {\em design\_name}\_include.h}.
 
@@ -245,7 +246,7 @@
         file to document its production.
         
         The bit file can be incorporated into the CPU application program by using
-        bin2c or bin2py and then loaded into the FPGA during proggram execution as
+        bin2c or bin2py and then loaded into the FPGA during program execution as
         described in previous sections.
         
         Alternatively the FPGA configuration can be loaded from the bit file
@@ -256,7 +257,8 @@
         \begin{lstlisting}[gobble=4, language=C]
         #include <stdio.h>
         #include <stdint.h>
-        #include "prog_fpga.h"
+        #include "fpga.h"
+        #include "prog.h"
 
         int main (int argc, const char *argv[]) {
             int         i;

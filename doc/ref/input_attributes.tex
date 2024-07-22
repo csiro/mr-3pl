@@ -22,7 +22,35 @@
         must exactly match the number of bits in the variable type. If the input
         is differential the array dimension must be twice the number of
         bits, the locations being used in pairs for the +ve and the -ve inputs
-        (in that order).
+        (in that order). The location array matches the associated signal
+        in order LSB to MSB for the array members and the signal bits.
+            
+        Pin strings are matched left to right to an input variable
+        starting at the the least-significant bit. For a compound type pins are
+        matched left to right from inner to outer nested types. For a struct the
+        strings are matched left to right in field order.
+
+        FPGA package pins are usually already defined in a platform header file,
+        for example -
+        \begin{lstlisting}[gobble=12, language=threepl]
+           iopins(a_pins, "[12]str",
+                        {
+                            "A0", "B0", "A1", "B1", "A2", "C2",
+                            "A3", "B3", "A4", "B4", "C3", "C4"
+                        }
+                );
+        \end{lstlisting}
+        There might be additional attributes included for these pins.
+
+        \begin{lstlisting}[gobble=12, language=threepl]
+           input(v, "[2][2]uint:2", loc=a_pins[2..9]);
+        \end{lstlisting}
+
+        The resulting input connections would be -\\
+        pins "A1", "B1" (LSB, MSB) are connected to v[0][0] \\
+        pins "A2", "C2" (LSB, MSB) are connected to v[0][1] \\
+        pins "A3", "B3" (LSB, MSB) are connected to v[1][0] \\
+        pins "A4", "B4" (LSB, MSB) are connected to v[1][1] \\
 
         The following attribute is read-only and is created when {\bf
         input()} is called and can be retrieved from the input mode

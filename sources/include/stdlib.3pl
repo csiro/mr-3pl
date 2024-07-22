@@ -2107,11 +2107,11 @@ timebase(
             }
             when (ce && !count_eq_0)
 	        --count;
-            assert(p <-);
+            pulse <- p;
         } else {
             var(s, "["+modulus+"]log", {true});
             tc := sequence(s, "log", ce) && ce;
-            assert(tc <-);
+            pulse <- tc;
         }
         used = true;
     }
@@ -2807,6 +2807,7 @@ netlistcommentfromdirs () {
     }
 }
 
+/******************************************************************
 global function
 git_revision () {
     str(os);
@@ -2816,3 +2817,4 @@ git_revision () {
         texit("git_revision() - shell returned non-zero status");
     return(substring(os, 0, strlen(os)-1)); // get rid of newline
 }
+*/

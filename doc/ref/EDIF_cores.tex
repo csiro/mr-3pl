@@ -82,7 +82,7 @@
         associated core port width.
 
         Where a clock is sourced in the core and is connected to the
-        main program via {\em import()} the clock variable must
+        main program via {\bf import()} the clock variable must
         be created in the main program, e.g.
         \begin{lstlisting}[gobble=8, language=threepl]
            clock(c, frequency=10e6, tnm="C");
@@ -140,7 +140,7 @@
         
         Since the clock {\em c} has an external source we do not have to supply
         a DLL or DCM but we still have to create the clock variable {\em c}
-        that is to be connected to the external clock source. The call {\em
+        that is to be connected to the external clock source. The call {\bf
         useclock()} need not precede the {\em export()} call.
         
         The core name must have been supplied using the -e option to the 3PL

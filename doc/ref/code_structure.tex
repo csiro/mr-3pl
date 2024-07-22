@@ -463,7 +463,7 @@
     generalise the above program by means of recursion - \index{recursion}
     \begin{lstlisting}[gobble=4, language=threepl]
            queue({result, q1, q2, q3}, "uint:8");
-           var(v, value, "[3]uint:8");
+           value(v, "[3]uint:8");
            .
            .
            v[0] := q1;
@@ -504,7 +504,7 @@
 
        function
        delay (value(in, "uint:8"), int(n)) {
-           var(d, static, "[10]uint:8");
+           static(d, "[10]uint:8");
            [
                d[0] <- in;
                for (int(i,1) ; i<n ; i++)
@@ -531,7 +531,7 @@
     \begin{lstlisting}[gobble=4, language=threepl]
        function
        delay (value(in, "uint:8"), int(n)) {
-           var(d, static, "[10]uint:8");
+           static(d, "[10]uint:8");
            [
                d[0] <- in;
                d[1] <- d[0];
@@ -557,7 +557,7 @@
 
        function
        delay (value(in), int(n)) {
-           var(d, static, "["+n+"]"+type(in));
+           static(d, "["+n+"]"+type(in));
            [
                d[0] <- in;
                for (int(i,1) ; i<n ; i++)

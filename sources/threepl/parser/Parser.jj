@@ -10,8 +10,11 @@ PARSER_BEGIN(Parser)
 //    Token.java
 //    TokenMgrError.java
 //
-// Some of these files must be "massaged" after javacc has run - see the
-// scripts in ../../scripts directory.
+// These files are created by javacc if they do not exist already.
+// Parser.java and ParserConstants.java will be recreated each time
+// javacc is run.
+// Token.java and TokenMgrError.java are created initially by javacc
+// but have since been modified and must not be rebuilt by javacc.
 
 package threepl.parser;
 

@@ -5,22 +5,22 @@
     \index{library!xilinx/common.3pl}
     This library provides common modules, procedures and functions for
     all Xilinx FPGAs.
-
+    
     This library must be incorporated by using a {\bf source} statement -
     \begin{lstlisting}[gobble=4, language=threepl]
        source "xilinx/common.3pl"
     \end{lstlisting}
-
+    
     {\bf All Xilinx family header files include this library.}
 
 
 
     \subsection{library modules}
-
+    
 
 
         \subsubsection{sequence - generate a sequence}\label{sec:lmsequence}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -52,11 +52,11 @@
 
     \subsection{library procedures}
 
-
-
+        
+        
         \subsubsection{IOconstraint - add an I/O constraint to the constraints file}\label{sec:lpioconstraint}
 
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -69,18 +69,18 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf loc} is the I/O pad designation \\
             {\bf con} is the constraint identifier \\
             {\bf val} is the constraint value \\
-
+        
             {\bf In-line target execution:} \\
             no
 
             {\bf description:} \\
             This procedure adds a line to the NCF (ISE) or XDC (Vivado) constraint
             file as determined by directive "postProcessTool" (\autorefph{sec:directives}).
-
+            
             {\bf con} is a string sepcifying the constraint. Valid constraints are -
 
             \begin{tabular}{| l | l | l |}
@@ -95,7 +95,7 @@
             "slew":                 & str & output slew rate               \\ \hline
             "tnm":                  & str & timing name                    \\ \hline
             \end{tabular}
-
+            
             The constraint value {\bf val} may be type "str", "log" or "int"
             as appropriate.
 
@@ -107,7 +107,7 @@
 
         \subsubsection{addncfline - add line to NCF file}\label{sec:lpaddncfline}
             \index{constraint}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -120,9 +120,9 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf s} is the line to be added to the NCF file
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -143,7 +143,7 @@
 
         \subsubsection{addxdcline - add line to XDC file}\label{sec:lpaddxdcline}
             \index{constraint}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -156,10 +156,10 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf fmt} is a formta string of the line to be added to the XDC file.
             {\bf sig} is an optional signal to insert into the line.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -188,7 +188,7 @@
 
 
         \subsubsection{append\_ncf\_file - append a file to the NCF file}\label{sec:lpappncf}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -201,9 +201,9 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf filename} is the input file name.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -211,7 +211,7 @@
             This procedure reads a file and appends it to the NCF file
             (Netlist Constraints File).
 
-            See also - \\
+            See also - \\   
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf elementaddncf()} \autorefph{sec:lpelementaddncf}\\
             {\bf addxdcline()} \autorefph{sec:lpaddxdcline}\\
@@ -225,11 +225,11 @@
 
 
 
-
+    
 
 
         \subsubsection{elementaddncf - add line to NCF file}\label{sec:lpelementaddncf}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -247,7 +247,7 @@
             {\bf attr} is the attribute or constraint name or else a line to be added to the NCF file for the element. \\
             {\bf val} is the value of the attribute or constraint if the previous argument
             is an attribute or constraint name. \\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -263,7 +263,7 @@
             The constraint string will have something like
             \verb'"INST block234"' prepended, where "block234" is the identifier
             for the element, and will also have a trailing ";" appended.
-
+            
             If the argument to {\bf val} is omitted then the string {\bf attr} will
             be used verbatim. If the argument to {\bf val} is present then
             {\bf attr} will be used as a key to a table of constraints for the element
@@ -283,7 +283,7 @@
             \end{lstlisting}
             is used then the attribute can be changed later if desired.
 
-            See also - \\
+            See also - \\       
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf append\_ncf\_file()} \autorefph{sec:lpappncf}\\
             {\bf addxdcline()} \autorefph{sec:lpaddxdcline}\\
@@ -298,7 +298,7 @@
 
 
         \subsubsection{elementBinProperty - add a property of type "int" to an element in binary format}\label{sec:lpelementBinProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -311,14 +311,14 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf n} is the property value.\\
             {\bf min} is the property minimum value.\\
             {\bf max} is the property maximum value.\\
             {\bf digits} is the number of binary digits required.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -328,9 +328,9 @@
             {\bf id} is a unique identifier for the element. If the argument is
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()} \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
-
+            
             {\bf n} is the value of the property. If no argument is passed then
             this procedure does nothing and returns. Note that if this procedure
             is called within another module or procedure and the property
@@ -338,15 +338,15 @@
             fuction {\bf nullarg()} \autorefph{sec:ifnullarg} may be used to enclose the
             argument to this procedure so that an omitted argument is ignored rather
             than the default parameter value of the enclosing procedure being used.
-
+            
             {\bf min} and {\bf max} are the minimum and maximum allowed values
             of the property. If one of these is exceeded then a fatal error
             will be forced.
-
+            
             {\bf digits} specifies the number of binary digits with which to
             express the property value. The binary digit string is not
             preceded by any base indicator (e.g. there is {\bf no} leading "0b").
-
+            
             See also - \\
             {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -354,12 +354,12 @@
             {\bf elementHexProperty()} \autorefph{sec:lpelementHexProperty} for hexadecimal properties,
             {\bf elementFloatProperty()} \autorefph{sec:lpelementFloatProperty} for floating point properties,
             {\bf elementStrProperty()} \autorefph{sec:lpelementStrProperty} for string properties.
-
-
+        
+        
 
 
         \subsubsection{elementcheck - check that a Xilinx element is allowed in the current device family}\label{sec:lpelementcheck}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -372,11 +372,11 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf element} is the name of a Xilinx library element. \\
             {\bf name} is the name of a library module, procedure or function which is
             attempting to create the library element.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -386,11 +386,11 @@
             for each device family are kept in an abbreviated map in xilinx/common.3pl,
             i.e. only a subset of elements are included, namely those used explicitly
             in 3PL libraries. The map can be expanded when required.
-
+            
             If the check fails, i.e. the element is not available in the current device family,
             then 3PL exits with an error message and traceback. {\bf name} is provided solely
             for use in the error message.
-
+            
             See also library function {\bf elementcheck()} \autorefph{sec:lfelementcheck}
             which can check non-fatally.
 
@@ -398,7 +398,7 @@
 
 
         \subsubsection{elementFloatProperty - add a property of type "float" to an element}\label{sec:lpelementFloatProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -411,14 +411,14 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf n} is the property value.\\
             {\bf min} is the property minimum value.\\
             {\bf max} is the property maximum value.\\
             {\bf digits} is the number of digits required after the decimal point.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -427,9 +427,9 @@
             {\bf id} is a unique identifier for the element. If the argument is
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()} \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
-
+            
             {\bf n} is the value of the property. If no argument is passed then
             this procedure does nothing and returns. Note that if this procedure
             is called within another module or procedure and the property
@@ -437,14 +437,14 @@
             fuction {\bf nullarg()} \autorefph{sec:ifnullarg} may be used to enclose the
             argument to this procedure so that an omitted argument is ignored rather
             than the default parameter value of the enclosing procedure being used.
-
+            
             {\bf min} and {\bf max} are the minimum and maximum allowed values
             of the property. If one of these is exceeded then a fatal error
             will be forced.
-
+            
             {\bf digits} specifies the number of digits to appear to the right
             of the decimal point.
-
+            
             See also - \\
             {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -460,7 +460,7 @@
 
 
         \subsubsection{elementHexProperty - add a property of type "int" to an element in hexadecimal format}\label{sec:lpelementHexProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -473,14 +473,14 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf n} is the property value.\\
             {\bf min} is the property minimum value.\\
             {\bf max} is the property maximum value.\\
             {\bf digits} is the number of hexadecimal digits required.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -490,9 +490,9 @@
             {\bf id} is a unique identifier for the element. If the argument is
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()} \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
-
+            
             {\bf n} is the value of the property. If no argument is passed then
             this procedure does nothing and returns. Note that if this procedure
             is called within another module or procedure and the property
@@ -500,15 +500,15 @@
             fuction {\bf nullarg()} \autorefph{sec:ifnullarg} may be used to enclose the
             argument to this procedure so that an omitted argument is ignored rather
             than the default parameter value of the enclosing procedure being used.
-
+            
             {\bf min} and {\bf max} are the minimum and maximum allowed values
             of the property. If one of these is exceeded then a fatal error
             will be forced.
-
+            
             {\bf digits} specifies the number of hexadecimal digits with which to
             express the property value. The hexadecimal digit string is not
             preceded by any base indicator (e.g. there is {\bf no} leading "0x").
-
+            
             See also - \\
             {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -525,7 +525,7 @@
 
 
         \subsubsection{elementIntProperty - add a property of type "int" to an element}\label{sec:lpelementIntProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -538,13 +538,13 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf n} is the property value.\\
             {\bf min} is the property minimum value.\\
             {\bf max} is the property maximum value.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -554,7 +554,7 @@
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()}
             \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
 
             {\bf n} is the value of the property. If no argument is passed then
@@ -569,7 +569,7 @@
             {\bf min} and {\bf max} are the minimum and maximum allowed values
             of the property. If one of these is exceeded then a fatal error
             will be forced.
-
+            
             See also - \\
             {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             %{\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -577,14 +577,14 @@
             {\bf elementHexProperty()} \autorefph{sec:lpelementHexProperty} for hexadecimal properties,
             {\bf elementFloatProperty()} \autorefph{sec:lpelementFloatProperty} for floating point properties,
             {\bf elementStrProperty()} \autorefph{sec:lpelementStrProperty} for string properties.
-
+         
 
 
 
 
 
         \subsubsection{elementLogProperty - add a property of type "log" to an element}\label{sec:lpelementLogProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -597,11 +597,11 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf l} is the property value.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -610,9 +610,9 @@
             {\bf id} is a unique identifier for the element. If the argument is
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()} \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
-
+            
             {\bf l} is the value of the property. If no argument is passed then
             this procedure does nothing and returns. Note that if this procedure
             is called within another module or procedure and the property
@@ -620,7 +620,7 @@
             fuction {\bf nullarg()} \autorefph{sec:ifnullarg} may be used to enclose the
             argument to this procedure so that an omitted argument is ignored rather
             than the default parameter value of the enclosing procedure being used.
-
+            
             See also - \\
             %{\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -635,7 +635,7 @@
 
 
         \subsubsection{elementStrProperty - add a property of type "str" to an element}\label{sec:lpelementStrProperty}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -648,13 +648,13 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the element identifier or null.\\
             {\bf prop} is the property identifier.\\
             {\bf v} is the property value.\\
             {\bf varargs} matches a number of string arguments listing the
                 allowed property values.\\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -663,9 +663,9 @@
             {\bf id} is a unique identifier for the element. If the argument is
             omitted then the current element is used, i.e. the one most recently
             created using inbuilt procedure {\bf element()} \autorefph{sec:ipelement}.
-
+            
             {\bf prop} is the property identifier.
-
+            
             {\bf v} is the value of the property. If no argument is passed then
             this procedure does nothing and returns. Note that if this procedure
             is called within another module or procedure and the property
@@ -673,13 +673,13 @@
             fuction {\bf nullarg()} \autorefph{sec:ifnullarg} may be used to enclose the
             argument to this procedure so that an omitted argument is ignored rather
             than the default parameter value of the enclosing procedure being used.
-
+            
             Optional arguments following {\bf prop} are strings specifying the allowed
             values for the property. If the property value is not identical to one
             of these strings then a fatal error will be forced. If the optional
             arguments are not supplied then the property will be defined
             unconditionally.
-
+            
             See also - \\
             {\bf elementLogProperty()} \autorefph{sec:lpelementLogProperty} for logical properties,
             {\bf elementIntProperty()} \autorefph{sec:lpelementIntProperty} for integer properties,
@@ -688,12 +688,12 @@
             {\bf elementFloatProperty()} \autorefph{sec:lpelementFloatProperty} for floating point properties,
             %{\bf elementStrProperty()} \autorefph{sec:lpelementStrProperty} for string properties.
 
-
+  
 
 
 
         \subsubsection{fdre - Create an FDRE flip-flop}\label{sec:lpfdre}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -714,13 +714,13 @@
             {\bf Output parameters:} \\
             {\bf q} is the flip-flop output.
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf d} is the data input, default low.\\
             {\bf c} is the clock input.\\
             {\bf ce} is the optional clock enable input, default high.\\
             {\bf r} is the optional synchronous reset input, default low. \\
             {\bf init} is the initial value, default reset.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -729,7 +729,7 @@
             synchronous reset. The {\bf d}, {\bf ce} and {\bf r} inputs must
             have the same clock domain as the input clock. The {\bf q} output
             is set to the same clock domain.
-
+            
             See also - \\
             {\bf fdse()} \autorefph{sec:lpfdse}\\
             {\bf fdrse()} \autorefph{sec:lpfdrse}\\
@@ -738,7 +738,7 @@
 
 
         \subsubsection{fdrse - Create an FDRSE flip-flop}\label{sec:lpfdrse}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -760,14 +760,14 @@
             {\bf Output parameters:} \\
             {\bf q} is the flip-flop output.
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf d} is the data input, default low.\\
             {\bf c} is the clock input.\\
             {\bf ce} is the optional clock enable input, default high.\\
             {\bf r} is the optional synchronous reset input, default low. \\
             {\bf s} is the optional synchronous set input, default low. \\
             {\bf init} is the initial value, default reset.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -776,7 +776,7 @@
             synchronous reset and set. The {\bf d}, {\bf ce}, {\bf r} and {\bf
             s} inputs must have the same clock domain as the input clock. The
             {\bf q} output is set to the same clock domain.
-
+            
             See also - \\
             {\bf fdre()} \autorefph{sec:lpfdre}\\
             {\bf fdse()} \autorefph{sec:lpfdse}\\
@@ -787,7 +787,7 @@
 
 
         \subsubsection{fdse - Create an FDSE flip-flop}\label{sec:lpfdse}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -808,13 +808,13 @@
             {\bf Output parameters:} \\
             {\bf q} is the flip-flop output.
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf d} is the data input, default low.\\
             {\bf c} is the clock input.\\
             {\bf ce} is the optional clock enable input, default high.\\
             {\bf s} is the optional synchronous set input, default low. \\
             {\bf init} is the initial value, default set.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -823,7 +823,7 @@
             synchronous set. The {\bf d}, {\bf ce} and {\bf s} inputs must have
             the same clock domain as the input clock. The {\bf q} output is set
             to the same clock domain.
-
+            
             See also - \\
             {\bf fdre()} \autorefph{sec:lpfdre}\\
             {\bf fdrse()} \autorefph{sec:lpfdrse}\\
@@ -832,7 +832,7 @@
 
 
         \subsubsection{fdce - Create an FDCE flip-flop}\label{sec:lpfdce}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -853,13 +853,13 @@
             {\bf Output parameters:} \\
             {\bf q} is the flip-flop output.
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf d} is the data input, default low.\\
             {\bf c} is the clock input.\\
             {\bf ce} is the optional clock enable input, default high.\\
             {\bf clr} is the optional asynchronous clear input, default low. \\
             {\bf init} is the initial value, default reset.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -868,7 +868,7 @@
             asynchronous clear. The {\bf d}, {\bf ce} and {\bf clr} inputs must
             have the same clock domain as the input clock. The {\bf q} output
             is set to the same clock domain.
-
+            
             See also - \\
             {\bf fdre()} \autorefph{sec:lpfdre}\\
             {\bf fdse()} \autorefph{sec:lpfdse}\\
@@ -877,7 +877,7 @@
 
 
         \subsubsection{fdpe - Create an FDPE flip-flop}\label{sec:lpfdpe}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -898,13 +898,13 @@
             {\bf Output parameters:} \\
             {\bf q} is the flip-flop output.
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf d} is the data input, default low.\\
             {\bf c} is the clock input.\\
             {\bf ce} is the optional clock enable input, default high.\\
             {\bf pre} is the optional asynchronous set input, default low. \\
             {\bf init} is the initial value, default set.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -913,7 +913,7 @@
             asynchronous set. The {\bf d}, {\bf ce} and {\bf pre} inputs must
             have the same clock domain as the input clock. The {\bf q} output
             is set to the same clock domain.
-
+            
             See also - \\
             {\bf fdre()} \autorefph{sec:lpfdre}\\
             {\bf fdse()} \autorefph{sec:lpfdse}\\
@@ -924,7 +924,7 @@
 
 
         \subsubsection{generateConstraints - generate constraint file entries from I/O mode variable attributes}\label{sec:lpgenerateconstraints}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -937,14 +937,14 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             none
-
+        
             {\bf In-line target execution:} \\
             no
 
             {\bf description:} \\
-
+            
             This procedure traverses all input, output and clock mode variables
             and from their attribute maps generates constraint file entries. The
             procedure obtains a list of pointers to these variables by calling
@@ -956,10 +956,10 @@
 
 
 
-
+            
 
         \subsubsection{iopins - create FPGA pin specifications}\label{sec:lpiopins}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -972,90 +972,140 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf id} is the identifier for a string or array of strings to be
             created.\\
             {\bf t} is the type of the following 'pins' argument.\\
             {\bf pins} is a collection of strings specifying FPGA pins.
-
+        
             {\bf In-line target execution:} \\
             no
 
             {\bf description:} \\
-            This procedure attaches attributes to a collection of FPGA pin
-            strings. Optionally the procedure can create a variable containing
-            the pin strings.
+            This procedure adds pin string names and attributes to a global map of
+            FPGA package pin attributes, {\bf pinAttributes}, the keys being FPGA
+            pin strings.
+            
+            Optionally the procedure can create a variable which selects a
+            subset of pins for use in calls to inbuilt procedures {\bf input()}
+            or {\bf output()},
 
             For each pin string a map of attributes is created. This map is itself
-            contained in a single map whose key is the pin string and value the
-            attribute map for that pin.
+            inserted into the single global map, {\bf pinAttributes} with the pin
+            string as the key. If that key already exists in the global map the new
+            attributes are added, or else replace existing attribute values if they
+            are already present.
 
             Parameter {\bf id} is an optional identifier which if given an argument
-            will be used to create an immediate variable whose value is the collection
-            of strings designating the FPGA pins.
+            will be used to create an immediate variable which is of type {\bf t}
+            and contains a copy of the argument to parameter {\bf pins}. This can
+            be used to select a subset of pins, usually the pins associated with
+            one of several I/O connectors.
 
-            Parameter {\bf t} is the type of the pin argument. The argument may be
-            type {\bf type} or it may be a type string. The type may be simply "str"
-            for one pin, or more usually nested arrays and structs whose primitive
-            types are only "str".
+            Parameter {\bf t} is the type of the {\bf pins} argument. The argument
+            may be type {\bf type} or it may be a type string. The type may be
+            simply "str" for one pin, or more usually a 1-dimensional array of
+            strings.
 
-            Parameter {\bf pins} is the collection of pin strings, the argument to
-            which may be either a compound constant or a variable of the designated
-            type.
+            Parameter {\bf pins} should match {\bf t} in type and is the collection
+            of pin strings, the argument to which may be either a compound constant
+            or a variable of the designated type.
+            
+            Usually an FPGA platform header file will contain a call to
+            {\bf iopins()} for each attached device or external connector.
+            For each call the {\bf id} identifier is then used to refer to that
+            subset of pins for input and output connections.
+            
+            To apply optional attributes to specific pins {\bf iopins()} can be
+            called with the {\bf id} argument missing in which case the call will
+            just apply the specified attributes to the specific pins regardless
+            of which subsets of pins to which they may belong.
+            
+            Pin strings are matched left to right to an input or output variable
+            starting at the the least-significant bit. For a compound type pins
+            are matched left to right from inner to outer nested types. For a
+            struct the strings are matched left to right in field order.
+            
+            The pin strings are provided as a flat 1-dimensional array
+            whose dimension matches the required number of bits, e.g. -
+
+            \begin{lstlisting}[gobble=12, language=threepl]
+                static(v, "[2][2]uint:2");
+                iopins(v_pins, "[8]str", {
+                                     "A1", "B1", "A2", "C2", "A3", "B3", "A4", "B4"
+                                 });
+                output(,, v, loc=v_pins);
+            \end{lstlisting}
+            The pin specification must match the number of data bits.
+
+            The resulting output connections are -\\
+            v[0][0] is connected to pins "A1", "B1" (LSB, MSB)\\
+            v[0][1] is connected to pins "A2", "C2" (LSB, MSB)\\
+            v[1][0] is connected to pins "A3", "B3" (LSB, MSB)\\
+            v[1][1] is connected to pins "A4", "B4" (LSB, MSB)\\
+            
+            A subset of pins may be selected, e.g.
+            \begin{lstlisting}[gobble=12, language=threepl]
+                static(w, "[2]uint:2");
+                output(,, w, loc=v_pins[2..5]);
+            \end{lstlisting}           
 
             Following these parameters a number of additional arguments may be
-            provided to specify attributes associated with the pins. These additional
-            arguments may be keymatch, i.e. attribute=value, or may be simple arguments.
-            Where an argument is not keymatch it must be type "map" whose keys are
-            attributes (strings) and values are attribute values.
+            provided to specify attributes associated with the pins. These
+            additional arguments may be keymatch, i.e. attribute=value, or may be
+            simple arguments. Where an argument is not keymatch it must be type
+            "map" whose keys are attributes (strings) and values are attribute
+            values. Each attribute is applied to every pin.
 
-            The arguments are processed left to right and where an attribute appears
-            more than once the right-most value will prevail.
+            The arguments are processed left to right and where an attribute
+            appears more than once the right-most value will prevail.
 
             Each attribute value must be a single value which will be added
             to each pin map.
-
+            
             This procedure may be called multiple times, perhaps with different
             but overlapping collections of pins. Each time attributes will be
             attached to the attribute map of each pin. Where attribute entries
             already exist they will be overwritten. The variable identifier must
             be different in each case or may be omitted.
-
-            It is important to note that the prime function of iopins() is to
+            
+            It is important to note that the prime function of {\bf iopins()} is to
             establish attributes associated with pins. As an optional byproduct a
             variable can be created which contains the collection of pins and this
-            would be used to pass locations to library procedures input(), output()
-            or clock() for external connections. The pin locations can however be
-            passed to these procedures quite independently of iopins since only the
-            pin strings are needed as the attributes are extracted from the
-            attribute maps associated with the pins. It is of course usual to use
-            the variable optionally created by iopins() to pass the location pins to
-            the I/O procedures.
+            would be used to pass locations to library procedures {\bf input()},
+            {\bf output()} or {\bf clock()} for external connections. The pin
+            locations can however be passed to these procedures quite independently
+            of {\bf iopins()} since only the pin strings are needed as the
+            attributes are extracted from the attribute maps associated with the
+            pins. It is of course usual to use the variable optionally created by
+            {\bf iopins()} to pass the location pins to the I/O procedures.
 
-            The pin attributes established by iopins() are used by library
-            procedures input(), output() and clock() but attributes can also be
-            passed directly to these procedures as arguments to them in a similar
-            way. It is a matter of choice whether to associate attributes directly
-            with pins or instead to pass them directly to the input and output
-            procedures. This may be partly decided by whether pins are connected
-            to fixed external components or else to hardware which varies with the
-            application.
+            The pin attributes established by {\bf iopins()} are used by library
+            procedures {\bf input()}, {\bf output()} and {\bf clock()} but
+            attributes can also be passed directly to these procedures as arguments
+            to them in a similar way. It is a matter of choice whether to associate
+            attributes directly with pins or instead to pass them directly to the
+            input and output procedures. This may be partly decided by whether pins
+            are connected to fixed external components or else to hardware which
+            varies with the application.
 
-            Attributes passed directly to input(), output() or clock() will
-            override any attributes passed via iopins(). An attribute associated
-            with a pin via iopins() that is passed to input(), output() or
-            clock() must not conflict with that attribute on another pin in that
-            call, though that attribute need not be on all pins.
+            Attributes passed directly to {\bf input()}, {\bf output()} or {\bf
+            clock()} will override any attributes passed via {\bf iopins()}. An
+            attribute associated with a pin via iopins() that is passed to {\bf
+            input()}, {\bf output()} or {\bf clock()} must not conflict with that
+            attribute on another pin in that call, though that attribute need not
+            be on all pins.
 
-            The attributes attached to pins by iopins() may be unused. Attributes
-            are only used where pins are processed by library procedures input(),
-            output() or clock() and then only those relevant to that procedure.
-            Unrecognised attributes will result in a fatal error.
-
+            The attributes attached to pins by {\bf iopins()} may be unused.
+            Attributes are only used where pins are processed by library procedures
+            input(), {\bf output()} or {\bf clock()} and then only those relevant
+            to that procedure. Unrecognised attributes will result in a fatal
+            error.
+            
             The following table lists the allowed attributes that are recognised
             by iopins().
             \input{iopins_attributes}
-
+                        
             Typical useage might be -
             \begin{lstlisting}[gobble=12, language=threepl]
                static(led, "bits:4");
@@ -1064,13 +1114,32 @@
                iopins(, "[2]str", {"B1", "A2"}, tnm=tnms);
                output(,, led, loc=led_pins, drive=24);
             \end{lstlisting}
-            which will create a variable {\bf led\_pins} in the current scope
-            which is an array of 4 strings. The I/O standard "lvcmos33" will be
-            established for each of the four pins (inputs or outputs) and a
-            pullup resistor is specified for each. For two of the pins separate
-            timing name attributes have been added.
+            
+            The 1st statement creates a static variable {\bf led} of four bits
+            (could have been "[4]log" or "uint:4" etc.) which is to be connected to
+            FPGA output pins.
 
-            The following example illustrates that attrbute values for pins
+            The 2nd statement creates variable {\bf tnms} which is an array of two
+            strings which will be used as timing group names.
+
+            The 3rd statement adds four pins to the global pin attributes map, sets
+            their I/O standard to lvcmos33 and gives each a pullup resistor. It 
+            also creates a variable {\bf led\_pins} in the curent scope which
+            contains a string array of the specified pins that can be passed to
+            procedure {\bf output()}. Note that "A1" will be assigned to the LSB
+            and "C2" to the MSB.
+
+            The 4th statement applies the timing names in variable {\bf tnms} to
+            two of the pins in the global pin attributes map. The first argument is
+            omitted as we do not need a handle on this subset of two pins as they
+            are already included in {\bf led\_pins}.
+
+            The 5th statement creates the output connection and also adds an
+            additional attribute "drive=24" to the all four pins. Note that this
+            does not add these additional attributes to the global attributes map
+             {\bf pinAttributes}.
+                        
+            The following example illustrates that attribute values for pins
             cab be overridden by an additional call to {\bf iopins()} -
             \begin{lstlisting}[gobble=12, language=threepl]
                static(led, "bits:4");
@@ -1078,18 +1147,18 @@
                iopins(, "[2]str", {"B1", "A2"}, pullup=false);
                output(,, led, loc=led_pins);
             \end{lstlisting}
-
+            
             An alternative is to pass attribute values directly through calls to
-            {\bf input()}, {\bf output}, or {\bf clock()} which will override attrbute values
-            previously specified via {\bf iopins()}, e.g.
+            {\bf input()}, {\bf output}, or {\bf clock()} which will override
+            attrbute values previously specified via {\bf iopins()}, e.g.
             \begin{lstlisting}[gobble=12, language=threepl]
                static(led, "bits:4");
                iopins(led_pins, "[4]str", {"A1", "B1", "A2", "C2"}, pullup=true);
                iopins(, "[2]str", {"B1", "A2"}, pullup=false);
                output(,, led, loc=led_pins, pullup=true);
             \end{lstlisting}
-
-
+            
+            
             This procedure is used in conjunction with inbuilt procedures
             {\bf input()} \autorefph{sec:ipinput}, \\
             {\bf output()} \autorefph{sec:ipoutput} and \\
@@ -1106,7 +1175,7 @@
         \subsubsection{maxdelay - specify max delay between timing groups}\label{sec:lpmaxdelay}
             \index{constraint!timing}
             \index{timing constraint}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1119,35 +1188,35 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf group1} is a string giving the timing name of a netlist group.\\
             {\bf group2} is a string giving the timing name of a netlist group.\\
             {\bf time} is the maximum delay in second allowed
             for signals propagating from signal sources in group1 to
             signal destinations in group2.
-
+        
             {\bf In-line target execution:} \\
             no
 
             {\bf description:} \\
             This procedure sets up the timing constraints for paths between
             components in different timing groups.
-
+            
             It will generate a {\bf TIMESPEC} constraint in the ISE NCF file or
             a corresponding {\bf set\_max\_delay} constraint in the Vivado XDC
             file.
 
             For input delay constraints -\\
-
+            
             {\bf group1} is timing group name for
             the input ports and {\bf group2} is the timing name for the clock.
-
+            
             For ISE {\bf time} specifies the maximum delay in ns for all signal
             paths from all the relevant input ports to elements clocked by the
             clock. This is a maximum delay time constraint from port to clock
             internal to the FPGA. This maximum delay must be met by ISE
             to satisfy the constraint.
-
+            
             For Vivado {\bf time} specifies the maximum delay in the external
             signals from the clock edge to arrival at the input ports.
             This is the actual maximum delay time from external clock edge to
@@ -1163,13 +1232,13 @@
             For output delay constraints {\bf group1} is timing name for the
             clock and {\bf group2} is the timing group name for the output
             ports.
-
+            
             For ISE {\bf time} specifies the maximum delay in ns for all signal
             paths from elements clocked by the clock to all the relevant output
             ports. This is a maximum delay time constraint from clock to port
             internal to the FPGA. This maximum delay must be met by ISE to
             satisfy the constraint.
-
+            
             For Vivado {\bf time} specifies the maximum delay in the external
             signals from the output ports to the external clock edge . This is
             the actual maximum delay time from output ports to external clock
@@ -1180,12 +1249,12 @@
             Vivado along with the clock period to determine the maximum time
             delay between clocked elements and pads that must be achieved during
             place-and-route.
-
+            
             {\bf maxdelay()} only adds a struct to a list of delay structs
             in common.3pl. A later call to generateConstraints() builds
             the constraint elements for ISE or Vivado as appropriate.
 
-            See also - \\
+            See also - \\         
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf append\_ncf\_file()} \autorefph{sec:lpappncf}\\
             {\bf elementaddncf()} \autorefph{sec:lpelementaddncf}\\
@@ -1200,7 +1269,7 @@
 
         \subsubsection{netaddncf - add constraint to NCF file for a net}\label{sec:lpnetaddncf}
             \index{constraint}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1214,11 +1283,11 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf sig} is .\\
             {\bf attr} is .\\
             {\bf val} is .
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -1227,7 +1296,7 @@
             {/bf sig} is a target variable that identifies the subject net. The
             attribute/constraint {/bf attr} and the value {/bf val} are both
             strings.
-
+            
             See also - \\
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf append\_ncf\_file()} \autorefph{sec:lpappncf}\\
@@ -1246,7 +1315,7 @@
 
 
         \subsubsection{period\_div - timing group for divided clock}\label{sec:lpperioddiv}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1259,11 +1328,11 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf newgroup} is a new timing group identifier. \\
             {\bf group} is a timing group identifier. \\
             {\bf ratio} is a period ratio. \\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -1272,7 +1341,7 @@
             given by {\bf newgroup}. The period of the new group is
             the period of the old timing group {\bf group} divided
             by {\bf ratio}.
-
+            
             See also - \\
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf append\_ncf\_file()} \autorefph{sec:lpappncf}\\
@@ -1286,7 +1355,7 @@
 
 
         \subsubsection{period\_mul - timing group for divided clock}\label{sec:lpperiodmul}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1299,11 +1368,11 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf newgroup} is a new timing group identifier. \\
             {\bf group} is a timing group identifier. \\
             {\bf ratio} is a period ratio. \\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -1312,7 +1381,7 @@
             given by {\bf newgroup}. The period of the new group is
             the period of the old timing group {\bf group} multiplied
             by {\bf ratio}.
-
+            
             See also - \\
             {\bf addncfline()} \autorefph{sec:lpaddncfline}\\
             {\bf append\_ncf\_file()} \autorefph{sec:lpappncf}\\
@@ -1321,10 +1390,10 @@
             {\bf maxdelay()} \autorefph{sec:lpmaxdelay}\\
             {\bf period\_div()} \autorefph{sec:lpperiodmul}\\
             {\bf netaddncf()} \autorefph{sec:lpnetaddncf}.
-
+ 
 
         \subsubsection{processPinAttributes - process pin attributes}\label{sec:lpprocPinAtt}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1337,27 +1406,27 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf ptr} is a pointer to an input, output or clock mode variable.
-
+        
             {\bf In-line target execution:} \\
             no
 
             {\bf description:} \\
-
+            
             This procedure is called following the creation of every input, output
             or clock mode variable. This procedure must have been previously
             registered with the 3PL system by calling
-
+            
             \begin{lstlisting}[gobble=12, language=threepl]
                attributeprocedure(processPinAttributes);
             \end{lstlisting}
-
+            
             prior to any calls to inbuilt procedures input(), output() or clock().
             This is best done by placing the call in a leader module, ordered
             within leader modules such that it occurs early enough to precede the
-            above variable creation calls.
-
+            above variable creation calls. 
+        
             The argument is a pointer to an input, output or clock mode variable.
             This procedure accesses the attribute map of the variable concerned and
             extracts the 'loc' attribute if present. From the 'loc' attribute it
@@ -1368,24 +1437,24 @@
             map of the variable if they are not already present since attributes
             passed as arguments to the variable creation procedure should override
             attributes derived from pins.
-
+            
             When an attribute is extracted from pin attribute maps it must be added
             to the input, output or clock variable attribute map as an array with
             one entry per pin since an attribute may have different values amongst
-            the pins.
-
+            the pins.           
+            
             The procedure also expands most attributes from the variable attribute
             map to arrays if they are single values (some attributes, such as
             frequency or readdomain, are required to remain single valued as they apply
             to the variable itself, not the input/output buffers or pads).
-
+            
             In the case of an input clock with differential input attributes
             attached to the pair of pins are redundant since the clock attributes
             except {\bf loc} are required to be single values. It is reasonable
             to expect that attributes associated with pins will be a pair of identical
             values and processPinAttributes() may use either (it will actually
             extract them in turn and the 2nd one will prevail).
-
+            
             Note that processPinAttributes() ignores attributes that it does not
             recognise. At present iopins() has a list of attributes that it will
             accept, which it checks for type. It will give a fatal error on an
@@ -1393,17 +1462,17 @@
             accept unrecognised attributes for addition to their attribute maps
             without comment). This may be relaxed in the future so that additional
             arbitrary attributes can be added for software use.
-
+            
             For information on attributes see {\bf input()} \autorefph{sec:ipinput},
             {\bf output()} \autorefph{sec:ipoutput} or {\bf clock()}
             \autorefph{sec:ipclock}.
-
+            
             See also {\bf attributeprocedure()} \autorefph{sec:ipattributeproc}.
 
 
 
         \subsubsection{pullup - connect pullups to a bus}\label{sec:lppullup}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1416,9 +1485,9 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf in} is a selectvalue mode variable. \\
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -1427,10 +1496,10 @@
             variable (an internal bus).
 
 
-
+            
 
         \subsubsection{setiostandard - set the I/O voltage standard for a pin or pins}\label{sec:lpsetiostandard}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1443,10 +1512,10 @@
             {\bf Output parameters:} \\
             none
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf iostandard} is a string giving the I/O voltage standard.\\
             For second argument see description.
-
+        
             {\bf In-line target execution:} \\
             no
 
@@ -1460,7 +1529,7 @@
             standard string). This procedure may be called again to change the
             standard established for pins on a previous call since the I/O
             standards are only used at the completion of immediate execution.
-
+            
             This procedure is used in conjunction with library function {\bf
             getiostandard()} \autorefph{sec:lfgetiostandard} and library procedure
             {\bf iopins()} \autorefph{sec:lpiopins}.
@@ -1482,7 +1551,7 @@
 
 
         \subsubsection{clockused - determine if a clock variable has been used}\label{sec:lfclockused}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1495,13 +1564,13 @@
             {\bf Return mode and type:} \\
             immediate, log
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf c} is a clock variable
 
             {\bf description:} \\
             This function returns true if the clock variable passed as argument
             has been used to drive logic.
-
+            
             The function can be used to avoid generating timing constraints, and
             even the clock generator itself, if a clock variable is not used
             to drive logic. This determination can only be made at the completion
@@ -1512,7 +1581,7 @@
 
 
         \subsubsection{del - variable length delay line}\label{sec:lfdel}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1532,7 +1601,7 @@
             {\bf Return mode and type:} \\
             value, type(in)
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf in} is the input value. It may be any target type.\\
             {\bf len} is the length of the delay line.\\
             {\bf init} is an optional initialisation.\\
@@ -1553,7 +1622,7 @@
             as described below. The other input arguments must not be modes {\bf
             immediate}, {\bf queue}, {\bf memory} or {\bf clock} and value mode
             arguments must not contain queue reads.
-
+            
             The argument to {\bf step} must be type "log" and may be as follows -
             \blist
             \item   no argument - the delay will advance on each clock cycle
@@ -1566,7 +1635,7 @@
             \item   a static, selectvalue or value mode value - the delay will
                     advance on clock cycles when {\bf step} is true.
             \blend
-
+            
             For example -
             \begin{lstlisting}[gobble=12, language=threepl]
                 when (l)
@@ -1575,7 +1644,7 @@
             will shift the current value of {\bf b} into the delay line every
             time the assignment to {\bf a} is made ({\bf l} is true), the
             assigned value being popped off the end.
-
+            
             Whereas -
             \begin{lstlisting}[gobble=12, language=threepl]
                 when (l)
@@ -1695,7 +1764,7 @@
 
             {\bf Note: the fixed delay parameter {\em len} gives the number of
             cycles to be delayed but the variable delay parameter {\em varlen}
-            is the number of cycles delay minus one!}
+            is the number of cycles delay minus one!}      
 
             In Xilinx devices there is a substantial delay between the clock
             edge and the arrival of the shift register signal at the output of
@@ -1716,7 +1785,7 @@
 
 
         \subsubsection{elementcheck - check that a Xilinx element is allowed in the current device family}\label{sec:lfelementcheck}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1729,7 +1798,7 @@
             {\bf Return mode and type:} \\
             immediate, log
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf element} is the name of a Xilinx library element.
 
             {\bf description:} \\
@@ -1738,17 +1807,17 @@
             for each device family are kept in an abbreviated map in xilinx/common.3pl,
             i.e. only a subset of elements are included, namely those used explicitly
             in 3PL libraries. The map can be expanded when required.
-
+            
             The result of the check is returned, true if the element is available in the
             current device family.
-
+            
             See also library procedure {\bf elementcheck()} \autorefph{sec:lpelementcheck}
             which will issue a fatal error message on failure, rather than returning
             the check result.
 
 
         \subsubsection{getiostandard - get the I/O standard for a pin or pins}\label{sec:lfgetiostandard}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1761,7 +1830,7 @@
             {\bf Return mode and type:} \\
             immediate, str
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             See description.
 
             {\bf description:} \\
@@ -1769,10 +1838,10 @@
             or more FPGA inputs or outputs. The argument must be a string or a string array of any
             number of dimensions, the strings being the FPGA pin designations.
             Multiple pins must have the same I/O standard or a fatal error occurs.
-
+            
             The I/O standard for one or more pins is established or changed by calling
             library procedure {\bf setiostandard()} \autorefph{sec:lpsetiostandard}.
-
+            
             This function is used in conjunction with library procedures {\bf
             setiostandard()} \autorefph{sec:lpsetiostandard} and {\bf iopins()}
             \autorefph{sec:lpiopins}.
@@ -1782,7 +1851,7 @@
 
 
         \subsubsection{reverse - reverse a value}\label{sec:lfreverse}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1795,20 +1864,20 @@
             {\bf Return mode and type:} \\
             value, type(in)
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf in} is the operand.
 
             {\bf description:} \\
             This function returns input operand with bits reversed. Since this
             does a simple bit-wise reversal it only makes sense if the input
             type can be sensibly reversed.
-
+           
 
 
 
 
         \subsubsection{sequence - generate a sequence}\label{sec:lfsequence}
-
+            
             {\bf Library: xilinx/common.3pl}
 
             {\bf Prototype:} \\
@@ -1821,7 +1890,7 @@
             {\bf Return mode and type:} \\
             value, "bits:"
 
-            {\bf Input parameters:} \\
+            {\bf Input parameters:} \\            
             {\bf s} is the sequence array.\\
             {\bf stype} is the data type.\\
             {\bf step} is an optional input to control data movement.
@@ -1841,7 +1910,7 @@
 
 
     \subsection{library classes}
-
+    
         None.
 
 

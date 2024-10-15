@@ -1,7 +1,11 @@
+# from https://stackoverflow.com/a/76466410/2130789
 ant := $(word 1,$(foreach p,$(subst :, ,$(PATH)),$(wildcard $p/ant)))
-
 ifeq ($(ant),)
 $(error "ant" not in PATH - install apache ant)
+endif
+git := $(word 1,$(foreach p,$(subst :, ,$(PATH)),$(wildcard $p/git)))
+ifeq ($(git),)
+$(error "git" not in PATH - install git)
 endif
 
 default:

@@ -31,7 +31,7 @@ and the rest comes from Macports:
     svn 1.13.0 (r1867053)
 
 (usually the system awk, grep, sed and make are ok - but if not, use the
-Macpors versions e.g. gmake, gsed)
+Macports versions e.g. gmake, gsed)
 
 On Windows, the build succeeded (at times) with these packages installed:
 

@@ -3,9 +3,6 @@
 <project name="3pl" basedir="." default="main"
   xmlns:if="ant:if" xmlns:unless="ant:unless">
 
-    <!-- retrieve environment variables into properties with prefix "env." -->
-    <property environment="env"/>
-
     <!--
         "Semantic Versioning" (ver 2.0.0) version number for 3pl
 
@@ -19,7 +16,7 @@
         For most uses, this property will be combined with an "M" suffix
         if 3pl is built inside a git working tree with uncommitted changes.
     -->
-    <property name="3pl.version" value="11.7.0"/>
+    <property name="3pl.version" value="12.0.0"/>
 
     <!--
         translate the version into a git tagname
@@ -63,6 +60,9 @@
         <arg value="--pretty=format:%ai"/>
     </exec>
 
+    <!-- retrieve environment variables into properties with prefix "env." -->
+    <property environment="env"/>
+
     <!--
         if the revision ends with "-dirty" then this repo is modified - if so,
         the 3pl.mflg property will be the string "M", otherwise it is empty
@@ -88,8 +88,11 @@
         <arg value="-m"/>
     </exec>
 
-    <!-- only copy internal files if -D3pl.internal=true passed on cmd line -->
+    <!-- copy internal files if -D3pl.internal=true passed on cmd line -->
     <property name="3pl.internal" value="false" unless:set="3pl.internal"/>
+
+    <!-- installation dir - override on cmd line with -D3pl.instdir=... -->
+    <property name="3pl.instdir" value="/opt/3pl" unless:set="3pl.instdir"/>
 
     <!--
         define a filterchain that does token replacement for 3PL version info
@@ -329,6 +332,11 @@
         <echo message="${3pl.version}${3pl.mflg}"/>
     </target>
 
+    <!-- the "versiontag" target prints the 3pl version as a git tag-->
+    <target name="versiontag" description="print 3pl version as git tag">
+        <echo message="${3pl.tagname}"/>
+    </target>
+
     <!-- the "revision" target prints the 3pl revision from git -->
     <target name="revision" description="print 3pl revision from git">
         <echo message="${3pl.revision}"/>
@@ -411,6 +419,15 @@
         <createinstall base="build/${3pl.version}${3pl.mflg}"/>
     </target>
 
+    <!--
+        the "install" target is the same as "build" except it is done into a
+        system directory
+    -->
+    <target name="install" depends="jar"
+      description="runs build target into a system directory">
+        <createinstall base="${3pl.instdir}/${3pl.version}${3pl.mflg}"/>
+    </target>
+
     <!-- the "api" target re-creates a html version of the API javadoc -->
     <target name="api"
       description="run javadoc to create html version of API docs in doc/api">
@@ -462,11 +479,15 @@
     </target>
 
     <target name="main" depends="clean,run"
-      description="main target - runs a clean then a run">
+      description="main target - runs clean target then run target">
     </target>
 
-    <target name="release" depends="clean,build"
-      description="runs clean and build targets then creates a release">
+    <target name="release" depends="clean,install"
+      description="runs clean and install targets then creates a release">
+        <fail message="'release' target not implemented (yet)"/>
+        <exec executable="git" failonerror="true">
+            <arg value="tag"/>
+        </exec>
     </target>
 
     <target name="refresh" if="eclipse.running">

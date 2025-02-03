@@ -1,3 +1,8 @@
+# from https://renenyffenegger.ch/notes/development/make/detect-os
+ifeq ($(OS), Windows_NT)
+ant := ant
+git := git
+else
 # from https://stackoverflow.com/a/76466410/2130789
 ant := $(word 1,$(foreach p,$(subst :, ,$(PATH)),$(wildcard $p/ant)))
 ifeq ($(ant),)
@@ -6,6 +11,7 @@ endif
 git := $(word 1,$(foreach p,$(subst :, ,$(PATH)),$(wildcard $p/git)))
 ifeq ($(git),)
 $(error "git" not in PATH - install git)
+endif
 endif
 
 default:

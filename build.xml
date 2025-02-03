@@ -490,6 +490,17 @@
         </exec>
     </target>
 
+    <target name="source"
+      description="creates a source archive from the current release branch">
+        <exec executable="git" failonerror="true">
+            <arg value="archive"/>
+            <arg value="--prefix=${3pl.tagname}/"/>
+            <arg value="--output"/>
+            <arg value="${3pl.tagname}.tar.gz"/>
+            <arg value="${3pl.tagname}"/>
+        </exec>
+    </target>
+
     <target name="refresh" if="eclipse.running">
         <eclipse.refreshLocal resource="${basedir}" depth="infinite"/>
     </target>

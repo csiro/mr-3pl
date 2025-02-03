@@ -90,4 +90,22 @@ java - https://www.java.com/en/download/manual.jsp
 Then 3pl should build in similar fashion to linux/macos from within a Git Bash
 shell.
 
+INSTALLATION
+------------
+
+The default installation directory is `/opt/3pl` - this can be
+overridden by providing the `-D3pl.instdir=<dir>` option to `ant`.
+
+To print the current version of `3pl` run `ant version` (or
+`ant versiontag` for a string suitable as a release tag in `git`).
+
+To install `3pl` into `/opt/3pl/<version>`, run `ant install` and place
+`/opt/3pl/<version>/bin` at the head of your `PATH` environment variable.
+
+To run `3pl` "in place" in the source directory, run `ant run`.
+
+To build the API documentation, run `ant api`.
+
+To remove most generated files, run `ant clean`.
+
 [^1]: **Dataflow** was a name given to data-driven computing architectures explored at **Manchester University** by **Ian Watson** and **John Gurd** in the late 1970s.

@@ -17,7 +17,15 @@ On all platforms, you will need a version of java and, if you want to rebuild
 the generated java source files for the parser, a version of javacc (at least
 version 6.0, but usually can use the latest e.g. 7.0.5).
 
-The complier build, install and release is done via [Apache Ant](https://ant.apache.org) and repository management is done by [git](https://git-scm.com/).
+The complier build, install and release is done via [Apache Ant](https://ant.apache.org) (version 1.10.14 compiled on August 16 2023) and repository
+management is done by [git](https://git-scm.com/) (version 2.47.1).
+
+To build the pdf documentation, you need to install (at least):
+
+```
+texlive-font-utils
+fig2dev
+```
 
 On Ubuntu, the java version used was:
 
@@ -25,12 +33,6 @@ On Ubuntu, the java version used was:
 openjdk version "1.8.0_252"
 OpenJDK Runtime Environment (build 1.8.0_252-8u252-b09-1ubuntu1-b09)
 OpenJDK 64-Bit Server VM (build 25.252-b09, mixed mode)
-```
-and to build the pdf documentation, you need to install (at least):
-
-```
-texlive-font-utils
-fig2dev
 ```
 On MacOS X, the system java should do the job, for example:
 

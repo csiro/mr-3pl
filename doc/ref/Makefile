@@ -11,7 +11,7 @@ export TEXINPUTS = .:../latex:
 	@echo + creating $@ from $^
 	@fig2dev -L eps $*.fig $*.eps
 
-texts =         alist.tex \
+texs =          alist.tex \
                 boards_avnet_sp3a.tex \
                 boards_microzed.tex \
                 boards_ml505.tex \
@@ -92,103 +92,109 @@ texts =         alist.tex \
                 zynq_CPU_comm.tex \
 		zynq_device_tree.tex
 
-figures =       and.pdf \
-                btrate1.pdf \
-                btrate2.pdf \
-                c_serial.pdf \
-                c_zynq.pdf \
-                clpdcm.pdf \
-                comm.pdf \
-                commdmar.pdf \
-                commdmaw.pdf \
-                commint.pdf \
-                commmr.pdf \
-                commmw.pdf \
-                commr.pdf \
-                commw.pdf \
-                core1.pdf \
-                core3.pdf \
-                cpu.pdf \
-                cram.pdf \
-                dcm.pdf \
-                dcm2.pdf \
-                ddrin.pdf \
-                ddrout.pdf \
-                del.pdf \
-                dff.pdf \
-                diverge.pdf \
-                dowhile.pdf \
-		dspex1.pdf \
-		dspex2.pdf \
-                e1.pdf \
-                e10.pdf \
-                e11.pdf \
-                e12.pdf \
-                e13.pdf \
-                e14.pdf \
-                e15.pdf \
-                e16.pdf \
-                e2.pdf \
-                e2cpo.pdf \
-                e2cu.pdf \
-                e2o.pdf \
-                e3.pdf \
-                e4.pdf \
-                e5.pdf \
-                e6.pdf \
-                e7.pdf \
-                e8.pdf \
-                e9a.pdf \
-                e9b.pdf \
-                ee1a.pdf \
-                ee1b.pdf \
-                ee2b.pdf \
-                ex3wf.pdf \
-                execp.pdf \
-                iddr1.pdf \
-                iddr2.pdf \
-                iddr3.pdf \
-                iloop.pdf \
-                inv.pdf \
-                iodll.pdf \
-                oddr.pdf \
-                op.pdf \
-                or.pdf \
-                pqueue.pdf \
-                priority.pdf \
-                py_serial.pdf \
-                py_zynq.pdf \
-                queue.pdf \
-                reg.pdf \
-                resync.pdf \
-                rram.pdf \
-                select.pdf \
-                start.pdf \
-                wait.pdf \
-                when.pdf \
-                while.pdf \
-                xor.pdf
+figs =          and.fig \
+                btrate1.fig \
+                btrate2.fig \
+                c_serial.fig \
+                c_zynq.fig \
+                clpdcm.fig \
+                comm.fig \
+                commdmar.fig \
+                commdmaw.fig \
+                commint.fig \
+                commmr.fig \
+                commmw.fig \
+                commr.fig \
+                commw.fig \
+                core1.fig \
+                core3.fig \
+                cpu.fig \
+                cram.fig \
+                dcm.fig \
+                dcm2.fig \
+                ddrin.fig \
+                ddrout.fig \
+                del.fig \
+                dff.fig \
+                diverge.fig \
+                dowhile.fig \
+		dspex1.fig \
+		dspex2.fig \
+                e1.fig \
+                e10.fig \
+                e11.fig \
+                e12.fig \
+                e13.fig \
+                e14.fig \
+                e15.fig \
+                e16.fig \
+                e2.fig \
+                e2cpo.fig \
+                e2cu.fig \
+                e2o.fig \
+                e3.fig \
+                e4.fig \
+                e5.fig \
+                e6.fig \
+                e7.fig \
+                e8.fig \
+                e9a.fig \
+                e9b.fig \
+                ee1a.fig \
+                ee1b.fig \
+                ee2b.fig \
+                ex3wf.fig \
+                execp.fig \
+                iddr1.fig \
+                iddr2.fig \
+                iddr3.fig \
+                iloop.fig \
+                inv.fig \
+                iodll.fig \
+                oddr.fig \
+                op.fig \
+                or.fig \
+                pqueue.fig \
+                priority.fig \
+                py_serial.fig \
+                py_zynq.fig \
+                queue.fig \
+                reg.fig \
+                resync.fig \
+                rram.fig \
+                select.fig \
+                start.fig \
+                wait.fig \
+                when.fig \
+                while.fig \
+                xor.fig
 
-all: manual.pdf
+all: doc.pdf
 
 .PHONEY: version.tex
 
-version.tex:	version.tex.template
+version.tex: version.tex.template
 	@echo + creating version information
 	@ant -q -S versionfilter -buildfile ../../build.xml \
 	    -Dinputfile=$(CURDIR)/$^ > $@
 
-.PRECIOUS: $(figures)
+.PRECIOUS: $(texs) $(figs)
 
-manual.pdf:	version.tex $(texts) $(figures)
+doc.pdf: version.tex $(texs) $(figs:.fig=.pdf)
 	@echo + building 3pl manual pdf
-	@-pdflatex doc
-	@-makeindex -c doc.idx
-	@-pdflatex doc
-	@mv -f doc.pdf $@
+	@-pdflatex doc >/dev/null
+	@-makeindex -c doc.idx >/dev/null
+	@-pdflatex doc >/dev/null
+
+manual.pdf: doc.pdf
+	@echo + replacing manual.pdf stored in repository
+	@cp -f doc.pdf $@
 
 clean:
-	rm -f doc.ind doc.ilg doc.aux doc.out doc.idx doc.toc doc.log
+	@echo + removing generated files
+	@rm -f doc.ind doc.ilg doc.aux doc.out doc.idx doc.toc doc.log
+	@rm -f *.eps doc.pdf version.tex
 
 realclean: clean
-	rm -f manual.pdf version.tex $(figures)
+	@echo + removing fig output pdfs
+	@rm -f $(figs:.fig=.pdf)

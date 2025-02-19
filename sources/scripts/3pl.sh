@@ -39,7 +39,7 @@ case "$jvn" in
     ;;
 1[0-9].*)
     ;;
-2[01].*)
+2[0-3].*)
     ;;
 *)
     echo "3pl cannot run using Java version '$jvn'" >&2

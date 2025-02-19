@@ -10,6 +10,10 @@
 been explicitly designed to support pipelining. The name **3PL** stands for
 *"Parallel Pipeline Programming Language"*.
 
+This software is a **3PL compiler**, taking **3PL source code** (`.3pl` files)
+and producing a **Xilinx "netlist" (EDN)** compatible output file.
+The **EDN** file is processed by the **Xilinx ISE** software suite ultimately producing a **"bitfile"** that can be loaded into a **Xilinx FPGA**.
+
 DEPENDENCIES
 ------------
 

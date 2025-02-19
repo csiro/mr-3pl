@@ -185,9 +185,10 @@ manual.pdf:	version.tex $(texts) $(figures)
 	@-pdflatex doc
 	@-makeindex -c doc.idx
 	@-pdflatex doc
-	@rm -f version.tex
 	@mv -f doc.pdf $@
 
 clean:
-	rm -f manual.pdf version.tex $(figures)
 	rm -f doc.ind doc.ilg doc.aux doc.out doc.idx doc.toc doc.log
+
+realclean: clean
+	rm -f manual.pdf version.tex $(figures)

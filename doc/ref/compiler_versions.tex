@@ -1,8 +1,8 @@
 \pagebreak
 
 \chapter{Compiler Versions}
-        
-        The current version is 11.6.
+
+        The current version is 12.0.
 
         The principal enhancement from version 3.n to version 4.0 was the
         introduction of an extra scope based on source files. The {\bf include}
@@ -17,10 +17,10 @@
         to most target control structures to allow premature termination when an
         exception expression is true. This also includes an optional code block
         to be executed when the exception occurs.
-        
+
         Version 4.2 contains list (\autorefph{sec:sseclists}) and map
         (\autorefph{sec:ssecmaps}) types.
-        
+
         Version 5.0 introduces variable {\bf attributes} which replace the
         arbitrary string of arguments previously required by inbuilt procedures
         {\bf input()}, {\bf externout()} and {\bf clock()}. There is a new mode
@@ -34,48 +34,48 @@
         \item   controlling some aspects of code generation such as queue buffer
                 depths and code optimisation
         \blend
-        
+
         There are now two memory modes, {\bf cmemory} for combinatorial output
         memory and {\bf rmemory} for registered output memory, where previously
         there was a single mode ({\bf memory}) used by both types of memory. The
         inbuilt procedures {\bf cmemory()} and {\bf rmemory()} are still used as before
         to create combinatorial output and registered output memories respectively
-        
+
         Version 5.0 also now takes note of the order of a subscript range. Previous
         versions sorted the range limits to smaller..larger but version 5.0
         uses the order specified, creating a descending order if required.
-        
+
         Inbuilt procedures {\bf externout()} and {\bf buffersize()} have been
         deleted, inbuilt procedure {\bf fatal()} has been renamed {\bf exit()} and
         an inbuilt procedure {\bf texit()} (same as trace() followed by exit()) has
         been added.
-        
+
         Variables of type "type" and type "str" can now be cross-assigned or
         initialised (no cast is needed). Variables of type "type" cannot otherwise
         be used where type "str" is accepted in which case the type can be
         converted by inbuilt function {\bf typestring()}, but this restriction
         may be lifted in the future.
-        
+
         Version 6.0 requires Java 1.6 where previous versions used Java 1.5.
-        
+
         Version 6.1 will handle Xilinx Coolrunner and XC95 CPLDs with a subset
         of modes and operations. Queue, cmemory, rmemory and selectvalue modes
         cannot be used. Target multiplication, division, remainder and
         variable shift operations are not implemented.
-        
+
         Version 6.2 has undegone an internal code reorganisation and has
         a few obscure but important bug fixes.
-        
+
         Version 6.3 has deprecated the following procedures -
 
         \begin{tabular}{| l | l |}
         \hline
         deprecated & replacement \\
         \hline
-        rram()      & rmemory()    \\  
+        rram()      & rmemory()    \\
         rramread()  & rmemoryread()  \\
         rramwrite() & rmemorywrite() \\
-        cram()      & cmemory()     \\ 
+        cram()      & cmemory()     \\
         cramwrite() & cmemorywrite() \\
         \hline
         \end{tabular}
@@ -96,13 +96,13 @@
         to the variable creation procedures to match the order of address and
         data arguments to the associated write procedures. The deprecated
         procedures and functions remain in the implementation.
-        
+
         Version 6.4 supports Virtex-5, including gigabit transceivers.
-        
+
         Version 6.5 contains a branch statement, the target equivalent of
         a switch statement. It also has new inbuilt functions timestring() and
         elapsedtime().
-        
+
         Version 6.6 now allows pin location attributes to be any type as long
         as they only contain "str" primitives. Previously these were restricted
         explicitly to types "str" and "[]str" but now may be nested arrays and
@@ -120,13 +120,13 @@
         env()       & return a map of environment variables     \\
         \hline
         \end{tabular}
-        
+
         Version 6.7 now implements target fixed-point types and arithmetic
         operations. This version also changed floating point implementation from
         using a struct for representation to a proper type with inbuilt
         functions to extract the sign, biased exponent and mantissa. Functions
         added are -
-        
+
         \begin{tabular}{| l | l |}
         \hline
         Offset()                & the offset of a fixed point value\\
@@ -137,20 +137,20 @@
         MantissaWidth()         & the mantissa width of a floating point value\\
         \hline
         \end{tabular}
-        
+
         Version 6.8 included the iswritten() inbuilt function.
 
         Version 7.0 has conditional compilation. It also has had the round()
         inbuilt function extended to provide rounding from fixed or ufixed
         to int or uint using round-to-even.
-        
+
         Version 7.1 has substantially improved code optimisation. It also extends
         the 'continuous' attribute to queue mode variables.
-        
+
         Version 7.2 has a new target construct, 'sync when () {}'.
-        
+
         Version 7.3 allows target mode values in a compound value.
-        
+
         Version 7.4 has improved implementation of combinatorial output
         memory. This is more efficient in some cases and also gives some
         more choices in the smaller queue buffer depths than previously.
@@ -215,7 +215,7 @@
         principal use of these is to synchronise two parallel execution threads,
         optionally passing a datum in the process. The use of these is of
         necessity somewhat restricted.
-        
+
         Version 8.5, when called with no source file command line argument,
         pops up a GUI to open the file. The GUI has buttons to set some
         options and a button to start (parsing, immediate execution and
@@ -223,55 +223,55 @@
         A file can be repeatedly compiled and executed by a single button
         press. Version 8.5 will run on Linux (or any Unix), MAC OSX and
         Windows.
-        
+
         Version 8.6 uses CLB logic for selectvalue mode variables by default,
         whereas previously 3-state buffers were used. An attribute is used
         to force 3-state implementation if desired. An additional attribute
         is now available to determine the output level when no inputs are
         selected. Inbuilt procedures and functions tselect() and tselecta()
         have been removed.
-        
+
         Version 8.7 allows selectvalue mode variables to have their default
         values, when no input is selected, to be specified. The environment
         variable {\bf THREEPL\_CONTINUOUS} is no longer recognised.
         There is a new directive, "output directory", produced by the
         compiler. The optional report file is now placed in the designated
         output directory instead of the parent directory.
-        
+
         Version 8.8 has added inbuilt functions memoryaddresstype() and
         memorydatatype().
-        
+
         Version 8.9 now allows compound values to contain target expressions.
         Inbuilt procedure float() will now accept an integer initialisation
         argument.
-        
+
         Version 8.10 dispenses with the unworkable conditional compilation
         scheme and substitutes conditional file inclusion via additional
         forms of 'module' and 'source' statements.
-        
+
         Version 8.11 no longer supports automatic conversion of "null" queues
         to "log" values. A queue of type "null" can be explicitly cast
         to a value of type "log" where required.
-        
+
         Version 8.12 removes some restrictions on the use of unbuffered
         queues.
-        
+
         Version 8.13 is functionally identical to version 8.12. The version
         number has been advanced because the source code has been extensively
         modified to incorporate generic Java typing and eliminate casts
         where possible. Also the parser has been separated from the main
         program, which was not the case previously.
-        
+
         Version 8.14 removes the restriction on cmemory and rmemory variables
         being passed as arguments to varags parameters.
-        
+
         Version 9.0 has removed clock managers and high speed serial devices
         from within 3PL and implemented them instead as 3PL library modules.
         This is a significant change and is not backward compatible.
 
 	Version 9.1 checks for input variables with no clock domain that occur
 	in target conditional statement test expressions.
-        
+
         Version 10.0 introduces a major change. Most constraints and attributes
         have been moved from the netlist constraints file (NCF) to the
         EDIF netlist file where they now appear as element properties. Remaining
@@ -284,40 +284,40 @@
         procedures INPUT(), OUTPUT() and CLOCK() have been introduced to
         properly handle constraints. These in turn call inbuilt procedures input(),
         output() and clock().
-        
+
         Version 10.1 has the 'ignoremodules' option added to queue attributes.
-        
+
         Version 10.2 allows map indices or keys to be applied in brackets in the
         same way as array subscripts. It also allows subscripts to be used to
         access lists, though list insertion still requires the use of an inbuilt
         procedure.
-        
+
         Version 10.3 has changed inbuilt procedures input(), output() and clock()
         so that where possible I/O attributes (properties) normally contained in
         a constraint file are now handled in 3PL software, not through Java code
         as a side effect of netlist generation. Most of the attributes that these
         procedures accept are arrays, one member per pin, as this allows attributes
         to differ from pin to pin even within one variable.
-        
+
         Version 11.0 changed all occurrences of 'pipe' to 'queue' in 3PL and
         the libraries. It was felt that naming a variable mode 'pipe' and then
         explaining that it was actually a queue was confusing and unnecessary.
         Also inbuilt procedures scanf, fscanf, sscanf, printf, fprintf and
         sprintf have been added.
-        
+
         Version 11.1 allows static variables to be initialised via an "init"
         attribute. Inbuilt function strtotype() has been added.
-        
+
         Version 11.2 no longer has inbuilt modules FD and REGISTER. There
         are numerous other minor code changes which should be backward
         compatible with version 11.1.
-        
+
         Version 11.3 now allows many inbuilt modules and procedures and a few
         inbuilt functions to be called with parameter=argument pairs as well
         as matching arguments to parameters solely by position. Input mode and
         output mode variables no longer have clock domains. Period attributes
         have been removed, the reciprocal of frequency being used instead.
-        
+
         Version 11.4 provides conditional compilation and execution based on
         time of last modification of all included source files, the compiler
         build time and the output netlist file. It also provides a
@@ -331,11 +331,12 @@
         code signal structures. The report file format has been restructured
         and improved and the optional intermediate code list is now in
         a separate file.
-        
+
         Version 11.6 has a change to the {\bf unless} control structure. It now
         requires an exception  code block in braces even if empty. The call to
         inbuilt procedure shell() has had its output argument order changed.
-        
+
         Version 11.7 has classes but is otherwise backward compatible with
         version 11.6.
-        
+
+        Version 12.0 is the first Open Source release.

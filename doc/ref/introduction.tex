@@ -1,13 +1,13 @@
 
 
 \chapter{Introduction}
-    
+
     The use of Field Programmable Gate Arrays (FPGAs) as real-time data
     processors is attracting growing interest. The
     Xilinx Virtex FPGA series is aimed directly at the DSP market
     and promises spectacular performance in comparison to a conventional
     CPU.
-    
+
     However, the programming of FPGAs still presents considerable
     difficulties, and digital circuit design is still the predominant
     method. Parallel languages for FPGAs have emerged in recent years, but
@@ -25,24 +25,24 @@
     to generate a data stream. Even where an algorithm is sequential,
     pipelining results in some parallel execution - the parallelism
     is effectively the length of the pipeline.
-    
-    This software was developed within a machine vision research group in
-    CSIRO (Commonwealth Scientific and Industrial Research Organisation), an
-    Australian Federal Government research laboratory. It was developed and
-    used successfully over two decades to implement machine vision
-    algorithms in FPGAs and to provide high-speed data processing in
-    instrumentation systems.
-    
+
+    This software was developed in 2001 within a machine vision research
+    group in CSIRO (Commonwealth Scientific and Industrial Research
+    Organisation), an Australian Federal Government research laboratory.
+    It was developed and used successfully over two decades to implement
+    machine vision algorithms in FPGAs and to provide high-speed data
+    processing in instrumentation systems.
+
     3PL has now been released as open-source software. As it was developed as
     an experimental research tool it carries no guarantees. Although it was
     refined over a long period, it will almost certainly not be error free and
     thus {\bf 3PL must not be used in any critical applications!}
-    
+
     3PL is implemented in Java and so will operate under both UNIX/LINUX/OSX
     and Windows environments. The release includes the source code however
     the Java jar file is provided so it is unnecessary to rebuild 3PL unless
     a bug is to be corrected or some extension or improvement is contemplated.
-    
+
     \section{The 3PL language}
 
         3PL is a {\em dataflow}\footnote{Dataflow was a name
@@ -88,7 +88,7 @@
         initialise a table.
 
         The 3PL compiler is not specific to any particular FPGA, but the code
-        generator supports only Xilinx FPGAs and CPLDs at the moment.        
+        generator supports only Xilinx FPGAs and CPLDs at the moment.
         Currently these platforms are Spartan2, Spartan3, Spartan6, Virtex,
         Virtex-E, Virtex2, Virtex2-Pro, Virtex4, Virtex5, Virtex6 and series 7
         FPGAs (Artix, Kintex, Virtex7 and Zynq). It also supports Coolrunner
@@ -96,14 +96,14 @@
         be used for these devices.
 
     \section{Current version}
-    
+
         The current version of 3PL is {\bf 11.7}. It requires Java 1.6 or
         later. A list of compiler versions appears as an appendix.
 
     \section{Known deficiencies}
-    
+
         \subsection{enumerated types where ordinal 0 is not used}
-        
+
             When a queue variable whose type is non-primitive is assigned, any
             words in the type that are not assigned in that clock cycle are by
             default assigned a value corresponding to all bits low. For numeric
@@ -117,14 +117,14 @@
             is unlikely that this will be fixed.
 
         \subsection{++ and -- operators limited}
-        
+
             The increment and decrement operators work on integer primitives,
             including members of arrays and structs. They do not parse if
             applied to an expression and hence cannot be used on an indirect
             reference via the \verb'->' operator.
-    
+
         \subsection{cannot have arrays of queues, clocks, memories etc}
-        
+
             Arrays and structs are part of a type specification. Clock mode
             variables do not have a type and hence there cannot be an array of
             clocks. The two memory modes do not have types, though their address
@@ -149,9 +149,9 @@
             as the value of the function. There is an example in library
             stdlib.3pl, {\bf queuearray()}, which creates a number of queue mode
             variables and returns an array of pointers to the queues.
-    
+
         \subsection{petrinets transitions do not wait on code blocks}
-        
+
             When a petrinet transition occurs an associated code block may wait
             on queue availability. Transitions should wait for completion of
             associated code blocks. To implement this the transition would have
@@ -172,7 +172,7 @@
             The \verb'*<-' assignment may be implemented later.
 
         \subsection{extension to round function}
-        
+
             The round function takes both immediate and target mode arguments.
             For the latter it rounds a fixed to int or ufixed to uint. It may
             be extended in the future to allow rounding of fixed, ufixed, int
@@ -180,14 +180,14 @@
             but so far no particular need for this has been felt.
 
         \subsection{target code pointers}
-        
+
             Immediate-mode pointers are available in 3PL. In immediate code,
             pointers to immediate or target mode variables can be created,
             assigned and dereferenced. There is no equivalent in target code.
             Pointer variables which could be assigned and dereferenced in target
             code could be implemented, but the resulting decoder logic would be
             extensive and slow except in the case of very limited usage, hence
-            this is probably not worth considering.      
+            this is probably not worth considering.
 
         \subsection{module and procedure call syntax}
 
@@ -209,7 +209,7 @@
             \end{lstlisting}
             The proposed change has not met with enthusiasm from other users
             so it may never be done.
-        
+
         \subsection{debugging facilities}
 
             Six debugging tools have been envisaged -
@@ -258,8 +258,10 @@
         \footnote{Commonwealth Scientific and Industrial Research Organisation -
         an Australian federal government research laboratory}
         Manufacturing and Infrastructure Technology, Preston laboratory,
-        Melbourne. The group is now called High Speed Instrumentation and is in
-        CSIRO Mineral Resources, Clayton, Melbourne.
+        Melbourne. The group progressed to become known as High Speed
+        Instrumentation, moving to CSIRO Mineral Resources, Clayton, Melbourne.
+        The group evolved further and is now called MicroAnalytical
+        GeoScience (MaGs).
 
         Paul Dunn conceived the language and he and Andrew Bainbridge-Smith
         developed the original (incomplete) compiler. Andrew did all the
@@ -276,12 +278,15 @@
         Andrew Tulloh has worked through both compiler versions developing the
         target simulator (currently disabled as it has not kept up with 3PL
         evolution).
-        
+
         Robin Kirkham has been an invaluable critic and expert user of 3PL
         throughout and has contributed significant 3PL library code.
-        
+
         Murray Jensen crafted the make files to operate under Unix-like
         or Windows environments (development and subsequent usage of 3PL
-        has however been entirely under UNIX/LINUX/OSX).
-
-
+        has however been entirely under UNIX/LINUX/OSX). In later years,
+        as the compiler is predominantly a Java program, Murray switched
+        the build system over to Apache Ant, which seemed to offer more
+        Java oriented dependency support. It was hoped that this would
+        handle things like inner-classes and jar files better (it is
+        unclear whether this has been successful).

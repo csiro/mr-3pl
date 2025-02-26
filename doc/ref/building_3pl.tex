@@ -2,4 +2,60 @@
 
 \chapter{Building 3PL}
 
-NOT YET WRITTEN!
+The 3PL compiler is predominantly a Java program therefore the logical choice
+of build system seemed to be Apache Ant which was designed from the ground up
+for building Java programs.
+
+The original "make" based build system had trouble dealing with dependencies
+for java inner-classes and handling the contents of Java jar files. It was
+hoped that Apache Ant might handle these things better (however, it is
+unclear whether this was achieved).
+
+A "make" Makefile is still supported but all it does is call Apache Ant with
+any make targets passed as Ant targets.
+
+The 3PL compiler will build on any of the three major operating systems in
+use currently, namely Linux, MacOS or Windows.
+
+The available Ant targets (and therefore "make" targets) are:
+\begin{description}[leftmargin=!,labelwidth=\widthof{\bfseries versionfilter}]
+\item[api]           run javadoc to create html version of API docs in doc/api
+\item[build]         runs jar target then creates new hierarchy in build dir
+\item[clean]         removes most output except jar file
+\item[compile]       creates properties files and compiles all .java files
+\item[install]       runs build target into a system directory
+\item[jar]           runs compile target then builds the .jar file
+\item[javacc]        rebuilds parser source from .jj file - into build/jcc-out
+\item[main]          main target - runs clean target then run target
+\item[release]       runs clean and install targets then creates a release
+\item[revision]      print 3pl revision from git
+\item[run]           runs jar target then executes jar file in place
+\item[source]        creates a source archive from the current release branch
+\item[version]       print 3pl version with modified flag
+\item[versionfilter] replace version tokens in stdin
+\item[versiontag]    print 3pl version as git tag
+\end{description}
+To build the compiler, simply run the command \bverb:ant build:. This will
+create a subdirectory \\ \bverb:build/<version>:, where \bverb:<version>: is the
+current 3PL compiler version (\bverb:<version>: will be suffixed with a
+capital \bverb:M: if any files have been modified in the local git repository).
+
+The build subdirectory will be populated with all the normal hierarchy that
+would be expected if installed in the system (i.e. \bverb:bin:, \bverb:include:
+and \bverb:lib:).
+
+To install the hierarchy in a more centralised system location, run the
+\bverb:ant install: command, which will install the hierarchy (including
+the \bverb:<version>: subdirectory) into \bverb:/opt/3pl: (the location can
+be overridden by defining the ant property \bverb:3pl.instdir: on the command
+line - e.g. \\ \bverb:ant -D3pl.instdir=/path install:).
+
+To run the compiler "in place", i.e. without building or installing the
+full hierarchy, use the command \bverb:ant run:. This builds only the
+required \bverb:jar: file, then runs it inside the \bverb:ant: program
+(which is itself a Java program) supplying the \bverb:sources/include:
+subdirectory as the include file search path.
+
+The \bverb:ant: program is very verbose in its output. To make it run more
+quietly, use the command line arguments \bverb:-q -S:. The \bverb:Makefile:
+does this by default.

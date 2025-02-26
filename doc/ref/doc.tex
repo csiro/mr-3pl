@@ -1,5 +1,5 @@
 \documentclass[10pt,a4paper,twoside,fleqn]{book}
-\usepackage{inchmargins,fancyhdr,amsmath,graphicx,moreverb,listings,color,crtitle}
+\usepackage{inchmargins,fancyhdr,amsmath,graphicx,moreverb,listings,color,crtitle,calc,enumitem,xcolor,newverbs}
 \usepackage{makeidx}
 \usepackage{tocloft}
 \usepackage{graphicx}
@@ -14,6 +14,10 @@
     pdfpagelayout=SinglePage
 ]{hyperref}
 \pagestyle{fancy}
+
+\newverbcommand{\bverb}
+  {\begin{lrbox}{\verbbox}}
+  {\end{lrbox}\colorbox{gray!30}{\box\verbbox}}
 
 \input{version}
 

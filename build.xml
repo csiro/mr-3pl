@@ -433,6 +433,12 @@
       description="run javadoc to create html version of API docs in doc/api">
         <delete dir="doc/api"/>
         <mkdir dir="doc/api"/>
+        <echo unless:set="env.JAVACCHOME"
+          message="JAVACCHOME environment variable to build Parser BNF html"/>
+        <jjdoc if:set="env.JAVACCHOME"
+          target="sources/threepl/parser/Parser.jj"
+          outputfile="doc/api/ParserBNF.html"
+          javacchome="${env.JAVACCHOME}"/>
         <javadoc destdir="doc/api"
           locale="en_AU" encoding="UTF-8" verbose="true"
           access="package" author="true" version="true" use="true"
@@ -449,12 +455,6 @@
             <footer><![CDATA[<b>3PL</b> - Parallel Pipeline Programming Language]]></footer>
             <bottom><![CDATA[<p style="width: 100%; text-align:center; font-size: x-small; font-style: italic;">Copyright &#169; 2004-${3pl.current_year} <a href="http://www.csiro.au/">CSIRO Australia</a>. All Rights Reserved.</p>]]></bottom>
         </javadoc>
-        <echo unless:set="env.JAVACCHOME"
-          message="JAVACCHOME environment variable to build Parser BNF html"/>
-        <jjdoc if:set="env.JAVACCHOME"
-          target="sources/threepl/parser/Parser.jj"
-          outputfile="doc/api/ParserBNF.html"
-          javacchome="${env.JAVACCHOME}"/>
     </target>
 
     <!-- the "javacc" target rebuilds parser source from .jj file -->

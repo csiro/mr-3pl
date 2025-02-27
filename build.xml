@@ -451,7 +451,7 @@
             <link
               href="https://docs.oracle.com/javase/8/docs/api/"
               offline="true"
-              packagelistURL="https://raw.githubusercontent.com/ao-apps/ao-javadoc-offline/refs/heads/master/src/main/resources/com/aoapps/javadoc/offline/javase/8/package-list"/>
+              packagelistURL="https://raw.githubusercontent.com/ao-apps/ao-javadoc-offline/refs/heads/master/src/main/resources/com/aoapps/javadoc/offline/javase/8/"/>
             <doctitle><![CDATA[<table><tr><td style="font-size: xx-large;"><b>3PL</b> - Parallel Pipeline Programming Language</td><td><img id="logo" width="80" height="63"><script type="text/javascript">document.getElementById("logo").src=pathtoroot+"../images/logo.png";</script></td></tr></table>]]></doctitle>
             <header><![CDATA[<img id="logosmall" width="36" height="28"><script type="text/javascript">document.getElementById("logosmall").src=pathtoroot+"../images/logo-small.png";</script>]]></header>
             <footer><![CDATA[<b>3PL</b> - Parallel Pipeline Programming Language]]></footer>

@@ -1,23 +1,41 @@
 export TEXINPUTS = .:../latex:
 
 .SUFFIXES:
-.SUFFIXES:	.tex .fig .eps .pdf
+.SUFFIXES: .tex .fig .eps .pdf
 
-%.pdf:	%.eps
-	epstopdf $*.eps
+%.pdf: %.eps
+	@echo + creating $@ from $^
+	@epstopdf $*.eps
 
-%.eps:	%.fig
-	fig2dev -L eps $*.fig $*.eps
+%.eps: %.fig
+	@echo + creating $@ from $^
+	@fig2dev -L eps $*.fig $*.eps
 
-figures =	queue.pdf \
-                dcm.pdf
+texs = \
+    doc.tex
 
-.PRECIOUS: $(figures)
+figs = \
+    queue.fig \
+    dcm.fig
 
-tutorial.pdf:	doc.tex $(figures)
-	pdflatex doc
-	pdflatex doc
-	mv -f doc.pdf $@
+all: doc.pdf
+
+.PRECIOUS: $(figs:.fig=.pdf)
+
+doc.pdf: $(texs) $(figs:.fig=.pdf)
+	@echo + building 3pl tutorial pdf - as $@
+	@-pdflatex doc >/dev/null
+	@-pdflatex doc >/dev/null
+
+tutorial.pdf: doc.pdf
+	@echo + replacing $@ stored in repository
+	@cp -f $^ $@
 
 clean:
-	rm -f tutorial.pdf doc.log doc.aux doc.atc $(figures)
+	@echo + removing generated files
+	@rm -f doc.log doc.aux doc.atc
+	@rm -f *.eps doc.pdf
+
+realclean: clean
+	@echo + removing fig output pdfs
+	@rm -f $(figs:.fig=.pdf)

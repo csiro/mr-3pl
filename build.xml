@@ -436,14 +436,16 @@
         <javadoc destdir="doc/api"
           locale="en_AU" encoding="UTF-8" verbose="true"
           access="package" author="true" version="true" use="true"
-          windowtitle="3PL API" overview="sources/threepl/overview.html">
+          windowtitle="3PL API" overview="sources/threepl/overview.html"
+          additionalparam="--allow-script-in-comments">
             <packageset dir="sources" defaultexcludes="yes">
                 <include name="threepl/**"/>
                 <exclude name="threepl/simulator/**"/>
             </packageset>
-            <link href="https://docs.oracle.com/javase/8/docs/api/"/>
-            <doctitle><![CDATA[<table><tr><td style="font-size: xx-large;"><b>3PL</b> - Parallel Pipeline Programming Language</td><td><img src="file://${basedir}/doc/images/logo.gif" width=80 height=63/></td></tr></table>]]></doctitle>
-            <header><![CDATA[<img src="file://${basedir}/doc/images/logo-small.gif" width=36 height=28/>]]></header>
+            <link href="https://docs.oracle.com/javase/8/docs/api/" offline="true"
+              packagelistURL="https://docs.oracle.com/javase/8/docs/api/package-list"/>
+            <doctitle><![CDATA[<table><tr><td style="font-size: xx-large;"><b>3PL</b> - Parallel Pipeline Programming Language</td><td><img id="logo" width="80" height="63"><script type="text/javascript">document.getElementById("logo").src=pathtoroot+"../images/logo.png";</script></td></tr></table>]]></doctitle>
+            <header><![CDATA[<img id="logosmall" width="36" height="28"><script type="text/javascript">document.getElementById("logosmall").src=pathtoroot+"../images/logo-small.png";</script>]]></header>
             <footer><![CDATA[<b>3PL</b> - Parallel Pipeline Programming Language]]></footer>
             <bottom><![CDATA[<p style="width: 100%; text-align:center; font-size: x-small; font-style: italic;">Copyright &#169; 2004-${3pl.current_year} <a href="http://www.csiro.au/">CSIRO Australia</a>. All Rights Reserved.</p>]]></bottom>
         </javadoc>

@@ -32,8 +32,12 @@
         </filterchain>
     </loadresource>
 
-    <!-- retrieve various git properties -->
-    <exec executable="git" failonerror="true" outputproperty="3pl.revision">
+    <!-- test whether in git repo or downloaded -->
+    <available file=".git" type="dir" property="3pl.fromgit"/>
+
+    <!-- if cloned from git, retrieve various git properties -->
+    <exec if:true="${3pl.fromgit}"
+      executable="git" failonerror="true" outputproperty="3pl.revision">
         <arg value="describe"/>
         <arg value="--dirty"/>
         <arg value="--tags"/>
@@ -41,24 +45,33 @@
         <arg value="--always"/>
         <arg value="--first-parent"/>
     </exec>
-    <exec executable="git" failonerror="true" outputproperty="3pl.changerev">
+    <exec if:true="${3pl.fromgit}"
+      executable="git" failonerror="true" outputproperty="3pl.changerev">
         <arg value="log"/>
         <arg value="--no-patch"/>
         <arg value="--max-count=1"/>
         <arg value="--pretty=format:%H"/>
     </exec>
-    <exec executable="git" failonerror="true" outputproperty="3pl.changeauthor">
+    <exec if:true="${3pl.fromgit}"
+      executable="git" failonerror="true" outputproperty="3pl.changeauthor">
         <arg value="log"/>
         <arg value="--no-patch"/>
         <arg value="--max-count=1"/>
         <arg value="--pretty=format:%aN &lt;%aE&gt;"/>
     </exec>
-    <exec executable="git" failonerror="true" outputproperty="3pl.changedate">
+    <exec if:true="${3pl.fromgit}"
+      executable="git" failonerror="true" outputproperty="3pl.changedate">
         <arg value="log"/>
         <arg value="--no-patch"/>
         <arg value="--max-count=1"/>
         <arg value="--pretty=format:%ai"/>
     </exec>
+    <!-- otherwise fill in some default values -->
+    <property unless:true="${3pl.fromgit}" name="3pl.revision" value="DAP"/>
+    <property unless:true="${3pl.fromgit}" name="3pl.changerev" value="unknown"/>
+    <property unless:true="${3pl.fromgit}" name="3pl.changeauthor" value="unknown"/>
+    <property unless:true="${3pl.fromgit}" name="3pl.changedate" value="unknown"/>
+    <property unless:true="${3pl.fromgit}" name="3pl.mflg" value="D"/>
 
     <!-- retrieve environment variables into properties with prefix "env." -->
     <property environment="env"/>
@@ -67,7 +80,7 @@
         if the revision ends with "-dirty" then this repo is modified - if so,
         the 3pl.mflg property will be the string "M", otherwise it is empty
     -->
-    <condition property="3pl.mflg" value="M" else="">
+    <condition if:true="${3pl.fromgit}" property="3pl.mflg" value="M" else="">
         <matches string="${3pl.revision}" pattern="-dirty$"/>
     </condition>
 

@@ -3,3 +3,4 @@
 /classes/*
 !/classes/3pl.jar
 __pycache__
+/.pydevproject
